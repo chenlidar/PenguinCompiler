@@ -3,19 +3,13 @@
 #include <memory>
 #include <string>
 #include <vector>
+namespace IR {
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
-class T_stm_ {};
-class T_exp_ {};
-
-// FIXME use smart
-typedef T_stm_* T_stm;
-typedef T_exp_* T_exp;
-
-// use T_Binop::T_plus
-enum class T_Binop {
+// use Binop::plus
+enum class binop {
     T_plus,
     T_minus,
     T_mul,
@@ -27,7 +21,7 @@ enum class T_Binop {
     T_arshift,
     T_xor
 };
-enum class T_relOp {
+enum class RelOp {
     T_eq,
     T_ne,
     T_lt,
@@ -39,88 +33,91 @@ enum class T_relOp {
     T_ugt,
     T_uge
 };
-T_relOp T_commute(T_relOp op);  // a op b    ==    b commute(op) a
-T_relOp T_notRel(T_relOp op);   // a op b    ==     not(a notRel(op) b)
-class T_seq_ : public T_stm_ {
+RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
+RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
+class Stm {};
+class Exp {};
+class Seq : public Stm {
    public:
-    T_stm left, right;
-    T_seq_(T_stm lf, T_stm rg) { left = lf, right = rg; }
+    Stm *left, *right;
+    Seq(Stm* lf, Stm* rg) { left = lf, right = rg; }
 };
-class T_label_ : public T_stm_ {
+class Label : public Stm {
    public:
     string label;
-    T_label_(string lb) { label = lb; }
+    Label(string lb) { label = lb; }
 };
-class T_jump_ : public T_stm_ {
+class Jump : public Stm {
    public:
-    T_exp exp;
+    Exp* exp;
     vector<string> jumps;
-    T_jump_(T_exp ep, vector<string> s) { exp = ep, jumps = s; }
+    Jump(Exp* ep, vector<string> s) { exp = ep, jumps = s; }
 };
-class T_cjump_ : public T_stm_ {
+class Cjump : public Stm {
    public:
-    T_relOp op;
-    T_exp left, right;
+    RelOp op;
+    Exp *left, *right;
     string trueLabel, falseLabel;
-    T_cjump_(T_relOp p, T_exp lf, T_exp rg, string tr, string fs) {
+    Cjump(RelOp p, Exp* lf, Exp* rg, string tr, string fs) {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
     }
 };
-class T_move_ : public T_stm_ {
+class Move : public Stm {
    public:
-    T_exp src, dst;
-    T_move_(T_exp ds, T_exp sr) { src = sr, dst = ds; }
+    Exp *src, *dst;
+    Move(Exp* ds, Exp* sr) { src = sr, dst = ds; }
 };
-class T_expStm_ : public T_stm_ {
+class ExpStm : public Stm {
    public:
-    T_exp exp;
-    T_expStm_(T_exp e) { exp = e; }
+    Exp* exp;
+    ExpStm(Exp* e) { exp = e; }
 };
 
-class T_constInt_ : public T_exp_ {
+class ConstInt : public Exp {
    public:
     int val;
-    T_constInt_(int x) { val = x; }
+    ConstInt(int x) { val = x; }
 };
-class T_constFloat_ : public T_exp_ {
+class ConstFloat : public Exp {
    public:
     float val;
-    T_constFloat_(float f) { val = f; }
+    ConstFloat(float f) { val = f; }
 };
 
-class T_binop_ : public T_exp_ {
+class Binop : public Exp {
    public:
-    T_exp left, right;
-    T_Binop op;
-    T_binop_(T_Binop o, T_exp lf, T_exp rg) { op = o, left = lf, right = rg; }
+    Exp *left, *right;
+    binop op;
+    Binop(binop o, Exp* lf, Exp* rg) { op = o, left = lf, right = rg; }
 };
-class T_temp_ : public T_exp_ {
+class Temp : public Exp {
    public:
     int tempid;
-    T_temp_(int id) { tempid = id; }
+    Temp(int id) { tempid = id; }
 };
-class T_mem_ : public T_exp_ {
+class Mem : public Exp {
    public:
-    T_exp mem;
-    T_mem_(T_exp e) { mem = e; }
+    Exp* mem;
+    Mem(Exp* e) { mem = e; }
 };
-class T_eseq_ : public T_exp_ {
+class Eseq : public Exp {
    public:
-    T_stm stm;
-    T_exp exp;
-    T_eseq_(T_stm s, T_exp e) { stm = s, exp = e; }
+    Stm* stm;
+    Exp* exp;
+    Eseq(Stm* s, Exp* e) { stm = s, exp = e; }
 };
 // TBD TODO:
-class T_name_ : public T_exp_ {
+class Name : public Exp {
    public:
     string name;
-    T_name_(string s) { name = s; }
+    Name(string s) { name = s; }
 };
-class T_call_ : public T_exp_ {
+class Call : public Exp {
    public:
-    T_exp fun;
-    vector<T_exp> args;
-    T_call_(T_exp fu, vector<T_exp> ar) { args = ar, fun = fu; }
+    Exp* fun;
+    vector<Exp*> args;
+    Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
 };
 
+}  // namespace IR
 #endif
