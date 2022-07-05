@@ -1,6 +1,7 @@
 #ifndef __TEMPLABEL
 #define __TEMPLABEL
 #include <string>
+#include <vector>
 #include "singleton.hpp"
 using std::string;
 using std::to_string;
@@ -19,4 +20,6 @@ class labelManager {
 string Temp_newlabel() {
     return Singleton::instance().LabelManager.newlabel();
 }
+typedef std::string Temp_label;
+typedef std::vector<std::string> Temp_labelList; 
 #endif

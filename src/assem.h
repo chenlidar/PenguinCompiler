@@ -2,23 +2,61 @@
 #include <iostream>
 #include <cstring>
 #include <string>
-typedef std::string Temp_label;
-typedef struct{Temp_labelList labels;}*AS_targets;
-typedef struct AS_instr_ *AS_instr;
-AS_targets AS_Targets(Temp_labelList labels);
+#include <vector>
+#include "util/templabel.hpp"
+#include "util/temptemp.hpp"
+
 namespace ASM{
-struct AS_instr{
-    
+typedef Temp_labelList Targets;
+struct Instr{
+    virtual void print()=0;
 };
-struct AS_Oper:public AS_instr{
+typedef std::vector<Instr> InstrList;
+struct Oper:public Instr{
     std::string assem;
     Temp_tempList dst,src;
-
+    Targets jumps;
+    Oper(std::string _assem,Temp_tempList &_dst,Temp_tempList &_src,Targets _jumps):
+        assem(_assem),dst(_dst),src(_src),jumps(_jumps){}
+    void print(){
+        int i=0;
+        for(auto d:dst){
+            std::string s=std::to_string(i++);
+            assem = assem.replace(assem.find("`d"+s), 1,std::to_string(d));
+        }
+        i=0;
+        for(auto sr:src){
+            std::string s=std::to_string(i++);
+            assem = assem.replace(assem.find("`s"+s), 1,std::to_string(sr));
+        }
+        std::cout<<assem<<std::endl;
+    }
 };
-struct AS_Label:public AS_instr{
-
+struct Label:public Instr{
+    std::string assem;
+    Temp_label label;
+    Label(std::string _assem,Temp_label _label):assem(_assem),label(_label){}
+    void print(){
+        std::cout<<label<<":"<<std::endl;
+    }
 };
-struct AS_Move:public AS_instr{
-
+struct Move:public Instr{
+    std::string assem;
+    Temp_temp dst,src;
+    Move(std::string _assem,Temp_temp _dst,Temp_temp _src):
+        assem(_assem),dst(_dst),src(_src){}
+    void print(){
+        assem = assem.replace(assem.find("`d0"), 1,std::to_string(dst));
+        assem = assem.replace(assem.find("`s0"), 1,std::to_string(src));
+        std::cout<<assem<<std::endl;
+    }
+};
+struct Proc{
+    InstrList body;
+    void print(){
+        for(auto instr:body){
+            instr.print();
+        }
+    }
 };
 }
