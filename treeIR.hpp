@@ -11,8 +11,8 @@ class T_stm_ {};
 class T_exp_ {};
 
 // FIXME use smart
-typedef unique_ptr<T_stm_> T_stm;
-typedef unique_ptr<T_exp_> T_exp;
+typedef T_stm_* T_stm;
+typedef T_exp_* T_exp;
 
 // use T_Binop::T_plus
 enum class T_Binop {
@@ -39,60 +39,137 @@ enum class T_relOp {
     T_ugt,
     T_uge
 };
-T_relOp T_notRel(T_relOp);   // a op b    ==     not(a notRel(op) b)
-T_relOp T_commute(T_relOp);  // a op b    ==    b commute(op) a
+
+T_relOp T_commute(T_relOp op) {  // a op b    ==    b commute(op) a
+    switch (op) {
+        case T_relOp::T_eq:
+            return T_relOp::T_eq;
+        case T_relOp::T_ne:
+            return T_relOp::T_ne;
+        case T_relOp::T_lt:
+            return T_relOp::T_gt;
+        case T_relOp::T_ge:
+            return T_relOp::T_le;
+        case T_relOp::T_gt:
+            return T_relOp::T_lt;
+        case T_relOp::T_le:
+            return T_relOp::T_ge;
+        case T_relOp::T_ult:
+            return T_relOp::T_ugt;
+        case T_relOp::T_uge:
+            return T_relOp::T_ule;
+        case T_relOp::T_ule:
+            return T_relOp::T_uge;
+        case T_relOp::T_ugt:
+            return T_relOp::T_ult;
+    }
+}
+T_relOp T_notRel(T_relOp op) {  // a op b    ==     not(a notRel(op) b)
+    switch (op) {
+        case T_relOp::T_eq:
+            return T_relOp::T_ne;
+        case T_relOp::T_ne:
+            return T_relOp::T_eq;
+        case T_relOp::T_lt:
+            return T_relOp::T_ge;
+        case T_relOp::T_ge:
+            return T_relOp::T_lt;
+        case T_relOp::T_gt:
+            return T_relOp::T_le;
+        case T_relOp::T_le:
+            return T_relOp::T_gt;
+        case T_relOp::T_ult:
+            return T_relOp::T_uge;
+        case T_relOp::T_uge:
+            return T_relOp::T_ult;
+        case T_relOp::T_ule:
+            return T_relOp::T_ugt;
+        case T_relOp::T_ugt:
+            return T_relOp::T_ule;
+    }
+}
+T_relOp T_commute(T_relOp);
 
 class T_seq_ : public T_stm_ {
+   public:
     T_stm left, right;
+    T_seq_(T_stm lf, T_stm rg) { left = lf, right = rg; }
 };
 class T_label_ : public T_stm_ {
+   public:
     string label;
+    T_label_(string lb) { label = lb; }
 };
-// TBD TODO:
 class T_jump_ : public T_stm_ {
+   public:
     T_exp exp;
     vector<string> jumps;
+    T_jump_(T_exp ep, vector<string> s) { exp = ep, jumps = s; }
 };
 class T_cjump_ : public T_stm_ {
+   public:
     T_relOp op;
     T_exp left, right;
     string trueLabel, falseLabel;
+    T_cjump_(T_relOp p, T_exp lf, T_exp rg, string tr, string fs) {
+        op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
+    }
 };
 class T_move_ : public T_stm_ {
+   public:
     T_exp src, dst;
+    T_move_(T_exp ds, T_exp sr) { src = sr, dst = ds; }
 };
 class T_expStm_ : public T_stm_ {
+   public:
     T_exp exp;
+    T_expStm_(T_exp e) { exp = e; }
 };
 
 class T_constInt_ : public T_exp_ {
+   public:
     int val;
+    T_constInt_(int x) { val = x; }
 };
 class T_constFloat_ : public T_exp_ {
+   public:
     float val;
+    T_constFloat_(float f) { val = f; }
 };
 
 class T_binop_ : public T_exp_ {
+   public:
     T_exp left, right;
     T_Binop op;
+    T_binop_(T_Binop o, T_exp lf, T_exp rg) { op = o, left = lf, right = rg; }
 };
 class T_temp_ : public T_exp_ {
+   public:
     int tempid;
+    T_temp_(int id) { tempid = id; }
 };
 class T_mem_ : public T_exp_ {
+   public:
     T_exp mem;
+    T_mem_(T_exp e) { mem = e; }
 };
 class T_eseq_ : public T_exp_ {
+   public:
     T_stm stm;
     T_exp exp;
+    T_eseq_(T_stm s, T_exp e) { stm = s, exp = e; }
 };
 // TBD TODO:
 class T_name_ : public T_exp_ {
+   public:
     string name;
+    T_name_(string s) { name = s; }
 };
 class T_call_ : public T_exp_ {
+   public:
     T_exp fun;
     vector<T_exp> args;
+    T_call_(T_exp fu, vector<T_exp> ar) { args = ar, fun = fu; }
 };
 
 #endif
