@@ -1,49 +1,50 @@
 #include "treeIR.hpp"
-T_relOp T_commute(T_relOp op) {  // a op b    ==    b commute(op) a
+using namespace IR;
+RelOp T_commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
-        case T_relOp::T_eq:
-            return T_relOp::T_eq;
-        case T_relOp::T_ne:
-            return T_relOp::T_ne;
-        case T_relOp::T_lt:
-            return T_relOp::T_gt;
-        case T_relOp::T_ge:
-            return T_relOp::T_le;
-        case T_relOp::T_gt:
-            return T_relOp::T_lt;
-        case T_relOp::T_le:
-            return T_relOp::T_ge;
-        case T_relOp::T_ult:
-            return T_relOp::T_ugt;
-        case T_relOp::T_uge:
-            return T_relOp::T_ule;
-        case T_relOp::T_ule:
-            return T_relOp::T_uge;
-        case T_relOp::T_ugt:
-            return T_relOp::T_ult;
+        case RelOp::T_eq:
+            return RelOp::T_eq;
+        case RelOp::T_ne:
+            return RelOp::T_ne;
+        case RelOp::T_lt:
+            return RelOp::T_gt;
+        case RelOp::T_ge:
+            return RelOp::T_le;
+        case RelOp::T_gt:
+            return RelOp::T_lt;
+        case RelOp::T_le:
+            return RelOp::T_ge;
+        case RelOp::T_ult:
+            return RelOp::T_ugt;
+        case RelOp::T_uge:
+            return RelOp::T_ule;
+        case RelOp::T_ule:
+            return RelOp::T_uge;
+        case RelOp::T_ugt:
+            return RelOp::T_ult;
     }
 }
-T_relOp T_notRel(T_relOp op) {  // a op b    ==     not(a notRel(op) b)
+RelOp T_notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
     switch (op) {
-        case T_relOp::T_eq:
-            return T_relOp::T_ne;
-        case T_relOp::T_ne:
-            return T_relOp::T_eq;
-        case T_relOp::T_lt:
-            return T_relOp::T_ge;
-        case T_relOp::T_ge:
-            return T_relOp::T_lt;
-        case T_relOp::T_gt:
-            return T_relOp::T_le;
-        case T_relOp::T_le:
-            return T_relOp::T_gt;
-        case T_relOp::T_ult:
-            return T_relOp::T_uge;
-        case T_relOp::T_uge:
-            return T_relOp::T_ult;
-        case T_relOp::T_ule:
-            return T_relOp::T_ugt;
-        case T_relOp::T_ugt:
-            return T_relOp::T_ule;
+        case RelOp::T_eq:
+            return RelOp::T_ne;
+        case RelOp::T_ne:
+            return RelOp::T_eq;
+        case RelOp::T_lt:
+            return RelOp::T_ge;
+        case RelOp::T_ge:
+            return RelOp::T_lt;
+        case RelOp::T_gt:
+            return RelOp::T_le;
+        case RelOp::T_le:
+            return RelOp::T_gt;
+        case RelOp::T_ult:
+            return RelOp::T_uge;
+        case RelOp::T_uge:
+            return RelOp::T_ult;
+        case RelOp::T_ule:
+            return RelOp::T_ugt;
+        case RelOp::T_ugt:
+            return RelOp::T_ule;
     }
 }
