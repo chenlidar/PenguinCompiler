@@ -34,7 +34,12 @@ IR::Stm* AST::ReturnStmt::ast2ir() {}
 
 IR::ExpTy AST::Lval::ast2ir() {}
 IR::ExpTy AST::IntNumber::ast2ir() {
-    return IR::ExpTy(new IR::ConstInt(value), TY::Type(0, TY::tyType::Ty_int));
+    auto exp = IR::Tr_Ex(new IR::ConstInt(value));
+    return IR::ExpTy(exp, TY::intType());
+    // auto trexp=new IR::Tr_Exp();
+    // trexp->ex=
+    // return IR::ExpTy(new IR::ConstInt(value), TY::Type(0,
+    // TY::tyType::Ty_int));
 }
 IR::ExpTy AST::FloatNumber::ast2ir() {
     // return IR::ExpTy(new IR::ConstFloat(), TY::Type(0,
