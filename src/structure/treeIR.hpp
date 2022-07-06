@@ -14,6 +14,7 @@ enum class binop {
     T_minus,
     T_mul,
     T_div,
+    T_mod,
     T_and,
     T_or,
     T_lshift,
