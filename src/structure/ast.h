@@ -396,10 +396,12 @@ struct Exp : InitVal {
 
     bool ast_isconst() { return constval.is_const; }
     virtual ~Exp() = default;
+    virtual IR::ExpTy AST::Exp::ast2ir();
 };
 
 struct PrimaryExp : public Exp {
     virtual ~PrimaryExp() = default;
+    // IR::ExpTy AST::PrimaryExp::ast2ir();
 };
 
 struct Lval : public PrimaryExp {
@@ -412,6 +414,7 @@ struct Lval : public PrimaryExp {
         /* Lval exists in AssignStmt and should not be const val */
         constval = ConstVal(nullptr);
     }
+    IR::ExpTy AST::Lval::ast2ir();
 };
 
 struct Number : public PrimaryExp {
@@ -425,6 +428,7 @@ struct IntNumber : Number {
     IntNumber(int _value, int _lineno) : value(_value), lineno(_lineno) {
         constval = ConstVal(value);
     }
+    IR::ExpTy AST::IntNumber::ast2ir();
 };
 
 struct FloatNumber : Number {
@@ -435,6 +439,7 @@ struct FloatNumber : Number {
         : float_in_string(_float_in_string), lineno(_lineno) {
         constval = ConstVal(std::stof(*float_in_string));
     }
+    IR::ExpTy AST::FloatNumber::ast2ir();
 };
 
 struct UnaryExp : public Exp {
@@ -462,6 +467,7 @@ struct UnaryExp : public Exp {
             }
         }
     }
+    IR::ExpTy AST::UnaryExp::ast2ir();
 };
 
 struct CallExp : public Exp {
@@ -471,6 +477,7 @@ struct CallExp : public Exp {
 
     CallExp(std::string* _id, ExpList* _params, int _lineno)
         : id(_id), params(_params), lineno(_lineno) {}
+    IR::ExpTy AST::CallExp::ast2ir();
 };
 
 struct ExpList : public NullableList<Exp*> {
@@ -503,6 +510,7 @@ struct MulExp : public Exp {
             }
         }
     }
+    IR::ExpTy AST::MulExp::ast2ir();
 };
 
 struct AddExp : public Exp {
@@ -525,6 +533,7 @@ struct AddExp : public Exp {
             }
         }
     }
+    IR::ExpTy AST::AddExp::ast2ir();
 };
 
 struct RelExp : public Exp {
@@ -535,6 +544,7 @@ struct RelExp : public Exp {
 
     RelExp(Exp* _lhs, rel_t _op, Exp* _rhs, int _lineno)
         : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
+    IR::ExpTy AST::RelExp::ast2ir();
 };
 
 struct EqExp : public Exp {
@@ -545,6 +555,7 @@ struct EqExp : public Exp {
 
     EqExp(Exp* _lhs, equal_t _op, Exp* _rhs, int _lineno)
         : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
+    IR::ExpTy AST::EqExp::ast2ir();
 };
 
 struct LAndExp : public Exp {
@@ -554,6 +565,7 @@ struct LAndExp : public Exp {
 
     LAndExp(Exp* _lhs, Exp* _rhs, int _lineno)
         : lhs(_lhs), rhs(_rhs), lineno(_lineno) {}
+    IR::ExpTy AST::LAndExp::ast2ir();
 };
 
 struct LOrExp : public Exp {
@@ -563,6 +575,7 @@ struct LOrExp : public Exp {
 
     LOrExp(Exp* _lhs, Exp* _rhs, int _lineno)
         : lhs(_lhs), rhs(_rhs), lineno(_lineno) {}
+    IR::ExpTy AST::LOrExp::ast2ir();
 };
 
 struct PutintStmt : public Stmt {
@@ -570,6 +583,7 @@ struct PutintStmt : public Stmt {
     int lineno;
 
     PutintStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
+    IR::Stm* AST::PutintStmt::ast2ir();
 };
 
 struct PutchStmt : public Stmt {
@@ -577,6 +591,7 @@ struct PutchStmt : public Stmt {
     int lineno;
 
     PutchStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
+    IR::Stm* AST::PutchStmt::ast2ir();
 };
 
 struct PutarrayStmt : public Stmt {
@@ -586,6 +601,7 @@ struct PutarrayStmt : public Stmt {
 
     PutarrayStmt(Exp* _len, Exp* _arr, int _lineno)
         : len(_len), arr(_arr), lineno(_lineno) {}
+    IR::Stm* AST::PutarrayStmt::ast2ir();
 };
 
 struct PutfloatStmt : public Stmt {
@@ -593,6 +609,7 @@ struct PutfloatStmt : public Stmt {
     int lineno;
 
     PutfloatStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
+    IR::Stm* AST::PutfloatStmt::ast2ir();
 };
 
 struct PutfarrayStmt : public Stmt {
@@ -602,6 +619,7 @@ struct PutfarrayStmt : public Stmt {
 
     PutfarrayStmt(Exp* _len, Exp* _arr, int _lineno)
         : len(_len), arr(_arr), lineno(_lineno) {}
+    IR::Stm* AST::PutfarrayStmt::ast2ir();
 };
 
 struct PutfStmt : public Stmt {
@@ -609,36 +627,42 @@ struct PutfStmt : public Stmt {
     int lineno;
 
     PutfStmt(ExpList* _args, int _lineno) : args(_args), lineno(_lineno) {}
+    IR::Stm* AST::PutfStmt::ast2ir();
 };
 
 struct StarttimeStmt : public Stmt {
     int lineno;
 
     StarttimeStmt(int _lineno) : lineno(_lineno) {}
+    IR::Stm* AST::StarttimeStmt::ast2ir();
 };
 
 struct StoptimeStmt : public Stmt {
     int lineno;
 
     StoptimeStmt(int _lineno) : lineno(_lineno) {}
+    IR::Stm* AST::StoptimeStmt::ast2ir();
 };
 
 struct GetintExp : public Exp {
     int lineno;
 
     GetintExp(int _lineno) : lineno(_lineno) {}
+    IR::ExpTy AST::GetintExp::ast2ir();
 };
 
 struct GetchExp : public Exp {
     int lineno;
 
     GetchExp(int _lineno) : lineno(_lineno) {}
+    IR::ExpTy AST::GetchExp::ast2ir();
 };
 
 struct GetfloatExp : public Exp {
     int lineno;
 
     GetfloatExp(int _lineno) : lineno(_lineno) {}
+    IR::ExpTy AST::GetfloatExp::ast2ir();
 };
 
 struct GetarrayExp : public Exp {
@@ -646,6 +670,7 @@ struct GetarrayExp : public Exp {
     int lineno;
 
     GetarrayExp(Exp* _arr, int _lineno) : arr(_arr), lineno(_lineno) {}
+    IR::ExpTy AST::GetarrayExp::ast2ir();
 };
 
 struct GetfarrayExp : public Exp {
@@ -653,6 +678,7 @@ struct GetfarrayExp : public Exp {
     int lineno;
 
     GetfarrayExp(Exp* _arr, int _lineno) : arr(_arr), lineno(_lineno) {}
+    IR::ExpTy AST::GetfarrayExp::ast2ir();
 };
 
 };  // namespace AST
