@@ -33,8 +33,13 @@ IR::Stm* AST::ContinueStmt::ast2ir() {}
 IR::Stm* AST::ReturnStmt::ast2ir() {}
 
 IR::ExpTy AST::Lval::ast2ir() {}
-IR::ExpTy AST::IntNumber::ast2ir() {}
-IR::ExpTy AST::FloatNumber::ast2ir() {}
+IR::ExpTy AST::IntNumber::ast2ir() {
+    return IR::ExpTy(new IR::ConstInt(value), TY::Type(0, TY::tyType::Ty_int));
+}
+IR::ExpTy AST::FloatNumber::ast2ir() {
+    // return IR::ExpTy(new IR::ConstFloat(), TY::Type(0,
+    // TY::tyType::Ty_float));
+}
 IR::ExpTy AST::UnaryExp::ast2ir() {}
 IR::ExpTy AST::CallExp::ast2ir() {}
 IR::ExpTy AST::MulExp::ast2ir() {}

@@ -7,6 +7,7 @@ class Type {
     Type* tp;
     tyType kind;
     // int arity;
+    Type(Type* t, tyType k) { tp = t, kind = k; }
 };
 };  // namespace TY
 
