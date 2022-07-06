@@ -24,8 +24,6 @@
 	AST::btype_t btype;
 	AST::ConstDef *constdef;
 	AST::ConstDefList *constdeflist;
-	AST::ConstInitVal *constinitval;
-	AST::ConstInitValList *constinitvallist;
 	AST::VarDecl *vardecl;
 	AST::VarDefList *vardeflist;
 	AST::VarDef *vardef;
@@ -67,8 +65,6 @@
 %type <btype> BTYPE
 %type <constdef> CONSTDEF
 %type <constdeflist> CONSTDEFLIST
-%type <constinitval> CONSTINITVAL
-%type <constinitvallist> CONSTINITVALLIST
 %type <vardecl> VARDECL
 %type <vardeflist> VARDEFLIST
 %type <vardef> VARDEF
@@ -154,28 +150,9 @@ BTYPE: INTT {
 	$$ = AST::btype_t::VOID;
 }
 
-CONSTDEF: ID ARRAYINDEX '=' CONSTINITVAL {
-	/* ConstDef -> ID ( [Exp] )* = ConstInitVal */
+CONSTDEF: ID ARRAYINDEX '=' INITVAL {
+	/* ConstDef -> ID ( [Exp] )* = InitVal */
 	$$ = new AST::ConstDef($1, $2, $4, yyget_lineno());
-}
-
-CONSTINITVAL: EXP {
-	/* ConstInitVal -> Exp */
-	$$ = $1;
-} | '{' CONSTINITVALLIST '}' {
-	/* ConstInitVal -> Array constant */
-	$$ = $2;
-}
-
-CONSTINITVALLIST:  {
-	/* Empty */
-	$$ = new AST::ConstInitValList(yyget_lineno());
-} | CONSTINITVAL {
-	$$ = new AST::ConstInitValList(yyget_lineno());
-	$$->list.push_back($1);
-} | CONSTINITVALLIST ',' CONSTINITVAL {
-	$$ = $1;
-	$$->list.push_back($3);
 }
 
 VARDECL: BTYPE VARDEFLIST ';' {
