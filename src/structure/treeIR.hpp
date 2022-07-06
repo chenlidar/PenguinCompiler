@@ -137,6 +137,12 @@ class ExpTy {
     ExpTy(Exp* _exp, TY::Type _ty) : exp(_exp), ty(_ty) {}
 };
 typedef std::list<Stm*> StmList;
+class StmList {
+   public:
+    Stm* stm;
+    StmList* tail;
+    StmList(Stm* _stm, StmList* _tail) : stm(_stm), tail(_tail) {}
+};
 typedef std::vector<Exp*> ExpList;
 }  // namespace IR
 #endif

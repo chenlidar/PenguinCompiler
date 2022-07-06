@@ -1,6 +1,6 @@
 #include "treeIR.hpp"
 using namespace IR;
-RelOp T_commute(RelOp op) {  // a op b    ==    b commute(op) a
+RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
         case RelOp::T_eq:
             return RelOp::T_eq;
@@ -24,7 +24,7 @@ RelOp T_commute(RelOp op) {  // a op b    ==    b commute(op) a
             return RelOp::T_ult;
     }
 }
-RelOp T_notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
+RelOp notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
     switch (op) {
         case RelOp::T_eq:
             return RelOp::T_ne;
