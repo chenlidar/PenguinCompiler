@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <list>
 namespace IR {
 using std::string;
 using std::unique_ptr;
@@ -129,7 +128,12 @@ class Call : public Exp {
     vector<Exp*> args;
     Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
 };
-typedef std::list<Stm*> StmList;
+class StmList{
+    public:
+    Stm *stm;
+    StmList* tail;
+    StmList(Stm* _stm,StmList* _tail):stm(_stm),tail(_tail){}
+};
 typedef std::vector<Exp*> ExpList;
 }  // namespace IR
 #endif
