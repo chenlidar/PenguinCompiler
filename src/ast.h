@@ -25,7 +25,6 @@ struct ConstDecl;
 struct ConstDefList;
 struct ConstDef;
 struct ConstInitVal;
-struct ConstExpList;
 struct ConstInitValList;
 struct VarDecl;
 struct VarDefList;
@@ -76,6 +75,8 @@ template <typename T> struct NullableList {
         : lineno(_lineno) {
         list.push_back(x);
     }
+
+    virtual ~NullableList() = default;
 };
 
 /* CompUnit -> [CompUnit] (Decl | FuncDef) */
@@ -91,13 +92,17 @@ struct CompUnitList {
 };
 
 /* CompUnit -> FuncDef | Decl */
-struct CompUnit {};
-
-struct BlockItem {
-    /* Empty */
+struct CompUnit {
+    virtual ~CompUnit() = default;
 };
 
-struct Decl : CompUnit, BlockItem {};
+struct BlockItem {
+    virtual ~BlockItem() = default;
+};
+
+struct Decl : CompUnit, BlockItem {
+    virtual ~Decl() = default;
+};
 
 struct ConstDecl : Decl {
     btype_t btype;
@@ -120,11 +125,11 @@ struct ConstDefList : public NullableList<ConstDef*> {
 
 struct ConstDef {
     std::string* id;
-    ConstExpList* index_list;
+    ArrayIndex* index_list;
     ConstInitVal* val;
     int lineno;
 
-    ConstDef(std::string* _id, ConstExpList* _index_list, ConstInitVal* _val, int _lineno)
+    ConstDef(std::string* _id, ArrayIndex* _index_list, ConstInitVal* _val, int _lineno)
         : id(_id)
         , index_list(_index_list)
         , val(_val)
@@ -132,15 +137,6 @@ struct ConstDef {
 };
 
 struct ConstInitVal {};
-
-struct ConstExpList : public NullableList<Exp*> {
-    ConstExpList()
-        : NullableList() {}
-    ConstExpList(int _lineno)
-        : NullableList(_lineno) {}
-    ConstExpList(Exp* x, int _lineno)
-        : NullableList(x, _lineno) {}
-};
 
 struct ConstInitValList : public NullableList<ConstInitVal*>, public ConstInitVal {
     ConstInitValList()
@@ -194,11 +190,11 @@ struct ArrayIndex : NullableList<Exp*> {
 };
 
 struct InitVal {
-    /* Empty */
+    virtual ~InitVal() = default;
 };
 
 struct ArrayInit : public InitVal {
-    /* Empty */
+    virtual ~ArrayInit() = default;
 };
 
 struct InitValList : public ArrayInit, NullableList<InitVal*> {
@@ -249,6 +245,7 @@ struct Parameter {
 
 struct Stmt : public BlockItem {
     /* Empty */
+    virtual ~Stmt() = default;
 };
 
 struct Block : public Stmt {
@@ -337,11 +334,11 @@ struct ReturnStmt : public Stmt {
 };
 
 struct Exp : ConstInitVal, InitVal {
-    /* Empty */
+    virtual ~Exp() = default;
 };
 
 struct PrimaryExp : public Exp {
-    /* Empty */
+    virtual ~PrimaryExp() = default;
 };
 
 struct Lval : public PrimaryExp {
@@ -356,7 +353,7 @@ struct Lval : public PrimaryExp {
 };
 
 struct Number : public PrimaryExp {
-    /* Empty */
+    virtual ~Number() = default;
 };
 
 struct IntNumber : Number {

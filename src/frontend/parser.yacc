@@ -24,7 +24,6 @@
 	AST::btype_t btype;
 	AST::ConstDef *constdef;
 	AST::ConstDefList *constdeflist;
-	AST::ConstExpList *constexplist;
 	AST::ConstInitVal *constinitval;
 	AST::ConstInitValList *constinitvallist;
 	AST::VarDecl *vardecl;
@@ -68,7 +67,6 @@
 %type <btype> BTYPE
 %type <constdef> CONSTDEF
 %type <constdeflist> CONSTDEFLIST
-%type <constexplist> CONSTEXPLIST
 %type <constinitval> CONSTINITVAL
 %type <constinitvallist> CONSTINITVALLIST
 %type <vardecl> VARDECL
@@ -156,16 +154,9 @@ BTYPE: INTT {
 	$$ = AST::btype_t::VOID;
 }
 
-CONSTDEF: ID CONSTEXPLIST '=' CONSTINITVAL {
+CONSTDEF: ID ARRAYINDEX '=' CONSTINITVAL {
 	/* ConstDef -> ID ( [Exp] )* = ConstInitVal */
 	$$ = new AST::ConstDef($1, $2, $4, yyget_lineno());
-}
-
-CONSTEXPLIST:  {
-	$$ = new AST::ConstExpList(yyget_lineno());
-} | CONSTEXPLIST '[' EXP ']' {
-	$$ = $1;
-	$$->list.push_back($3);
 }
 
 CONSTINITVAL: EXP {
