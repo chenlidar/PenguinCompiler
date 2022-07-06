@@ -126,6 +126,19 @@ public:
 	T look(node node);
 };
 
+
+template <typename T>
+void table<T>::enter(node node, T value)
+{
+	this->t[node->mykey]=value;
+}
+template <typename T>
+T table<T>::look(node node)
+{
+	this->t.erase(node->mykey);
+}
+
+
 }
 
 

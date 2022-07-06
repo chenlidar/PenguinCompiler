@@ -1,4 +1,5 @@
 #include "treeIR.hpp"
+#include <assert.h>
 using namespace IR;
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
@@ -47,4 +48,61 @@ RelOp notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
         case RelOp::T_ugt:
             return RelOp::T_ule;
     }
+}
+static void doPatch(PatchList* tList,Temp_Label label){
+    for(; tList; tList=tList->tail)
+        tList->head = label;
+}
+Cx unCx(Tr_Exp* e){
+	switch(e->kind){
+		case Tr_ty::Tr_cx:{
+			return e->cx;
+		}break;
+		case Tr_ty::Tr_ex:{
+			Stm* stm=new Cjump(RelOp::T_ne,e->ex,new ConstInt(0),NULL,NULL);
+            Cx cx;
+            cx.stm = stm;
+            cx.falses = new PatchList(static_cast<Cjump*>(stm)->falseLabel, NULL);
+            cx.trues = new PatchList(static_cast<Cjump*>(stm)->trueLabel, NULL);
+            return cx;
+		}break;
+		default:assert(0);
+	}
+}
+Exp* unEx(Tr_Exp* e){
+    if(e==0)return 0;
+    switch (e->kind){
+        case Tr_ty::Tr_ex :{
+            return e->ex;
+        }break;
+        case Tr_ty::Tr_cx:{
+            Temp_Temp r = Temp_newtemp();
+            Temp_Label t = Temp_newlabel(), f = Temp_newlabel();
+            doPatch(e->cx.trues, t);
+            doPatch(e->cx.falses, f);
+            return new Eseq(new Move(new Temp(r), new ConstInt(1)),
+                          new Eseq(e->cx.stm,
+                                 new Eseq(new Label(f),
+                                        new Eseq(new Move(new Temp(r), new ConstInt(0)),
+                                               new Eseq(new Label(t),
+                                                      new Temp(r))))));
+        }break;
+        default:assert(0);
+    }
+}
+
+Tr_Exp* Tr_Ex(Exp* ex){
+    Tr_Exp* texp=new Tr_Exp();
+    texp->kind=Tr_ty::Tr_ex;
+    texp->ex=ex;
+    return texp;
+}
+
+Tr_Exp* Tr_Cx(PatchList* trues, PatchList* falses,Stm* stm){
+    Tr_Exp* texp=new Tr_Exp();
+    texp->kind=Tr_ty::Tr_cx;
+    texp->cx.trues=trues;
+    texp->cx.falses=falses;
+    texp->cx.stm=stm;
+    return texp;
 }
