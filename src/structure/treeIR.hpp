@@ -1,9 +1,10 @@
 #ifndef __TREE_IR
 #define __TREE_IR
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>
-#include <list>
+#include "ty.hpp"
 namespace IR {
 using std::string;
 using std::unique_ptr;
@@ -38,11 +39,11 @@ enum class RelOp {
 RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
 RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
 class Stm {
-    public:
+   public:
     virtual ~Stm();
 };
 class Exp {
-    public:
+   public:
     virtual ~Exp();
 };
 class Seq : public Stm {
@@ -80,8 +81,8 @@ class ExpStm : public Stm {
     Exp* exp;
     ExpStm(Exp* e) { exp = e; }
 };
-class Const:public Exp{
-    public:
+class Const : public Exp {
+   public:
     virtual ~Const();
 };
 class ConstInt : public Const {
@@ -129,7 +130,19 @@ class Call : public Exp {
     vector<Exp*> args;
     Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
 };
+class ExpTy {
+   public:
+    Exp* exp;
+    TY::Type ty;
+    ExpTy(Exp* _exp, TY::Type _ty) : exp(_exp), ty(_ty) {}
+};
 typedef std::list<Stm*> StmList;
+class StmList {
+   public:
+    Stm* stm;
+    StmList* tail;
+    StmList(Stm* _stm, StmList* _tail) : stm(_stm), tail(_tail) {}
+};
 typedef std::vector<Exp*> ExpList;
 }  // namespace IR
 #endif

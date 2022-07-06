@@ -20,6 +20,6 @@ class labelManager {
 string Temp_newlabel() {
     return Singleton::instance().LabelManager.newlabel();
 }
-typedef std::string Temp_label;
-typedef std::vector<std::string> Temp_labelList; 
+typedef std::string Temp_Label;
+typedef std::vector<Temp_Label> Temp_LabelList; 
 #endif

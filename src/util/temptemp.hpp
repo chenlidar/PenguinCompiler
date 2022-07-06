@@ -18,6 +18,6 @@ class tempManager {
 int Temp_newtemp() {
     Singleton::instance().TempManager.newtemp();
 }
-typedef int Temp_temp;
-typedef std::vector<Temp_temp> Temp_tempList;
+typedef int Temp_Temp;
+typedef std::vector<Temp_Temp> Temp_TempList;
 #endif

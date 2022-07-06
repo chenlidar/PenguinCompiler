@@ -1,6 +1,8 @@
 {
     "files.associations": {
-        "*.yacc": "yacc",
+        "*.cpp": "cpp",
+        "*.svh": "systemverilog",
+        "*.html": "html",
         "*.lex": "lex",
         "*.sy": "c",
         "array": "cpp",
