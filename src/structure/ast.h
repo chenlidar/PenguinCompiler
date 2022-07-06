@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "treeIR.hpp"
 
 namespace AST {
 
@@ -65,17 +66,14 @@ struct LAndExp;
 struct LOrExp;
 
 /* Nullable List Template */
-template <typename T> struct NullableList {
+template <typename T>
+struct NullableList {
     std::vector<T> list;
     int lineno;
 
     NullableList() {}
-    NullableList(int _lineno)
-        : lineno(_lineno) {}
-    NullableList(T x, int _lineno)
-        : lineno(_lineno) {
-        list.push_back(x);
-    }
+    NullableList(int _lineno) : lineno(_lineno) {}
+    NullableList(T x, int _lineno) : lineno(_lineno) { list.push_back(x); }
 };
 
 /* CompUnit -> [CompUnit] (Decl | FuncDef) */
@@ -86,15 +84,18 @@ struct CompUnitList {
     std::vector<CompUnit*> list;
     int lineno;
 
-    CompUnitList(int _lineno)
-        : lineno(_lineno) {}
+    CompUnitList(int _lineno) : lineno(_lineno) {}
+    IR::StmList* ast2ir();
 };
 
 /* CompUnit -> FuncDef | Decl */
-struct CompUnit {};
+struct CompUnit {
+    virtual IR::Stm* ast2ir();
+};
 
 struct BlockItem {
     /* Empty */
+    virtual IR::Stm* ast2ir();
 };
 
 struct Decl : CompUnit, BlockItem {};
@@ -104,18 +105,13 @@ struct ConstDecl : Decl {
     ConstDefList* defs;
     int lineno;
     ConstDecl(btype_t _btype, ConstDefList* _defs, int _lineno)
-        : btype(_btype)
-        , defs(_defs)
-        , lineno(_lineno) {}
+        : btype(_btype), defs(_defs), lineno(_lineno) {}
 };
 
 struct ConstDefList : public NullableList<ConstDef*> {
-    ConstDefList()
-        : NullableList() {}
-    ConstDefList(int _lineno)
-        : NullableList(_lineno) {}
-    ConstDefList(ConstDef* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    ConstDefList() : NullableList() {}
+    ConstDefList(int _lineno) : NullableList(_lineno) {}
+    ConstDefList(ConstDef* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct ConstDef {
@@ -124,31 +120,26 @@ struct ConstDef {
     ConstInitVal* val;
     int lineno;
 
-    ConstDef(std::string* _id, ConstExpList* _index_list, ConstInitVal* _val, int _lineno)
-        : id(_id)
-        , index_list(_index_list)
-        , val(_val)
-        , lineno(_lineno) {}
+    ConstDef(std::string* _id,
+             ConstExpList* _index_list,
+             ConstInitVal* _val,
+             int _lineno)
+        : id(_id), index_list(_index_list), val(_val), lineno(_lineno) {}
 };
 
 struct ConstInitVal {};
 
 struct ConstExpList : public NullableList<Exp*> {
-    ConstExpList()
-        : NullableList() {}
-    ConstExpList(int _lineno)
-        : NullableList(_lineno) {}
-    ConstExpList(Exp* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    ConstExpList() : NullableList() {}
+    ConstExpList(int _lineno) : NullableList(_lineno) {}
+    ConstExpList(Exp* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
-struct ConstInitValList : public NullableList<ConstInitVal*>, public ConstInitVal {
-    ConstInitValList()
-        : NullableList() {}
-    ConstInitValList(int _lineno)
-        : NullableList(_lineno) {}
-    ConstInitValList(ConstInitVal* x, int _lineno)
-        : NullableList(x, _lineno) {}
+struct ConstInitValList : public NullableList<ConstInitVal*>,
+                          public ConstInitVal {
+    ConstInitValList() : NullableList() {}
+    ConstInitValList(int _lineno) : NullableList(_lineno) {}
+    ConstInitValList(ConstInitVal* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct VarDecl : public Decl {
@@ -157,18 +148,13 @@ struct VarDecl : public Decl {
     int lineno;
 
     VarDecl(btype_t _btype, VarDefList* _defs, int _lineno)
-        : btype(_btype)
-        , defs(_defs)
-        , lineno(_lineno) {}
+        : btype(_btype), defs(_defs), lineno(_lineno) {}
 };
 
 struct VarDefList : public NullableList<VarDef*> {
-    VarDefList()
-        : NullableList() {}
-    VarDefList(int _lineno)
-        : NullableList(_lineno) {}
-    VarDefList(VarDef* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    VarDefList() : NullableList() {}
+    VarDefList(int _lineno) : NullableList(_lineno) {}
+    VarDefList(VarDef* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct VarDef {
@@ -178,19 +164,13 @@ struct VarDef {
     int lineno;
 
     VarDef(std::string* _id, ArrayIndex* _index, InitVal* _initval, int _lineno)
-        : id(_id)
-        , index(_index)
-        , initval(_initval)
-        , lineno(_lineno) {}
+        : id(_id), index(_index), initval(_initval), lineno(_lineno) {}
 };
 
 struct ArrayIndex : NullableList<Exp*> {
-    ArrayIndex()
-        : NullableList() {}
-    ArrayIndex(int _lineno)
-        : NullableList(_lineno) {}
-    ArrayIndex(Exp* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    ArrayIndex() : NullableList() {}
+    ArrayIndex(int _lineno) : NullableList(_lineno) {}
+    ArrayIndex(Exp* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct InitVal {
@@ -202,12 +182,9 @@ struct ArrayInit : public InitVal {
 };
 
 struct InitValList : public ArrayInit, NullableList<InitVal*> {
-    InitValList()
-        : NullableList() {}
-    InitValList(int _lineno)
-        : NullableList(_lineno) {}
-    InitValList(InitVal* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    InitValList() : NullableList() {}
+    InitValList(int _lineno) : NullableList(_lineno) {}
+    InitValList(InitVal* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct FuncDef : public CompUnit {
@@ -217,21 +194,23 @@ struct FuncDef : public CompUnit {
     Block* block;
     int lineno;
 
-    FuncDef(btype_t _btype, std::string* _id, Parameters* _parameters, Block* _block, int _lineno)
-        : btype(_btype)
-        , id(_id)
-        , parameters(_parameters)
-        , block(_block)
-        , lineno(_lineno) {}
+    FuncDef(btype_t _btype,
+            std::string* _id,
+            Parameters* _parameters,
+            Block* _block,
+            int _lineno)
+        : btype(_btype),
+          id(_id),
+          parameters(_parameters),
+          block(_block),
+          lineno(_lineno) {}
+    IR::Stm* ast2ir();
 };
 
 struct Parameters : public NullableList<Parameter*> {
-    Parameters()
-        : NullableList() {}
-    Parameters(int _lineno)
-        : NullableList(_lineno) {}
-    Parameters(Parameter* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    Parameters() : NullableList() {}
+    Parameters(int _lineno) : NullableList(_lineno) {}
+    Parameters(Parameter* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct Parameter {
@@ -240,33 +219,28 @@ struct Parameter {
     ArrayIndex* arrayindex;
     int lineno;
 
-    Parameter(btype_t _btype, std::string* _id, ArrayIndex* _arrayindex, int _lineno)
-        : btype(_btype)
-        , id(_id)
-        , arrayindex(_arrayindex)
-        , lineno(_lineno) {}
+    Parameter(btype_t _btype,
+              std::string* _id,
+              ArrayIndex* _arrayindex,
+              int _lineno)
+        : btype(_btype), id(_id), arrayindex(_arrayindex), lineno(_lineno) {}
 };
 
-struct Stmt : public BlockItem {
-    /* Empty */
-};
+struct Stmt : public BlockItem {};
 
 struct Block : public Stmt {
     BlockItemList* items;
     int lineno;
 
     Block(BlockItemList* _items, int _lineno)
-        : items(_items)
-        , lineno(_lineno) {}
+        : items(_items), lineno(_lineno) {}
+    IR::Stm* ast2ir();
 };
 
 struct BlockItemList : public NullableList<BlockItem*> {
-    BlockItemList()
-        : NullableList() {}
-    BlockItemList(int _lineno)
-        : NullableList(_lineno) {}
-    BlockItemList(BlockItem* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    BlockItemList() : NullableList() {}
+    BlockItemList(int _lineno) : NullableList(_lineno) {}
+    BlockItemList(BlockItem* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct AssignStmt : public Stmt {
@@ -275,18 +249,16 @@ struct AssignStmt : public Stmt {
     int lineno;
 
     AssignStmt(Lval* _lval, Exp* _exp, int _lineno)
-        : lval(_lval)
-        , exp(_exp)
-        , lineno(_lineno) {}
+        : lval(_lval), exp(_exp), lineno(_lineno) {}
+    IR::Stm* AST::AssignStmt::ast2ir();
 };
 
 struct ExpStmt : public Stmt {
     Exp* exp;
     int lineno;
 
-    ExpStmt(Exp* _exp, int _lineno)
-        : exp(_exp)
-        , lineno(_lineno) {}
+    ExpStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
+    IR::Stm* AST::ExpStmt::ast2ir();
 };
 
 struct IfStmt : public Stmt {
@@ -296,10 +268,11 @@ struct IfStmt : public Stmt {
     int lineno;
 
     IfStmt(Exp* _exp, Stmt* _if_part, Stmt* _else_part, int _lineno)
-        : exp(_exp)
-        , if_part(_if_part)
-        , else_part(_else_part)
-        , lineno(_lineno) {}
+        : exp(_exp),
+          if_part(_if_part),
+          else_part(_else_part),
+          lineno(_lineno) {}
+    IR::Stm* AST::IfStmt::ast2ir();
 };
 
 struct WhileStmt : public Stmt {
@@ -308,32 +281,30 @@ struct WhileStmt : public Stmt {
     int lineno;
 
     WhileStmt(Exp* _exp, Stmt* _loop, int _lineno)
-        : exp(_exp)
-        , loop(_loop)
-        , lineno(_lineno) {}
+        : exp(_exp), loop(_loop), lineno(_lineno) {}
+    IR::Stm* AST::WhileStmt::ast2ir();
 };
 
 struct BreakStmt : public Stmt {
     int lineno;
 
-    BreakStmt(int _lineno)
-        : lineno(_lineno) {}
+    BreakStmt(int _lineno) : lineno(_lineno) {}
+    IR::Stm* AST::BreakStmt::ast2ir();
 };
 
 struct ContinueStmt : public Stmt {
     int lineno;
 
-    ContinueStmt(int _lineno)
-        : lineno(_lineno) {}
+    ContinueStmt(int _lineno) : lineno(_lineno) {}
+    IR::Stm* AST::ContinueStmt::ast2ir();
 };
 
 struct ReturnStmt : public Stmt {
     Exp* exp;
     int lineno;
 
-    ReturnStmt(Exp* _exp, int _lineno)
-        : exp(_exp)
-        , lineno(_lineno) {}
+    ReturnStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
+    IR::Stm* AST::ReturnStmt::ast2ir();
 };
 
 struct Exp : ConstInitVal, InitVal {
@@ -350,9 +321,7 @@ struct Lval : public PrimaryExp {
     int lineno;
 
     Lval(std::string* _id, ArrayIndex* _arrayindex, int _lineno)
-        : id(_id)
-        , arrayindex(_arrayindex)
-        , lineno(_lineno) {}
+        : id(_id), arrayindex(_arrayindex), lineno(_lineno) {}
 };
 
 struct Number : public PrimaryExp {
@@ -363,9 +332,7 @@ struct IntNumber : Number {
     int value;
     int lineno;
 
-    IntNumber(int _value, int _lineno)
-        : value(_value)
-        , lineno(_lineno) {}
+    IntNumber(int _value, int _lineno) : value(_value), lineno(_lineno) {}
 };
 
 struct FloatNumber : Number {
@@ -373,8 +340,7 @@ struct FloatNumber : Number {
     int lineno;
 
     FloatNumber(std::string* _float_in_string, int _lineno)
-        : float_in_string(_float_in_string)
-        , lineno(_lineno) {}
+        : float_in_string(_float_in_string), lineno(_lineno) {}
 };
 
 struct UnaryExp : public Exp {
@@ -383,9 +349,7 @@ struct UnaryExp : public Exp {
     int lineno;
 
     UnaryExp(unaryop_t _op, Exp* _exp, int _lineno)
-        : op(_op)
-        , exp(_exp)
-        , lineno(_lineno) {}
+        : op(_op), exp(_exp), lineno(_lineno) {}
 };
 
 struct CallExp : public Exp {
@@ -394,18 +358,13 @@ struct CallExp : public Exp {
     int lineno;
 
     CallExp(std::string* _id, ExpList* _params, int _lineno)
-        : id(_id)
-        , params(_params)
-        , lineno(_lineno) {}
+        : id(_id), params(_params), lineno(_lineno) {}
 };
 
 struct ExpList : public NullableList<Exp*> {
-    ExpList()
-        : NullableList() {}
-    ExpList(int _lineno)
-        : NullableList(_lineno) {}
-    ExpList(Exp* x, int _lineno)
-        : NullableList(x, _lineno) {}
+    ExpList() : NullableList() {}
+    ExpList(int _lineno) : NullableList(_lineno) {}
+    ExpList(Exp* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct MulExp : public Exp {
@@ -415,10 +374,7 @@ struct MulExp : public Exp {
     int lineno;
 
     MulExp(Exp* _lhs, mul_t _op, Exp* _rhs, int _lineno)
-        : lhs(_lhs)
-        , op(_op)
-        , rhs(_rhs)
-        , lineno(_lineno) {}
+        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
 };
 
 struct AddExp : public Exp {
@@ -428,10 +384,7 @@ struct AddExp : public Exp {
     int lineno;
 
     AddExp(Exp* _lhs, addop_t _op, Exp* _rhs, int _lineno)
-        : lhs(_lhs)
-        , op(_op)
-        , rhs(_rhs)
-        , lineno(_lineno) {}
+        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
 };
 
 struct RelExp : public Exp {
@@ -441,10 +394,7 @@ struct RelExp : public Exp {
     int lineno;
 
     RelExp(Exp* _lhs, rel_t _op, Exp* _rhs, int _lineno)
-        : lhs(_lhs)
-        , op(_op)
-        , rhs(_rhs)
-        , lineno(_lineno) {}
+        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
 };
 
 struct EqExp : public Exp {
@@ -454,10 +404,7 @@ struct EqExp : public Exp {
     int lineno;
 
     EqExp(Exp* _lhs, equal_t _op, Exp* _rhs, int _lineno)
-        : lhs(_lhs)
-        , op(_op)
-        , rhs(_rhs)
-        , lineno(_lineno) {}
+        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
 };
 
 struct LAndExp : public Exp {
@@ -466,9 +413,7 @@ struct LAndExp : public Exp {
     int lineno;
 
     LAndExp(Exp* _lhs, Exp* _rhs, int _lineno)
-        : lhs(_lhs)
-        , rhs(_rhs)
-        , lineno(_lineno) {}
+        : lhs(_lhs), rhs(_rhs), lineno(_lineno) {}
 };
 
 struct LOrExp : public Exp {
@@ -477,27 +422,21 @@ struct LOrExp : public Exp {
     int lineno;
 
     LOrExp(Exp* _lhs, Exp* _rhs, int _lineno)
-        : lhs(_lhs)
-        , rhs(_rhs)
-        , lineno(_lineno) {}
+        : lhs(_lhs), rhs(_rhs), lineno(_lineno) {}
 };
 
 struct PutintStmt : public Stmt {
     Exp* exp;
     int lineno;
 
-    PutintStmt(Exp* _exp, int _lineno)
-        : exp(_exp)
-        , lineno(_lineno) {}
+    PutintStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
 };
 
 struct PutchStmt : public Stmt {
     Exp* exp;
     int lineno;
 
-    PutchStmt(Exp* _exp, int _lineno)
-        : exp(_exp)
-        , lineno(_lineno) {}
+    PutchStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
 };
 
 struct PutarrayStmt : public Stmt {
@@ -506,18 +445,14 @@ struct PutarrayStmt : public Stmt {
     int lineno;
 
     PutarrayStmt(Exp* _len, Exp* _arr, int _lineno)
-        : len(_len)
-        , arr(_arr)
-        , lineno(_lineno) {}
+        : len(_len), arr(_arr), lineno(_lineno) {}
 };
 
 struct PutfloatStmt : public Stmt {
     Exp* exp;
     int lineno;
 
-    PutfloatStmt(Exp* _exp, int _lineno)
-        : exp(_exp)
-        , lineno(_lineno) {}
+    PutfloatStmt(Exp* _exp, int _lineno) : exp(_exp), lineno(_lineno) {}
 };
 
 struct PutfarrayStmt : public Stmt {
@@ -526,71 +461,58 @@ struct PutfarrayStmt : public Stmt {
     int lineno;
 
     PutfarrayStmt(Exp* _len, Exp* _arr, int _lineno)
-        : len(_len)
-        , arr(_arr)
-        , lineno(_lineno) {}
+        : len(_len), arr(_arr), lineno(_lineno) {}
 };
 
 struct PutfStmt : public Stmt {
     ExpList* args;
     int lineno;
 
-    PutfStmt(ExpList* _args, int _lineno)
-        : args(_args)
-        , lineno(_lineno) {}
+    PutfStmt(ExpList* _args, int _lineno) : args(_args), lineno(_lineno) {}
 };
 
 struct StarttimeStmt : public Stmt {
     int lineno;
 
-    StarttimeStmt(int _lineno)
-        : lineno(_lineno) {}
+    StarttimeStmt(int _lineno) : lineno(_lineno) {}
 };
 
 struct StoptimeStmt : public Stmt {
     int lineno;
 
-    StoptimeStmt(int _lineno)
-        : lineno(_lineno) {}
+    StoptimeStmt(int _lineno) : lineno(_lineno) {}
 };
 
 struct GetintExp : public Exp {
     int lineno;
 
-    GetintExp(int _lineno)
-        : lineno(_lineno) {}
+    GetintExp(int _lineno) : lineno(_lineno) {}
 };
 
 struct GetchExp : public Exp {
     int lineno;
 
-    GetchExp(int _lineno)
-        : lineno(_lineno) {}
+    GetchExp(int _lineno) : lineno(_lineno) {}
 };
 
 struct GetfloatExp : public Exp {
     int lineno;
 
-    GetfloatExp(int _lineno)
-        : lineno(_lineno) {}
+    GetfloatExp(int _lineno) : lineno(_lineno) {}
 };
 
 struct GetarrayExp : public Exp {
     Exp* arr;
     int lineno;
 
-    GetarrayExp(Exp* _arr, int _lineno)
-        : arr(_arr)
-        , lineno(_lineno) {}
+    GetarrayExp(Exp* _arr, int _lineno) : arr(_arr), lineno(_lineno) {}
 };
 
 struct GetfarrayExp : public Exp {
     Exp* arr;
     int lineno;
 
-    GetfarrayExp(Exp* _arr, int _lineno)
-        : arr(_arr)
-        , lineno(_lineno) {}
+    GetfarrayExp(Exp* _arr, int _lineno) : arr(_arr), lineno(_lineno) {}
 };
 
 };  // namespace AST
