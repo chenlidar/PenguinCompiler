@@ -39,6 +39,7 @@
 	AST::BlockItem *blockitem;
 	AST::Stmt *stmt;
 	AST::Exp *exp;
+	AST::IdExp *idexp;
 	AST::ExpList *explist;
 	AST::Number *number;
 	AST::Lval *lval;
@@ -81,6 +82,7 @@
 %type <stmt> STMT IFSTMT WHILESTMT ASSIGNSTMT EXPSTMT BREAKSTMT CONTINUESTMT RETURNSTMT
 %type <exp> EXP PRIMARYEXP UNARYEXP MULEXP ADDEXP RELEXP EQEXP LANDEXP LOREXP CALLEXP
 %type <exp> GETINTEXP GETCHEXP GETFLOATEXP GETARRAYEXP GETFARRAYEXP
+%type <idexp> IDEXP
 %type <stmt> PUTINTSTMT PUTCHSTMT PUTARRAYSTMT PUTFLOATSTMT PUTFARRAYSTMT PUTFSTMT
 %type <stmt> STARTTIMESTMT STOPTIMESTMT
 %type <explist> EXPLIST
@@ -150,7 +152,7 @@ BTYPE: INTT {
 	$$ = AST::btype_t::VOID;
 }
 
-CONSTDEF: ID ARRAYINDEX '=' INITVAL {
+CONSTDEF: IDEXP ARRAYINDEX '=' INITVAL {
 	/* ConstDef -> ID ( [Exp] )* = InitVal */
 	$$ = new AST::ConstDef($1, $2, $4, yyget_lineno());
 }
@@ -167,9 +169,9 @@ VARDEFLIST: VARDEF {
 	$$->list.push_back($3);
 }
 
-VARDEF: ID ARRAYINDEX {
+VARDEF: IDEXP ARRAYINDEX {
 	$$ = new AST::VarDef($1, $2, nullptr, yyget_lineno());
-} | ID ARRAYINDEX '=' INITVAL {
+} | IDEXP ARRAYINDEX '=' INITVAL {
 	$$ = new AST::VarDef($1, $2, $4, yyget_lineno());
 }
 
@@ -197,7 +199,7 @@ INITVALLIST: INITVAL {
 	$$->list.push_back($3);
 }
 
-FUNCDEF: BTYPE ID '(' PARAMETERS ')' BLOCK {
+FUNCDEF: BTYPE IDEXP '(' PARAMETERS ')' BLOCK {
 	$$ = new AST::FuncDef($1, $2, $4, $6, yyget_lineno());
 }
 
@@ -208,9 +210,9 @@ PARAMETERS:  {
 	$$->list.push_back($3);
 }
 
-PARAMETER: BTYPE ID {
+PARAMETER: BTYPE IDEXP {
 	$$ = new AST::Parameter($1, $2, nullptr, yyget_lineno());
-} | BTYPE ID '[' ']' ARRAYINDEX {
+} | BTYPE IDEXP '[' ']' ARRAYINDEX {
 	$$ = new AST::Parameter($1, $2, $5, yyget_lineno());
 }
 
@@ -359,9 +361,15 @@ EXP: PRIMARYEXP {
 	$$ = $1;
 } | GETFARRAYEXP {
 	$$ = $1;
+} | IDEXP {
+	$$ = $1;
 }
 
-LVAL: ID ARRAYINDEX {
+IDEXP: ID {
+	$$ = new AST::IdExp($1, yyget_lineno());
+}
+
+LVAL: IDEXP ARRAYINDEX {
 	$$ = new AST::Lval($1, $2, yyget_lineno());
 }
 
@@ -383,7 +391,7 @@ UNARYEXP: UNARYOP EXP %prec prec1 {
 	$$ = new AST::UnaryExp($1, $2, yyget_lineno());
 } 
 
-CALLEXP: ID '(' EXPLIST ')' {
+CALLEXP: IDEXP '(' EXPLIST ')' {
 	$$ = new AST::CallExp($1, $3, yyget_lineno());
 }
 

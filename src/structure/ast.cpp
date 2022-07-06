@@ -53,6 +53,7 @@ IR::ExpTy AST::RelExp::ast2ir() {}
 IR::ExpTy AST::EqExp::ast2ir() {}
 IR::ExpTy AST::LAndExp::ast2ir() {}
 IR::ExpTy AST::LOrExp::ast2ir() {}
+IR::ExpTy AST::IdExp::ast2ir() {}
 IR::Stm* AST::PutintStmt::ast2ir() {}
 IR::Stm* AST::PutchStmt::ast2ir() {}
 IR::Stm* AST::PutarrayStmt::ast2ir() {}
