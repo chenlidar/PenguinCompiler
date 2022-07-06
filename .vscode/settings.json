@@ -1,5 +1,8 @@
 {
     "files.associations": {
+        "*.cpp": "cpp",
+        "*.svh": "systemverilog",
+        "*.html": "html",
         "*.lex": "lex",
         "*.sy": "c",
         "array": "cpp",
@@ -47,6 +50,10 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "list": "cpp",
+        "ranges": "cpp"
     }
 }

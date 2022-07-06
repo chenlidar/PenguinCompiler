@@ -19,14 +19,14 @@ enum class btype_t { VOID, INT, FLOAT };
 
 enum class addop_t { ADD, SUB };
 
+enum class constop_t { ADD, SUB, MUL, DIV, REM, NOT };
+
 struct CompUnitList;
 struct CompUnit;
 struct Decl;
 struct ConstDecl;
 struct ConstDefList;
 struct ConstDef;
-struct ConstInitVal;
-struct ConstInitValList;
 struct VarDecl;
 struct VarDefList;
 struct VarDef;
@@ -63,6 +63,98 @@ struct RelExp;
 struct EqExp;
 struct LAndExp;
 struct LOrExp;
+
+struct ConstVal {
+    bool is_const;
+    bool is_int;
+
+    /*
+     * const int b[2] = {0, 1};
+     * int a[b[1]] = {};
+     * b[1] cannot be directly calculated from AST
+     */
+    bool can_cal_from_ast;
+    union {
+        int i;
+        float f;
+    } val;
+
+    ConstVal() : is_const(false) {}
+    ConstVal(int i) : is_const(true), is_int(true), can_cal_from_ast(true) {
+        val.i = i;
+    }
+    ConstVal(float f) : is_const(true), is_int(false), can_cal_from_ast(true) {
+        val.f = f;
+    }
+
+    /* Pass nullptr to set can_cal_from_ast to false */
+    ConstVal(void* x) : is_const(true), can_cal_from_ast(false) {}
+};
+
+static ConstVal calconst(const ConstVal& lhs,
+                         constop_t op,
+                         const ConstVal& rhs) {
+    if (!lhs.is_const || !rhs.is_const) {
+        return ConstVal();
+    }
+
+    if (!lhs.can_cal_from_ast || !rhs.can_cal_from_ast) {
+        return ConstVal(nullptr);
+    }
+
+    switch (op) {
+        case constop_t::ADD:
+            if (lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.i + rhs.val.i);
+            if (lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.i + rhs.val.f);
+            if (!lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.f + rhs.val.i);
+            if (!lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.f + rhs.val.f);
+            break;
+        case constop_t::SUB:
+            if (lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.i - rhs.val.i);
+            if (lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.i - rhs.val.f);
+            if (!lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.f - rhs.val.i);
+            if (!lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.f - rhs.val.f);
+            break;
+        case constop_t::MUL:
+            if (lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.i * rhs.val.i);
+            if (lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.i * rhs.val.f);
+            if (!lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.f * rhs.val.i);
+            if (!lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.f * rhs.val.f);
+            break;
+        case constop_t::DIV:
+            if (lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.i / rhs.val.i);
+            if (lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.i / rhs.val.f);
+            if (!lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.f / rhs.val.i);
+            if (!lhs.is_int && !rhs.is_int)
+                return ConstVal(lhs.val.f / rhs.val.f);
+            break;
+        case constop_t::REM:
+            if (lhs.is_int && rhs.is_int)
+                return ConstVal(lhs.val.i % rhs.val.i);
+            break;
+        case constop_t::NOT:
+            if (rhs.is_int)
+                return ConstVal(int(!lhs.val.i));
+            break;
+        default:;
+    }
+    return ConstVal();
+}
 
 /* Nullable List Template */
 template <typename T>
@@ -121,23 +213,14 @@ struct ConstDefList : public NullableList<ConstDef*> {
 struct ConstDef {
     std::string* id;
     ArrayIndex* index_list;
-    ConstInitVal* val;
+    InitVal* val;
     int lineno;
 
     ConstDef(std::string* _id,
              ArrayIndex* _index_list,
-             ConstInitVal* _val,
+             InitVal* _val,
              int _lineno)
         : id(_id), index_list(_index_list), val(_val), lineno(_lineno) {}
-};
-
-struct ConstInitVal {};
-
-struct ConstInitValList : public NullableList<ConstInitVal*>,
-                          public ConstInitVal {
-    ConstInitValList() : NullableList() {}
-    ConstInitValList(int _lineno) : NullableList(_lineno) {}
-    ConstInitValList(ConstInitVal* x, int _lineno) : NullableList(x, _lineno) {}
 };
 
 struct VarDecl : public Decl {
@@ -308,7 +391,10 @@ struct ReturnStmt : public Stmt {
     IR::Stm* AST::ReturnStmt::ast2ir();
 };
 
-struct Exp : ConstInitVal, InitVal {
+struct Exp : InitVal {
+    ConstVal constval;
+
+    bool ast_isconst() { return constval.is_const; }
     virtual ~Exp() = default;
 };
 
@@ -322,7 +408,10 @@ struct Lval : public PrimaryExp {
     int lineno;
 
     Lval(std::string* _id, ArrayIndex* _arrayindex, int _lineno)
-        : id(_id), arrayindex(_arrayindex), lineno(_lineno) {}
+        : id(_id), arrayindex(_arrayindex), lineno(_lineno) {
+        /* Lval exists in AssignStmt and should not be const val */
+        constval = ConstVal(nullptr);
+    }
 };
 
 struct Number : public PrimaryExp {
@@ -333,7 +422,9 @@ struct IntNumber : Number {
     int value;
     int lineno;
 
-    IntNumber(int _value, int _lineno) : value(_value), lineno(_lineno) {}
+    IntNumber(int _value, int _lineno) : value(_value), lineno(_lineno) {
+        constval = ConstVal(value);
+    }
 };
 
 struct FloatNumber : Number {
@@ -341,7 +432,9 @@ struct FloatNumber : Number {
     int lineno;
 
     FloatNumber(std::string* _float_in_string, int _lineno)
-        : float_in_string(_float_in_string), lineno(_lineno) {}
+        : float_in_string(_float_in_string), lineno(_lineno) {
+        constval = ConstVal(std::stof(*float_in_string));
+    }
 };
 
 struct UnaryExp : public Exp {
@@ -350,7 +443,25 @@ struct UnaryExp : public Exp {
     int lineno;
 
     UnaryExp(unaryop_t _op, Exp* _exp, int _lineno)
-        : op(_op), exp(_exp), lineno(_lineno) {}
+        : op(_op), exp(_exp), lineno(_lineno) {
+        if (exp->ast_isconst()) {
+            switch (op) {
+                case unaryop_t::ADD:
+                    constval =
+                        calconst(ConstVal(0), constop_t::ADD, exp->constval);
+                    break;
+                case unaryop_t::SUB:
+                    constval =
+                        calconst(ConstVal(0), constop_t::SUB, exp->constval);
+                    break;
+                case unaryop_t::NOT:
+                    constval =
+                        calconst(ConstVal(0), constop_t::NOT, exp->constval);
+                    break;
+                default:;
+            }
+        }
+    }
 };
 
 struct CallExp : public Exp {
@@ -375,7 +486,23 @@ struct MulExp : public Exp {
     int lineno;
 
     MulExp(Exp* _lhs, mul_t _op, Exp* _rhs, int _lineno)
-        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
+        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {
+        if (lhs->ast_isconst() && rhs->ast_isconst()) {
+            switch (op) {
+                case mul_t::MULT:
+                    constval = calconst(lhs, constop_t::MUL, rhs);
+                    break;
+                case mul_t::DIV:
+                    constval = calconst(lhs, constop_t::DIV, rhs);
+                    break;
+                case mul_t::REM:
+                    constval = calconst(lhs, constop_t::REM, rhs);
+                    break;
+
+                default:;
+            }
+        }
+    }
 };
 
 struct AddExp : public Exp {
@@ -385,7 +512,19 @@ struct AddExp : public Exp {
     int lineno;
 
     AddExp(Exp* _lhs, addop_t _op, Exp* _rhs, int _lineno)
-        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {}
+        : lhs(_lhs), op(_op), rhs(_rhs), lineno(_lineno) {
+        if (lhs->ast_isconst() && rhs->ast_isconst()) {
+            switch (op) {
+                case addop_t::ADD:
+                    constval = calconst(lhs, constop_t::ADD, rhs);
+                    break;
+                case addop_t::SUB:
+                    constval = calconst(lhs, constop_t::SUB, rhs);
+                    break;
+                default:;
+            }
+        }
+    }
 };
 
 struct RelExp : public Exp {
