@@ -46,6 +46,21 @@ int 		{ return INTT; }
 float		{ return FLOATT; }
 const		{ return CONST; }
 
+getint		{ return GETINT; }
+getch		{ return GETCH; }
+getfloat	{ return GETFLOAT; }
+getarray	{ return GETARRAY; }
+getfarray	{ return GETFARRAY; }
+putint		{ return PUTINT; }
+putch		{ return PUTCH; }
+putarray	{ return PUTARRAY; }
+putfloat	{ return PUTFLOAT; }
+putfarray	{ return PUTFARRAY; }
+putf		{ return PUTF; }
+starttime	{ return STARTTIME; }
+stoptime	{ return STOPTIME; }
+
+
 [a-z_A-Z][0-9a-zA-Z]* {
 	yylval.id = new std::string(yytext);
 	return ID;
