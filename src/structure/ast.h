@@ -482,6 +482,117 @@ struct LOrExp : public Exp {
         , lineno(_lineno) {}
 };
 
+struct PutintStmt : public Stmt {
+    Exp* exp;
+    int lineno;
+
+    PutintStmt(Exp* _exp, int _lineno)
+        : exp(_exp)
+        , lineno(_lineno) {}
+};
+
+struct PutchStmt : public Stmt {
+    Exp* exp;
+    int lineno;
+
+    PutchStmt(Exp* _exp, int _lineno)
+        : exp(_exp)
+        , lineno(_lineno) {}
+};
+
+struct PutarrayStmt : public Stmt {
+    Exp* len;
+    Exp* arr;
+    int lineno;
+
+    PutarrayStmt(Exp* _len, Exp* _arr, int _lineno)
+        : len(_len)
+        , arr(_arr)
+        , lineno(_lineno) {}
+};
+
+struct PutfloatStmt : public Stmt {
+    Exp* exp;
+    int lineno;
+
+    PutfloatStmt(Exp* _exp, int _lineno)
+        : exp(_exp)
+        , lineno(_lineno) {}
+};
+
+struct PutfarrayStmt : public Stmt {
+    Exp* len;
+    Exp* arr;
+    int lineno;
+
+    PutfarrayStmt(Exp* _len, Exp* _arr, int _lineno)
+        : len(_len)
+        , arr(_arr)
+        , lineno(_lineno) {}
+};
+
+struct PutfStmt : public Stmt {
+    ExpList* args;
+    int lineno;
+
+    PutfStmt(ExpList* _args, int _lineno)
+        : args(_args)
+        , lineno(_lineno) {}
+};
+
+struct StarttimeStmt : public Stmt {
+    int lineno;
+
+    StarttimeStmt(int _lineno)
+        : lineno(_lineno) {}
+};
+
+struct StoptimeStmt : public Stmt {
+    int lineno;
+
+    StoptimeStmt(int _lineno)
+        : lineno(_lineno) {}
+};
+
+struct GetintExp : public Exp {
+    int lineno;
+
+    GetintExp(int _lineno)
+        : lineno(_lineno) {}
+};
+
+struct GetchExp : public Exp {
+    int lineno;
+
+    GetchExp(int _lineno)
+        : lineno(_lineno) {}
+};
+
+struct GetfloatExp : public Exp {
+    int lineno;
+
+    GetfloatExp(int _lineno)
+        : lineno(_lineno) {}
+};
+
+struct GetarrayExp : public Exp {
+    Exp* arr;
+    int lineno;
+
+    GetarrayExp(Exp* _arr, int _lineno)
+        : arr(_arr)
+        , lineno(_lineno) {}
+};
+
+struct GetfarrayExp : public Exp {
+    Exp* arr;
+    int lineno;
+
+    GetfarrayExp(Exp* _arr, int _lineno)
+        : arr(_arr)
+        , lineno(_lineno) {}
+};
+
 };  // namespace AST
 
 #endif

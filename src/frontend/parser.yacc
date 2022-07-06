@@ -51,6 +51,9 @@
 %token<token> RETURN IF ELSE WHILE BREAK CONTINUE
 %token<token> VOIDT INTT FLOATT CONST
 %token<token> INTNUMBER
+%token<token> GETINT GETCH GETFLOAT GETARRAY GETFARRAY
+%token<token> PUTINT PUTCH PUTARRAY PUTFLOAT PUTFARRAY PUTF
+%token<token> STARTTIME STOPTIME
 %token<floatnumber> FLOATNUMBER
 %token<token> ADDOP SUBOP NOTOP LANDOP LOROP
 %token<mul> MULOP
@@ -83,6 +86,9 @@
 %type <blockitem> BLOCKITEM
 %type <stmt> STMT IFSTMT WHILESTMT ASSIGNSTMT EXPSTMT BREAKSTMT CONTINUESTMT RETURNSTMT
 %type <exp> EXP PRIMARYEXP UNARYEXP MULEXP ADDEXP RELEXP EQEXP LANDEXP LOREXP CALLEXP
+%type <exp> GETINTEXP GETCHEXP GETFLOATEXP GETARRAYEXP GETFARRAYEXP
+%type <stmt> PUTINTSTMT PUTCHSTMT PUTARRAYSTMT PUTFLOATSTMT PUTFARRAYSTMT PUTFSTMT
+%type <stmt> STARTTIMESTMT STOPTIMESTMT
 %type <explist> EXPLIST
 %type <number> NUMBER
 %type <unaryop> UNARYOP
@@ -94,9 +100,9 @@
 %left RELOP
 %left ADDOP SUBOP
 %left MULOP
-%precedence prec1
-%precedence prec2
-%precedence ELSE
+%left prec1
+%left prec2
+%left ELSE
 
 %start COMPUNITLIST
 
@@ -155,7 +161,7 @@ CONSTDEF: ID CONSTEXPLIST '=' CONSTINITVAL {
 	$$ = new AST::ConstDef($1, $2, $4, yyget_lineno());
 }
 
-CONSTEXPLIST: %empty {
+CONSTEXPLIST:  {
 	$$ = new AST::ConstExpList(yyget_lineno());
 } | CONSTEXPLIST '[' EXP ']' {
 	$$ = $1;
@@ -170,7 +176,7 @@ CONSTINITVAL: EXP {
 	$$ = $2;
 }
 
-CONSTINITVALLIST: %empty {
+CONSTINITVALLIST:  {
 	/* Empty */
 	$$ = new AST::ConstInitValList(yyget_lineno());
 } | CONSTINITVAL {
@@ -199,7 +205,7 @@ VARDEF: ID ARRAYINDEX {
 	$$ = new AST::VarDef($1, $2, $4, yyget_lineno());
 }
 
-ARRAYINDEX: %empty {
+ARRAYINDEX:  {
 	$$ = new AST::ArrayIndex(yyget_lineno());
 } | ARRAYINDEX '[' EXP ']' {
 	$$ = $1;
@@ -227,7 +233,7 @@ FUNCDEF: BTYPE ID '(' PARAMETERS ')' BLOCK {
 	$$ = new AST::FuncDef($1, $2, $4, $6, yyget_lineno());
 }
 
-PARAMETERS: %empty {
+PARAMETERS:  {
 	$$ = new AST::Parameters(yyget_lineno());
 } | PARAMETERS ',' PARAMETER {
 	$$ = $1;
@@ -244,7 +250,7 @@ BLOCK: '{' BLOCKITEMLIST '}' {
 	$$ = new AST::Block($2, yyget_lineno());
 }
 
-BLOCKITEMLIST: %empty {
+BLOCKITEMLIST:  {
 	$$ = new AST::BlockItemList(yyget_lineno());
 } | BLOCKITEMLIST BLOCKITEM {
 	$$ = $1;
@@ -274,6 +280,22 @@ STMT: ASSIGNSTMT ';' {
 } | CONTINUESTMT ';' {
 	$$ = $1;
 } | RETURNSTMT ';' {
+	$$ = $1;
+} | PUTINTSTMT ';' {
+	$$ = $1;
+} | PUTCHSTMT ';' {
+	$$ = $1;
+} | PUTARRAYSTMT ';' {
+	$$ = $1;
+} | PUTFLOATSTMT ';' {
+	$$ = $1;
+} | PUTFARRAYSTMT ';' {
+	$$ = $1;
+} | PUTFSTMT ';' {
+	$$ = $1;
+} | STARTTIMESTMT ';' {
+	$$ = $1;
+} | STOPTIMESTMT ';' {
 	$$ = $1;
 }
 
@@ -309,6 +331,38 @@ RETURNSTMT: RETURN {
 	$$ = new AST::ReturnStmt($2, yyget_lineno());
 }
 
+PUTINTSTMT: PUTINT '(' EXP ')' {
+	$$ = new AST::PutintStmt($3, yyget_lineno());
+}
+
+PUTCHSTMT: PUTCH '(' EXP ')' {
+	$$ = new AST::PutchStmt($3, yyget_lineno());
+}
+
+PUTARRAYSTMT: PUTARRAY '(' EXP ',' EXP ')' {
+	$$ = new AST::PutarrayStmt($3, $5, yyget_lineno());
+}
+
+PUTFLOATSTMT: PUTFLOAT '(' EXP ')' {
+	$$ = new AST::PutfloatStmt($3, yyget_lineno());
+}
+
+PUTFARRAYSTMT: PUTFARRAY '(' EXP ',' EXP ')' {
+	$$ = new AST::PutfarrayStmt($3, $5, yyget_lineno());
+}
+
+PUTFSTMT: PUTF '(' EXPLIST ')' {
+	$$ = new AST::PutfStmt($3, yyget_lineno());
+}
+
+STARTTIMESTMT: STARTTIME '(' ')' {
+	$$ = new AST::StarttimeStmt(yyget_lineno());
+}
+
+STOPTIMESTMT: STOPTIME '(' ')' {
+	$$ = new AST::StoptimeStmt(yyget_lineno());
+}
+
 EXP: PRIMARYEXP {
 	$$ = $1;
 } | UNARYEXP {
@@ -326,6 +380,16 @@ EXP: PRIMARYEXP {
 } | LOREXP {
 	$$ = $1;
 } | CALLEXP {
+	$$ = $1;
+} | GETINTEXP {
+	$$ = $1;
+} | GETCHEXP {
+	$$ = $1;
+} | GETFLOATEXP {
+	$$ = $1;
+} | GETARRAYEXP {
+	$$ = $1;
+} | GETFARRAYEXP {
 	$$ = $1;
 }
 
@@ -364,7 +428,7 @@ UNARYOP: ADDOP {
 	$$ = AST::unaryop_t::NOT;
 }
 
-EXPLIST: %empty {
+EXPLIST:  {
 	$$ = new AST::ExpList(yyget_lineno());
 } | EXP {
 	$$ = new AST::ExpList($1, yyget_lineno());
@@ -399,6 +463,25 @@ LOREXP: EXP LOROP EXP {
 	$$ = new AST::LOrExp($1, $3, yyget_lineno());
 }
 
+GETINTEXP: GETINT '(' ')' {
+	$$ = new AST::GetintExp(yyget_lineno());
+}
+
+GETCHEXP: GETCH '(' ')' {
+	$$ = new AST::GetchExp(yyget_lineno());
+}
+
+GETFLOATEXP: GETFLOAT '(' ')' {
+	$$ = new AST::GetfloatExp(yyget_lineno());
+}
+
+GETARRAYEXP: GETARRAY '(' EXP ')' {
+	$$ = new AST::GetarrayExp($3, yyget_lineno());
+}
+
+GETFARRAYEXP: GETFARRAY '(' EXP ')' {
+	$$ = new AST::GetfarrayExp($3, yyget_lineno());
+}
 
 
 %%
