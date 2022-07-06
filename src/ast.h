@@ -48,6 +48,7 @@ struct BreakStmt;
 struct ContinueStmt;
 struct ReturnStmt;
 struct Exp;
+struct IdExp;
 struct Lval;
 struct PrimaryExp;
 struct Number;
@@ -200,19 +201,6 @@ struct ConstDefList : public NullableList<ConstDef*> {
         : NullableList(x, _lineno) {}
 };
 
-struct ConstDef {
-    std::string* id;
-    ArrayIndex* index_list;
-    InitVal* val;
-    int lineno;
-
-    ConstDef(std::string* _id, ArrayIndex* _index_list, InitVal* _val, int _lineno)
-        : id(_id)
-        , index_list(_index_list)
-        , val(_val)
-        , lineno(_lineno) {}
-};
-
 struct VarDecl : public Decl {
     btype_t btype;
     VarDefList* defs;
@@ -234,12 +222,12 @@ struct VarDefList : public NullableList<VarDef*> {
 };
 
 struct VarDef {
-    std::string* id;
+    IdExp* id;
     ArrayIndex* index;
     InitVal* initval;
     int lineno;
 
-    VarDef(std::string* _id, ArrayIndex* _index, InitVal* _initval, int _lineno)
+    VarDef(IdExp* _id, ArrayIndex* _index, InitVal* _initval, int _lineno)
         : id(_id)
         , index(_index)
         , initval(_initval)
@@ -274,12 +262,12 @@ struct InitValList : public ArrayInit, NullableList<InitVal*> {
 
 struct FuncDef : public CompUnit {
     btype_t btype;
-    std::string* id;
+    IdExp* id;
     Parameters* parameters;
     Block* block;
     int lineno;
 
-    FuncDef(btype_t _btype, std::string* _id, Parameters* _parameters, Block* _block, int _lineno)
+    FuncDef(btype_t _btype, IdExp* _id, Parameters* _parameters, Block* _block, int _lineno)
         : btype(_btype)
         , id(_id)
         , parameters(_parameters)
@@ -298,11 +286,11 @@ struct Parameters : public NullableList<Parameter*> {
 
 struct Parameter {
     btype_t btype;
-    std::string* id;
+    IdExp* id;
     ArrayIndex* arrayindex;
     int lineno;
 
-    Parameter(btype_t _btype, std::string* _id, ArrayIndex* _arrayindex, int _lineno)
+    Parameter(btype_t _btype, IdExp* _id, ArrayIndex* _arrayindex, int _lineno)
         : btype(_btype)
         , id(_id)
         , arrayindex(_arrayindex)
@@ -406,16 +394,25 @@ struct Exp : InitVal {
     virtual ~Exp() = default;
 };
 
+struct IdExp : public Exp {
+    std::string* str;
+    int lineno;
+
+    IdExp(std::string* _str, int _lineno)
+        : str(_str)
+        , lineno(_lineno) {}
+};
+
 struct PrimaryExp : public Exp {
     virtual ~PrimaryExp() = default;
 };
 
 struct Lval : public PrimaryExp {
-    std::string* id;
+    IdExp* id;
     ArrayIndex* arrayindex;
     int lineno;
 
-    Lval(std::string* _id, ArrayIndex* _arrayindex, int _lineno)
+    Lval(IdExp* _id, ArrayIndex* _arrayindex, int _lineno)
         : id(_id)
         , arrayindex(_arrayindex)
         , lineno(_lineno) {
@@ -477,11 +474,11 @@ struct UnaryExp : public Exp {
 };
 
 struct CallExp : public Exp {
-    std::string* id;
+    IdExp* id;
     ExpList* params;
     int lineno;
 
-    CallExp(std::string* _id, ExpList* _params, int _lineno)
+    CallExp(IdExp* _id, ExpList* _params, int _lineno)
         : id(_id)
         , params(_params)
         , lineno(_lineno) {}
@@ -697,6 +694,27 @@ struct GetfarrayExp : public Exp {
     GetfarrayExp(Exp* _arr, int _lineno)
         : arr(_arr)
         , lineno(_lineno) {}
+};
+
+struct ConstDef {
+    IdExp* id;
+    ArrayIndex* index_list;
+    InitVal* val;
+    int lineno;
+
+    ConstDef(IdExp* _id, ArrayIndex* _index_list, InitVal* _val, int _lineno)
+        : id(_id)
+        , index_list(_index_list)
+        , val(_val)
+        , lineno(_lineno) {
+        id->constval = ConstVal(nullptr);
+
+        /* if (auto x = dynamic_cast<Exp *>(val)) {
+                if (x->ast_isconst()) {
+                        id->constval = x->constval;
+                }
+        } */
+    }
 };
 
 };  // namespace AST
