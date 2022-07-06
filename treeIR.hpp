@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <list>
 namespace IR {
 using std::string;
 using std::unique_ptr;
@@ -35,8 +36,14 @@ enum class RelOp {
 };
 RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
 RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
-class Stm {};
-class Exp {};
+class Stm {
+    public:
+    virtual ~Stm();
+};
+class Exp {
+    public:
+    virtual ~Exp();
+};
 class Seq : public Stm {
    public:
     Stm *left, *right;
@@ -72,13 +79,16 @@ class ExpStm : public Stm {
     Exp* exp;
     ExpStm(Exp* e) { exp = e; }
 };
-
-class ConstInt : public Exp {
+class Const:public Exp{
+    public:
+    virtual ~Const();
+};
+class ConstInt : public Const {
    public:
     int val;
     ConstInt(int x) { val = x; }
 };
-class ConstFloat : public Exp {
+class ConstFloat : public Const {
    public:
     float val;
     ConstFloat(float f) { val = f; }
@@ -118,6 +128,7 @@ class Call : public Exp {
     vector<Exp*> args;
     Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
 };
-
+typedef std::list<Stm*> StmList;
+typedef std::vector<Exp*> ExpList;
 }  // namespace IR
 #endif
