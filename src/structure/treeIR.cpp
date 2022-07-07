@@ -1,5 +1,9 @@
 #include "treeIR.hpp"
 #include <assert.h>
+#include <algorithm>
+#include <string>
+#include "assem.h"
+using std::string;
 using namespace IR;
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
@@ -129,4 +133,22 @@ Tr_Exp* IR::Tr_Nx(Stm* stm) {
     tmp->kind = Tr_ty::Tr_nx;
     tmp->nx = stm;
     return tmp;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//   TILE
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void Label::ir2asm(ASM::InstrList* ls) {
+    ls->push_back(ASM::Label(label));
+}
+void Jump::ir2asm(ASM::InstrList* ls) {
+    auto tname = static_cast<IR::Name*>(exp);
+    ls->push_back(ASM::Oper(string("b ") + tname->name, vector<int>(),
+                            vector<int>(), jumps));
+}
+void Cjump::ir2asm(ASM::InstrList* ls) {
+    // FIXME
+    do {
+        if ()
+    } while (0);
 }

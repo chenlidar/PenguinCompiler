@@ -4,8 +4,9 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "ty.hpp"
 #include "../util/templabel.hpp"
+#include "assem.h"
+#include "ty.hpp"
 namespace IR {
 using std::string;
 using std::unique_ptr;
@@ -25,97 +26,113 @@ enum class binop {
     T_arshift,
     T_xor
 };
-enum class RelOp { T_eq, T_ne, T_lt, T_gt, T_le, T_ge, T_ult, T_ule, T_ugt, T_uge };
+enum class RelOp {
+    T_eq,
+    T_ne,
+    T_lt,
+    T_gt,
+    T_le,
+    T_ge,
+    T_ult,
+    T_ule,
+    T_ugt,
+    T_uge
+};
 RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
-RelOp notRel(RelOp op);  // a op b    ==     not(a notRel(op) b)
+RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
 class Stm {
-public:
+   public:
     virtual ~Stm();
+    virtual void ir2asm(ASM::InstrList* ls);
 };
 class Exp {
-public:
+   public:
     virtual ~Exp();
+    virtual void ir2asm(ASM::InstrList* ls);
 };
 class Seq : public Stm {
-public:
+   public:
     Stm *left, *right;
     Seq(Stm* lf, Stm* rg) { left = lf, right = rg; }
 };
 class Label : public Stm {
-public:
+   public:
     string label;
     Label(string lb) { label = lb; }
+    void ir2asm(ASM::InstrList* ls);
 };
 class Jump : public Stm {
-public:
+   public:
     Exp* exp;
     vector<string> jumps;
     Jump(Exp* ep, vector<string> s) { exp = ep, jumps = s; }
+    void ir2asm(ASM::InstrList* ls);
 };
 class Cjump : public Stm {
-public:
+   public:
     RelOp op;
     Exp *left, *right;
     Temp_Label trueLabel, falseLabel;
     Cjump(RelOp p, Exp* lf, Exp* rg, string tr, string fs) {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
     }
+    void ir2asm(ASM::InstrList* ls);
 };
 class Move : public Stm {
-public:
+   public:
     Exp *src, *dst;
     Move(Exp* ds, Exp* sr) { src = sr, dst = ds; }
 };
 class ExpStm : public Stm {
-public:
+   public:
     Exp* exp;
     ExpStm(Exp* e) { exp = e; }
 };
 class Const : public Exp {
-public:
+   public:
     virtual ~Const();
 };
 class ConstInt : public Const {
-public:
+   public:
     int val;
     ConstInt(int x) { val = x; }
 };
 class ConstFloat : public Const {
-public:
+   public:
     float val;
     ConstFloat(float f) { val = f; }
 };
 
 class Binop : public Exp {
-public:
+   public:
     Exp *left, *right;
     binop op;
     Binop(binop o, Exp* lf, Exp* rg) { op = o, left = lf, right = rg; }
 };
 class Temp : public Exp {
-public:
+   public:
     int tempid;
     Temp(int id) { tempid = id; }
 };
 class Mem : public Exp {
-public:
+   public:
     Exp* mem;
     Mem(Exp* e) { mem = e; }
 };
 class Eseq : public Exp {
-public:
+   public:
     Stm* stm;
     Exp* exp;
     Eseq(Stm* s, Exp* e) { stm = s, exp = e; }
 };
 // TBD TODO:
 class Name : public Exp {
-public:
+   public:
     string name;
     Name(string s) { name = s; }
 };
 class Call : public Exp {
-public:
+   public:
     Exp* fun;
     vector<Exp*> args;
     Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
@@ -123,49 +140,44 @@ public:
 struct PatchList {
     Temp_Label head;
     PatchList* tail;
-    PatchList(Temp_Label _head,PatchList* _tail):head(_head),tail(_tail){}
+    PatchList(Temp_Label _head, PatchList* _tail) : head(_head), tail(_tail) {}
 };
 struct Cx {
     PatchList* trues;
     PatchList* falses;
     Stm* stm;
-    Cx(PatchList* _trues,PatchList* _falses,Stm* _stm):trues(_trues),falses(_falses),stm(_stm){}
-    Cx(){}
+    Cx(PatchList* _trues, PatchList* _falses, Stm* _stm)
+        : trues(_trues), falses(_falses), stm(_stm) {}
+    Cx() {}
 };
-enum class Tr_ty{
-    Tr_ex, Tr_nx, Tr_cx
-};
+enum class Tr_ty { Tr_ex, Tr_nx, Tr_cx };
 struct Tr_Exp {
     Tr_ty kind;
     Exp* ex;
     Stm* nx;
     Cx cx;
-    Tr_Exp(){}
+    Tr_Exp() {}
 };
 class ExpTy {
-public:
+   public:
     Tr_Exp* exp;
     TY::Type ty;
-    ExpTy(Tr_Exp* _exp, TY::Type _ty)
-        : exp(_exp)
-        , ty(_ty) {}
+    ExpTy(Tr_Exp* _exp, TY::Type _ty) : exp(_exp), ty(_ty) {}
 };
 class StmList {
-public:
+   public:
     Stm* stm;
     StmList* tail;
-    StmList(Stm* _stm, StmList* _tail)
-        : stm(_stm)
-        , tail(_tail) {}
+    StmList(Stm* _stm, StmList* _tail) : stm(_stm), tail(_tail) {}
 };
 typedef std::vector<Exp*> ExpList;
 
 Exp* unEx(Tr_Exp* e);
-Cx   unCx(Tr_Exp* e);
-Stm* unNx(Tr_Exp* exp) ;
+Cx unCx(Tr_Exp* e);
+Stm* unNx(Tr_Exp* exp);
 
 Tr_Exp* Tr_Nx(Stm* stm);
-Tr_Exp* Tr_Cx(PatchList* trues,PatchList* falses,Stm* stm);
+Tr_Exp* Tr_Cx(PatchList* trues, PatchList* falses, Stm* stm);
 Tr_Exp* Tr_Ex(Exp* exp);
 }  // namespace IR
 #endif

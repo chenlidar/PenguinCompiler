@@ -7,18 +7,18 @@
 #include "../util/temptemp.hpp"
 
 namespace ASM {
-typedef Temp_labelList Targets;
+typedef Temp_LabelList Targets;
 struct Instr {
     virtual void print() = 0;
 };
 typedef std::vector<Instr> InstrList;
 struct Oper : public Instr {
     std::string assem;
-    Temp_tempList dst, src;
+    Temp_TempList dst, src;
     Targets jumps;
     Oper(std::string _assem,
-         Temp_tempList _dst,
-         Temp_tempList _src,
+         Temp_TempList _dst,
+         Temp_TempList _src,
          Targets _jumps)
         : assem(_assem), dst(_dst), src(_src), jumps(_jumps) {}
     void print() {
@@ -37,14 +37,14 @@ struct Oper : public Instr {
     }
 };
 struct Label : public Instr {
-    Temp_label label;
-    Label(Temp_label _label) : label(_label) {}
+    Temp_Label label;
+    Label(Temp_Label _label) : label(_label) {}
     void print() { std::cout << label << ":" << std::endl; }
 };
 struct Move : public Instr {
     std::string assem;
-    Temp_temp dst, src;
-    Move(std::string _assem, Temp_temp _dst, Temp_temp _src)
+    Temp_Temp dst, src;
+    Move(std::string _assem, Temp_Temp _dst, Temp_Temp _src)
         : assem(_assem), dst(_dst), src(_src) {}
     void print() {
         std::string out = assem;
