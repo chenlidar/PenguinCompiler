@@ -175,20 +175,20 @@ struct CompUnitList {
 /* CompUnit -> FuncDef | Decl */
 struct CompUnit {
     virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
     virtual ~CompUnit() = default;
 };
 
 struct BlockItem {
     virtual ~BlockItem() = default;
     virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct Decl : CompUnit, BlockItem {
     virtual ~Decl() = default;
     virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct ConstDecl : Decl {
@@ -200,7 +200,7 @@ struct ConstDecl : Decl {
         , defs(_defs)
         , lineno(_lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct ConstDefList : public NullableList<ConstDef*> {
@@ -230,7 +230,8 @@ struct ConstDef {
                 }
         } */
     }
-    void binder(btype_t btype,Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    void binder(btype_t btype, Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                Temp_Label name);
 };
 struct VarDecl : public Decl {
     btype_t btype;
@@ -242,7 +243,7 @@ struct VarDecl : public Decl {
         , defs(_defs)
         , lineno(_lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct VarDefList : public NullableList<VarDef*> {
@@ -253,7 +254,7 @@ struct VarDefList : public NullableList<VarDef*> {
     VarDefList(VarDef* x, int _lineno)
         : NullableList(x, _lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct VarDef {
@@ -268,7 +269,7 @@ struct VarDef {
         , initval(_initval)
         , lineno(_lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel,Temp_Label name);
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct ArrayIndex : NullableList<Exp*> {
@@ -283,7 +284,7 @@ struct ArrayIndex : NullableList<Exp*> {
 struct InitVal {
     virtual ~InitVal() = default;
     virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label name);
+                             Temp_Label name);
 };
 
 struct ArrayInit : public InitVal {
@@ -441,7 +442,7 @@ struct Exp : InitVal {
     bool ast_isconst() { return constval.is_const; }
     virtual ~Exp() = default;
     virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label name);
+                             Temp_Label name);
 };
 
 struct IdExp : public Exp {
@@ -452,7 +453,7 @@ struct IdExp : public Exp {
         : str(_str)
         , lineno(_lineno) {}
     IR::ExpTy AST::IdExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label name);
+                                 Temp_Label name);
 };
 
 struct PrimaryExp : public Exp {
@@ -527,7 +528,8 @@ struct UnaryExp : public Exp {
             }
         }
     }
-    IR::ExpTy AST::UnaryExp::ast2ir();
+    IR::ExpTy AST::UnaryExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct CallExp : public Exp {
@@ -539,7 +541,8 @@ struct CallExp : public Exp {
         : id(_id)
         , params(_params)
         , lineno(_lineno) {}
-    IR::ExpTy AST::CallExp::ast2ir();
+    IR::ExpTy AST::CallExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct ExpList : public NullableList<Exp*> {
@@ -572,7 +575,8 @@ struct MulExp : public Exp {
             }
         }
     }
-    IR::ExpTy AST::MulExp::ast2ir();
+    IR::ExpTy AST::MulExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct AddExp : public Exp {
@@ -594,7 +598,8 @@ struct AddExp : public Exp {
             }
         }
     }
-    IR::ExpTy AST::AddExp::ast2ir();
+    IR::ExpTy AST::AddExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct RelExp : public Exp {
@@ -608,7 +613,8 @@ struct RelExp : public Exp {
         , op(_op)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy AST::RelExp::ast2ir();
+    IR::ExpTy AST::RelExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct EqExp : public Exp {
@@ -622,7 +628,8 @@ struct EqExp : public Exp {
         , op(_op)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy AST::EqExp::ast2ir();
+    IR::ExpTy AST::EqExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                 Temp_Label name);
 };
 
 struct LAndExp : public Exp {
@@ -634,7 +641,8 @@ struct LAndExp : public Exp {
         : lhs(_lhs)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy AST::LAndExp::ast2ir();
+    IR::ExpTy AST::LAndExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct LOrExp : public Exp {
@@ -646,7 +654,8 @@ struct LOrExp : public Exp {
         : lhs(_lhs)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy AST::LOrExp::ast2ir();
+    IR::ExpTy AST::LOrExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct PutintStmt : public Stmt {

@@ -1,5 +1,6 @@
 #include "treeIR.hpp"
 #include <assert.h>
+#include "../util/utils.hpp"
 using namespace IR;
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
@@ -49,18 +50,14 @@ RelOp notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
             return RelOp::T_ule;
     }
 }
-static void doPatch(PatchList* tList, Temp_Label label) {
-    for (; tList; tList = tList->tail)
-        tList->head = label;
-}
-Cx IR::Tr_Exp::unCx(Tr_Exp* e) {
-    switch (e->kind) {
+Cx IR::Tr_Exp::unCx() {
+    switch (this->kind) {
         case Tr_ty::Tr_cx: {
-            return e->cx;
+            return this->cx;
         } break;
         case Tr_ty::Tr_ex: {
             Stm* stm =
-                new Cjump(RelOp::T_ne, e->ex, new ConstInt(0), NULL, NULL);
+                new Cjump(RelOp::T_ne, this->ex, new ConstInt(0), NULL, NULL);
             Cx cx;
             cx.stm = stm;
             cx.falses =
@@ -72,22 +69,22 @@ Cx IR::Tr_Exp::unCx(Tr_Exp* e) {
             assert(0);
     }
 }
-Exp* IR::Tr_Exp::unEx(Tr_Exp* e) {
-    if (e == 0)
+Exp* IR::Tr_Exp::unEx() {
+    if (this == 0)
         return 0;
-    switch (e->kind) {
+    switch (this->kind) {
         case Tr_ty::Tr_ex: {
-            return e->ex;
+            return this->ex;
         } break;
         case Tr_ty::Tr_cx: {
             Temp_Temp r = Temp_newtemp();
             Temp_Label t = Temp_newlabel(), f = Temp_newlabel();
-            doPatch(e->cx.trues, t);
-            doPatch(e->cx.falses, f);
+            doPatch(this->cx.trues, t);
+            doPatch(this->cx.falses, f);
             return new Eseq(
                 new Move(new Temp(r), new ConstInt(1)),
                 new Eseq(
-                    e->cx.stm,
+                    this->cx.stm,
                     new Eseq(new Label(f),
                              new Eseq(new Move(new Temp(r), new ConstInt(0)),
                                       new Eseq(new Label(t), new Temp(r))))));
@@ -96,14 +93,14 @@ Exp* IR::Tr_Exp::unEx(Tr_Exp* e) {
             assert(0);
     }
 }
-Stm* IR::Tr_Exp::unNx(Tr_Exp* exp) {
-    switch (exp->kind) {
+Stm* IR::Tr_Exp::unNx() {
+    switch (this->kind) {
         case Tr_ty::Tr_ex:
-            return new ExpStm(exp->ex);
+            return new ExpStm(this->ex);
         case Tr_ty::Tr_cx:
-            return new ExpStm(unEx(exp));
+            return new ExpStm(this->unEx());
         case Tr_ty::Tr_nx:
-            return exp->nx;
+            return this->nx;
     }
     assert(0);
 }

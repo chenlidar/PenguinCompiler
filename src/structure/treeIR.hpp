@@ -19,11 +19,7 @@ enum class binop {
     T_div,
     T_mod,
     T_and,
-    T_or,
-    T_lshift,
-    T_rshift,
-    T_arshift,
-    T_xor
+    T_or
 };
 enum class RelOp { T_eq, T_ne, T_lt, T_gt, T_le, T_ge, T_ult, T_ule, T_ugt, T_uge };
 RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
@@ -143,9 +139,9 @@ struct Tr_Exp {
     Tr_Exp(Stm* stm);
     Tr_Exp(PatchList* trues,PatchList* falses,Stm* stm);
     Tr_Exp(Exp* exp);
-    Exp* unEx(Tr_Exp* e);
-    Cx   unCx(Tr_Exp* e);
-    Stm* unNx(Tr_Exp* exp) ;
+    Exp* unEx();
+    Cx   unCx();
+    Stm* unNx() ;
 };
 class ExpTy {
 public:
