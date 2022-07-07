@@ -38,18 +38,52 @@ IR::ExpTy AST::Lval::ast2ir() {}
 IR::ExpTy AST::IntNumber::ast2ir() {
     auto exp = IR::Tr_Ex(new IR::ConstInt(value));
     return IR::ExpTy(exp, TY::intType());
-    // auto trexp=new IR::Tr_Exp();
-    // trexp->ex=
-    // return IR::ExpTy(new IR::ConstInt(value), TY::Type(0,
-    // TY::tyType::Ty_int));
 }
 IR::ExpTy AST::FloatNumber::ast2ir() {
-    // return IR::ExpTy(new IR::ConstFloat(), TY::Type(0,
-    // TY::tyType::Ty_float));
+    auto exp = IR::Tr_Ex(new IR::ConstFloat(constval.val.f));
+    return IR::ExpTy(exp, TY::floatType());
 }
-IR::ExpTy AST::UnaryExp::ast2ir() {}
+IR::ExpTy AST::UnaryExp::ast2ir() {
+    auto body = exp->ast2ir();
+    if (body.ty.kind != TY::tyType::Ty_float &&
+        body.ty.kind != TY::tyType::Ty_int) {
+        // err
+    }
+    IR::Exp* exp;
+    switch (op) {
+        case unaryop_t::ADD:
+            return body;
+        case unaryop_t::SUB:
+            exp = new IR::Binop(IR::binop::T_mul, new IR::ConstInt(-1),
+                                body.exp->ex);
+            return IR::ExpTy(IR::Tr_Ex(exp), body.ty);
+        case unaryop_t::NOT:
+            // FIXME
+            // return IR::ExpTy(IR::Tr_Ex(exp), body.ty);
+        default:
+            // err
+    }
+}
 IR::ExpTy AST::CallExp::ast2ir() {}
-IR::ExpTy AST::MulExp::ast2ir() {}
+IR::ExpTy AST::MulExp::ast2ir() {
+    auto lf = lhs->ast2ir(), rf = rhs->ast2ir();
+    auto retType = binopResType(lf.ty, rf.ty);
+    IR::Exp* exp;
+    switch (op) {
+        case mul_t::MULT:
+            exp = new IR::Binop(IR::binop::T_mul, lf.exp->ex, rf.exp->ex);
+            return IR::ExpTy(IR::Tr_Ex(exp), retType);
+        case mul_t::DIV:
+            exp = new IR::Binop(IR::binop::T_div, lf.exp->ex, rf.exp->ex);
+            return IR::ExpTy(IR::Tr_Ex(exp), retType);
+        case mul_t::REM:
+            if (retType.kind == TY::floatType().kind) {
+                // err
+            }
+            exp = new IR::Binop(IR::binop::T_mod, lf.exp->ex, rf.exp->ex);
+            return IR::ExpTy(IR::Tr_Ex(exp), retType);
+    }
+}
 IR::ExpTy AST::AddExp::ast2ir() {}
 IR::ExpTy AST::RelExp::ast2ir() {}
 IR::ExpTy AST::EqExp::ast2ir() {}
