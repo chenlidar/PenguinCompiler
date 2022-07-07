@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "treeIR.hpp"
+#include "../util/table.hpp"
 
 namespace AST {
 
@@ -179,7 +180,7 @@ struct CompUnitList {
     int lineno;
 
     CompUnitList(int _lineno) : lineno(_lineno) {}
-    IR::StmList* ast2ir();
+    IR::StmList* ast2ir(Table::Stable<> venv);
 };
 
 /* CompUnit -> FuncDef | Decl */
