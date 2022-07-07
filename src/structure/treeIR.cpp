@@ -53,7 +53,7 @@ static void doPatch(PatchList* tList, Temp_Label label) {
     for (; tList; tList = tList->tail)
         tList->head = label;
 }
-Cx IR::unCx(Tr_Exp* e) {
+Cx IR::Tr_Exp::unCx(Tr_Exp* e) {
     switch (e->kind) {
         case Tr_ty::Tr_cx: {
             return e->cx;
@@ -72,7 +72,7 @@ Cx IR::unCx(Tr_Exp* e) {
             assert(0);
     }
 }
-Exp* IR::unEx(Tr_Exp* e) {
+Exp* IR::Tr_Exp::unEx(Tr_Exp* e) {
     if (e == 0)
         return 0;
     switch (e->kind) {
@@ -96,7 +96,7 @@ Exp* IR::unEx(Tr_Exp* e) {
             assert(0);
     }
 }
-Stm* IR::unNx(Tr_Exp* exp) {
+Stm* IR::Tr_Exp::unNx(Tr_Exp* exp) {
     switch (exp->kind) {
         case Tr_ty::Tr_ex:
             return new ExpStm(exp->ex);
@@ -108,25 +108,19 @@ Stm* IR::unNx(Tr_Exp* exp) {
     assert(0);
 }
 
-Tr_Exp* IR::Tr_Ex(Exp* ex) {
-    Tr_Exp* texp = new Tr_Exp();
-    texp->kind = Tr_ty::Tr_ex;
-    texp->ex = ex;
-    return texp;
+IR::Tr_Exp::Tr_Exp(Exp* ex) {
+    this->kind = Tr_ty::Tr_ex;
+    this->ex = ex;
 }
 
-Tr_Exp* IR::Tr_Cx(PatchList* trues, PatchList* falses, Stm* stm) {
-    Tr_Exp* texp = new Tr_Exp();
-    texp->kind = Tr_ty::Tr_cx;
-    texp->cx.trues = trues;
-    texp->cx.falses = falses;
-    texp->cx.stm = stm;
-    return texp;
+IR::Tr_Exp::Tr_Exp(PatchList* trues, PatchList* falses, Stm* stm) {
+    this->kind = Tr_ty::Tr_cx;
+    this->cx.trues = trues;
+    this->cx.falses = falses;
+    this->cx.stm = stm;
 }
 
-Tr_Exp* IR::Tr_Nx(Stm* stm) {
-    Tr_Exp* tmp = new Tr_Exp();
-    tmp->kind = Tr_ty::Tr_nx;
-    tmp->nx = stm;
-    return tmp;
+IR::Tr_Exp::Tr_Exp(Stm* stm) {
+    this->kind = Tr_ty::Tr_nx;
+    this->nx = stm;
 }

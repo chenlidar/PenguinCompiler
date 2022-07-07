@@ -140,15 +140,21 @@ struct Tr_Exp {
     Exp* ex;
     Stm* nx;
     Cx cx;
-    Tr_Exp(){}
+    Tr_Exp(Stm* stm);
+    Tr_Exp(PatchList* trues,PatchList* falses,Stm* stm);
+    Tr_Exp(Exp* exp);
+    Exp* unEx(Tr_Exp* e);
+    Cx   unCx(Tr_Exp* e);
+    Stm* unNx(Tr_Exp* exp) ;
 };
 class ExpTy {
 public:
     Tr_Exp* exp;
-    TY::Type ty;
-    ExpTy(Tr_Exp* _exp, TY::Type _ty)
+    TY::Type* ty;
+    ExpTy(Tr_Exp* _exp, TY::Type *_ty)
         : exp(_exp)
         , ty(_ty) {}
+    ExpTy(){}
 };
 class StmList {
 public:
@@ -159,13 +165,5 @@ public:
         , tail(_tail) {}
 };
 typedef std::vector<Exp*> ExpList;
-
-Exp* unEx(Tr_Exp* e);
-Cx   unCx(Tr_Exp* e);
-Stm* unNx(Tr_Exp* exp) ;
-
-Tr_Exp* Tr_Nx(Stm* stm);
-Tr_Exp* Tr_Cx(PatchList* trues,PatchList* falses,Stm* stm);
-Tr_Exp* Tr_Ex(Exp* exp);
 }  // namespace IR
 #endif

@@ -19,15 +19,15 @@ static IR::Stm* seq(IR::Stm* x, IR::Stm* y) {
         return x;
     return new IR::Seq(x, y);
 }
-static TY::Type binopResType(const TY::Type& a, const TY::Type& b) {
-    if (a.kind != TY::tyType::Ty_float && a.kind != TY::tyType::Ty_int) {
+static TY::Type* binopResType(const TY::Type* a, const TY::Type* b) {
+    if (a->kind != TY::tyType::Ty_float && a->kind != TY::tyType::Ty_int) {
         // err
     }
-    if (b.kind != TY::tyType::Ty_float && b.kind != TY::tyType::Ty_int) {
+    if (b->kind != TY::tyType::Ty_float && b->kind != TY::tyType::Ty_int) {
         // err
     }
-    return (b.kind == TY::tyType::Ty_float || a.kind != TY::tyType::Ty_float)
-               ? TY::floatType()
-               : TY::intType();
+    return (b->kind == TY::tyType::Ty_float || a->kind != TY::tyType::Ty_float)
+               ? TY::floatType(0)
+               : TY::intType(0);
 }
 #endif
