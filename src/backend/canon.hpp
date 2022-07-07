@@ -5,6 +5,7 @@
 #include "treeIR.hpp"
 #include "../util/temptemp.hpp"
 #include "../util/templabel.hpp"
+#include "../util/table.hpp"
 using namespace IR;
 namespace CANON {
 struct StmExp {

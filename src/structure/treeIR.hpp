@@ -150,7 +150,6 @@ public:
         : exp(_exp)
         , ty(_ty) {}
 };
-typedef std::list<Stm*> StmList;
 class StmList {
 public:
     Stm* stm;

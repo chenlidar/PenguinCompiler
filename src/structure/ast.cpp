@@ -3,9 +3,11 @@
 #include "treeIR.hpp"
 
 IR::StmList* AST::CompUnitList::ast2ir() {
-    auto ret = new IR::StmList();
+    IR::StmList *ret,*tail;
+    ret=tail=NULL;
     for (const auto& it : list) {
-        ret->push_back(it->ast2ir());
+        if(ret==NULL) ret=tail=new IR::StmList(it->ast2ir(),NULL);
+        else tail=tail->tail=new IR::StmList(it->ast2ir(),NULL);
     }
     return ret;
 }
