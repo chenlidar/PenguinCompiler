@@ -38,34 +38,59 @@ enum class RelOp {
     T_ugt,
     T_uge
 };
+
+enum class expType {
+    constint,
+    constfloat,
+    binop,
+    fbinop,
+    temp,
+    mem,
+    eseq,
+    name,
+    call
+};
+enum class stmType { seq, label, jump, cjump, move, exp };
+
 RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
 RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
 class Stm {
    public:
+    stmType kind;
     virtual ~Stm();
     virtual void ir2asm(ASM::InstrList* ls);
 };
 class Exp {
    public:
+    expType kind;
     virtual ~Exp();
     virtual void ir2asm(ASM::InstrList* ls);
 };
 class Seq : public Stm {
    public:
     Stm *left, *right;
-    Seq(Stm* lf, Stm* rg) { left = lf, right = rg; }
+    Seq(Stm* lf, Stm* rg) {
+        left = lf, right = rg;
+        kind = stmType::seq;
+    }
 };
 class Label : public Stm {
    public:
     string label;
-    Label(string lb) { label = lb; }
+    Label(string lb) {
+        label = lb;
+        kind = stmType::label;
+    }
     void ir2asm(ASM::InstrList* ls);
 };
 class Jump : public Stm {
    public:
     Exp* exp;
     vector<string> jumps;
-    Jump(Exp* ep, vector<string> s) { exp = ep, jumps = s; }
+    Jump(Exp* ep, vector<string> s) {
+        exp = ep, jumps = s;
+        kind = stmType::jump;
+    }
     void ir2asm(ASM::InstrList* ls);
 };
 class Cjump : public Stm {
@@ -75,18 +100,25 @@ class Cjump : public Stm {
     Temp_Label trueLabel, falseLabel;
     Cjump(RelOp p, Exp* lf, Exp* rg, string tr, string fs) {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
+        kind = stmType::cjump;
     }
     void ir2asm(ASM::InstrList* ls);
 };
 class Move : public Stm {
    public:
     Exp *src, *dst;
-    Move(Exp* ds, Exp* sr) { src = sr, dst = ds; }
+    Move(Exp* ds, Exp* sr) {
+        src = sr, dst = ds;
+        kind = stmType::move;
+    }
 };
 class ExpStm : public Stm {
    public:
     Exp* exp;
-    ExpStm(Exp* e) { exp = e; }
+    ExpStm(Exp* e) {
+        exp = e;
+        kind = stmType::exp;
+    }
 };
 class Const : public Exp {
    public:
@@ -95,47 +127,70 @@ class Const : public Exp {
 class ConstInt : public Const {
    public:
     int val;
-    ConstInt(int x) { val = x; }
+    ConstInt(int x) {
+        val = x;
+        kind = expType::constint;
+    }
 };
 class ConstFloat : public Const {
    public:
     float val;
-    ConstFloat(float f) { val = f; }
+    ConstFloat(float f) {
+        val = f;
+        kind = expType::constfloat;
+    }
 };
 
 class Binop : public Exp {
    public:
     Exp *left, *right;
     binop op;
-    Binop(binop o, Exp* lf, Exp* rg) { op = o, left = lf, right = rg; }
+    Binop(binop o, Exp* lf, Exp* rg) {
+        op = o, left = lf, kind = expType::binop, right = rg;
+    }
 };
 class Temp : public Exp {
    public:
     int tempid;
-    Temp(int id) { tempid = id; }
+    Temp(int id) {
+        tempid = id;
+        kind = expType::temp;
+    }
 };
 class Mem : public Exp {
    public:
     Exp* mem;
-    Mem(Exp* e) { mem = e; }
+    Mem(Exp* e) {
+        mem = e;
+        kind = expType::mem;
+    }
 };
 class Eseq : public Exp {
    public:
     Stm* stm;
     Exp* exp;
-    Eseq(Stm* s, Exp* e) { stm = s, exp = e; }
+    Eseq(Stm* s, Exp* e) {
+        stm = s, exp = e;
+        kind = expType::eseq;
+    }
 };
 // TBD TODO:
 class Name : public Exp {
    public:
     string name;
-    Name(string s) { name = s; }
+    Name(string s) {
+        name = s;
+        kind = expType::name;
+    }
 };
 class Call : public Exp {
    public:
     Exp* fun;
     vector<Exp*> args;
-    Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
+    Call(Exp* fu, vector<Exp*> ar) {
+        args = ar, fun = fu;
+        kind = expType::call;
+    }
 };
 struct PatchList {
     Temp_Label head;
