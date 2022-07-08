@@ -230,8 +230,8 @@ struct ConstDef {
                 }
         } */
     }
-    void binder(btype_t btype, Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                Temp_Label name);
+    IR::Stm* ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
+                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 struct VarDecl : public Decl {
     btype_t btype;
@@ -243,7 +243,7 @@ struct VarDecl : public Decl {
         , defs(_defs)
         , lineno(_lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
+                    Temp_Label name);
 };
 
 struct VarDefList : public NullableList<VarDef*> {
@@ -253,8 +253,6 @@ struct VarDefList : public NullableList<VarDef*> {
         : NullableList(_lineno) {}
     VarDefList(VarDef* x, int _lineno)
         : NullableList(x, _lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct VarDef {
@@ -268,8 +266,8 @@ struct VarDef {
         , index(_index)
         , initval(_initval)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
+                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct ArrayIndex : NullableList<Exp*> {
@@ -285,10 +283,14 @@ struct InitVal {
     virtual ~InitVal() = default;
     virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                              Temp_Label name);
+    virtual IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+                               Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct ArrayInit : public InitVal {
     virtual ~ArrayInit() = default;
+    virtual IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+                               Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct InitValList : public ArrayInit, NullableList<InitVal*> {
@@ -298,6 +300,8 @@ struct InitValList : public ArrayInit, NullableList<InitVal*> {
         : NullableList(_lineno) {}
     InitValList(InitVal* x, int _lineno)
         : NullableList(x, _lineno) {}
+    IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct FuncDef : public CompUnit {
@@ -443,6 +447,8 @@ struct Exp : InitVal {
     virtual ~Exp() = default;
     virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                              Temp_Label name);
+    IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
 struct IdExp : public Exp {
