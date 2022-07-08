@@ -55,7 +55,35 @@ IR::Stm* AST::BreakStmt::ast2ir() {}
 IR::Stm* AST::ContinueStmt::ast2ir() {}
 IR::Stm* AST::ReturnStmt::ast2ir() {}
 
-IR::ExpTy AST::Lval::ast2ir() {}
+IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                            Temp_Label name) {
+    std::string idname = *this->id->str;
+    assert(venv->exist(idname));
+    TY::Entry* exp = venv->look(idname);
+    IR::Exp* idIR;
+    if (exp->kind == TY::tyEntry::Ty_global) {
+        idIR = new IR::Name(static_cast<TY::GloVar*>(exp)->label);
+    } else if (exp->kind == TY::tyEntry::Ty_local) {
+        idIR = new IR::Temp(static_cast<TY::LocVar*>(exp)->temp);
+    }
+
+    if (this->arrayindex) {  // array
+        TY::Type* ty = exp->ty;
+        IR::Exp* e = new IR::ConstInt(0);
+        for (AST::Exp* it : this->arrayindex->list) {
+            IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+            int dim = ty->dim;
+            e = new IR::Binop(IR::binop::T_plus,
+                              new IR::Binop(IR::binop::T_mul, new IR::ConstInt(dim), e),
+                              expty.exp->unEx());
+            ty = ty->tp;
+        }
+        return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(new IR::Binop(IR::binop::T_plus, idIR, e))),
+                         ty);
+    } else {  // not array
+        return IR::ExpTy(new IR::Tr_Exp(idIR), exp->ty);
+    }
+}
 IR::ExpTy AST::IntNumber::ast2ir() {
     auto exp = new IR::Tr_Exp(new IR::ConstInt(value));
     return IR::ExpTy(exp, TY::intType(new int(this->value)));

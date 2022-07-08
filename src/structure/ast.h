@@ -473,7 +473,8 @@ struct Lval : public PrimaryExp {
         /* Lval exists in AssignStmt and should not be const val */
         constval = ConstVal(nullptr);
     }
-    IR::ExpTy AST::Lval::ast2ir();
+    IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                Temp_Label name);
 };
 
 struct Number : public PrimaryExp {

@@ -9,11 +9,13 @@ public:
     Type* tp;
     std::vector<Type*> param;
     tyType kind;
+    int dim;
     int* value;
     //FIXME
     // int arity;
     Type(){}
     Type(Type* t, tyType k, int* _value) { tp = t, kind = k; value=_value;}
+    Type(Type* t, tyType k, int* _value,int _dim) { tp = t, kind = k; value=_value;dim=_dim;}
     Type(Type* t, tyType k, std::vector<Type*> _param,Type* rtn) {
         tp = t, kind = k;
         param = _param;
@@ -24,7 +26,7 @@ public:
 Type* intType(int* val) { return new TY::Type(0, TY::tyType::Ty_int, val); }
     //FIXME
 Type* floatType(int* val) { return new TY::Type(0, TY::tyType::Ty_float, val); }
-Type* arrayType(Type* ty) { return new TY::Type(ty, TY::tyType::Ty_array, NULL); }
+Type* arrayType(Type* ty,int _dim) { return new TY::Type(ty, TY::tyType::Ty_array, NULL,_dim); }
 Type* funcType(Type* rtn, std::vector<Type*> _param) {
     return new TY::Type(0, TY::tyType::Ty_func, _param,rtn);
 }
