@@ -21,7 +21,7 @@ IR::Stm* seq(IR::Stm* x, IR::Stm* y) {
 }
 void doPatch(IR::PatchList* tList, Temp_Label label) {
     for (; tList; tList = tList->tail)
-        tList->head = label;
+        *(tList->head) = label;
 }
 IR::PatchList* joinPatch(IR::PatchList* first,IR::PatchList* second) {
     if(!first)return second;
@@ -36,31 +36,31 @@ TY::Type* binopResType(const TY::Type* a, const TY::Type* b,IR::binop op) {
     switch(op){
         case IR::binop::T_plus:{
             if(a->kind==TY::tyType::Ty_int&&b->kind==TY::tyType::Ty_int){
-                if(a->value&&b->value)return TY::intType(new int(*a->value+*b->value));
+                if(a->value&&b->value)return TY::intType(new int(*a->value+*b->value),false);
             }
             else assert(0);//FIXME
         }break;
         case IR::binop::T_minus:{
             if(a->kind==TY::tyType::Ty_int&&b->kind==TY::tyType::Ty_int){
-                if(a->value&&b->value)return TY::intType(new int(*a->value-*b->value));
+                if(a->value&&b->value)return TY::intType(new int(*a->value-*b->value),false);
             }
             else assert(0);//FIXME
         }break;
         case IR::binop::T_mul:{
             if(a->kind==TY::tyType::Ty_int&&b->kind==TY::tyType::Ty_int){
-                if(a->value&&b->value)return TY::intType(new int(*a->value* *b->value));
+                if(a->value&&b->value)return TY::intType(new int(*a->value* *b->value),false);
             }
             else assert(0);//FIXME
         }break;
         case IR::binop::T_div:{
             if(a->kind==TY::tyType::Ty_int&&b->kind==TY::tyType::Ty_int){
-                if(a->value&&b->value)return TY::intType(new int(*a->value/ *b->value));
+                if(a->value&&b->value)return TY::intType(new int(*a->value/ *b->value),false);
             }
             else assert(0);//FIXME
         }break;
         case IR::binop::T_mod:{
             assert(a->kind==TY::tyType::Ty_int&&b->kind==TY::tyType::Ty_int);
-            if(a->value&&b->value)return TY::intType(new int(*a->value% *b->value));
+            if(a->value&&b->value)return TY::intType(new int(*a->value% *b->value),false);
         }break;
         default:assert(0);
     }

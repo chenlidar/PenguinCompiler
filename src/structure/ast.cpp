@@ -90,10 +90,10 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
         } else {
             if (!index) {  // int
                 IR::ExpTy expty = this->initval->ast2ir(venv, fenv, name);
-                Temp_Temp tmp=Temp_newtemp();
+                Temp_Temp tmp = Temp_newtemp();
                 venv->enter(*this->id->str,
                             new TY::LocVar(TY::intType(expty.ty->value, false), tmp));
-                return new IR::Move(new IR::Temp(tmp),expty.exp->unEx());
+                return new IR::Move(new IR::Temp(tmp), expty.exp->unEx());
             } else {  // int []
                 // get array index
                 int offset = 0;
@@ -106,11 +106,14 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 // head->value = new int[head->arraysize];
                 //
                 Temp_Temp tmp = Temp_newtemp();
-                IR::Stm* cat_stm = new IR::Move(new IR::Temp(tmp),new IR::Call(new IR::Name("malloc"),IR::ExpList(1,new IR::ConstInt(head->arraysize))));
+                IR::Stm* cat_stm = new IR::Move(
+                    new IR::Temp(tmp),
+                    new IR::Call(new IR::Name("malloc"),
+                                 IR::ExpList(1, new IR::ConstInt(head->arraysize))));
                 IR::ExpTy expty
                     = this->initval->calArray(new IR::Temp(tmp), head, venv, fenv, name);
                 venv->enter(*this->id->str, new TY::LocVar(expty.ty, tmp));
-                return seq(cat_stm,new IR::ExpStm(expty.exp->unEx()));
+                return seq(cat_stm, new IR::ExpStm(expty.exp->unEx()));
             }
         }
 
@@ -127,18 +130,55 @@ IR::Stm* AST::Block::ast2ir() {
     // for (const auto& p : ls) nowseq = seq(nowseq, p->ast2ir());
     // return nowseq;
 }
-IR::Stm* AST::AssignStmt::ast2ir() {
-    // TODO
+IR::Stm* AST::AssignStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+    IR::ExpTy l = this->lval->ast2ir(venv, fenv, name);
+    IR::ExpTy r = this->exp->ast2ir(venv, fenv, name);
+    IR::Exp* lexp = l.exp->unEx();
+    IR::Exp* rexp = r.exp->unEx();
+    return new IR::Move(lexp, rexp);
 }
-IR::Stm* AST::ExpStmt::ast2ir() {
-    // TODO
+IR::Stm* AST::ExpStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                              Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+    return new IR::ExpStm(this->exp->ast2ir(venv, fenv, name).exp->unEx());
 }
-IR::Stm* AST::IfStmt::ast2ir() {
-    // TODO
+IR::Stm* AST::IfStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                             Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+    IR::Cx ct = this->exp->ast2ir(venv, fenv, name).exp->unCx();
+    Temp_Label tlabel = Temp_newlabel(), flabel = Temp_newlabel(), done = Temp_newlabel();
+    doPatch(ct.trues, tlabel);
+    doPatch(ct.falses, flabel);
+    return seq(ct.stm,
+               seq(new IR::Label(tlabel),
+                   seq(this->if_part->ast2ir(venv, fenv, brelabel, conlabel, name),
+                       seq(new IR::Jump(new IR::Name(done), Temp_LabelList(1, done)),
+                           seq(new IR::Label(flabel),
+                               seq(this->else_part->ast2ir(venv, fenv, brelabel, conlabel, name),
+                                   new IR::Label(done)))))));
 }
-IR::Stm* AST::BreakStmt::ast2ir() {}
-IR::Stm* AST::ContinueStmt::ast2ir() {}
-IR::Stm* AST::ReturnStmt::ast2ir() {}
+IR::Stm* AST::WhileStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+    IR::Cx ct = this->exp->ast2ir(venv, fenv, name).exp->unCx();
+    Temp_Label begin = Temp_newlabel(), test = Temp_newlabel(), done = Temp_newlabel();
+    doPatch(ct.trues, begin);
+    doPatch(ct.falses, done);
+    return seq(new IR::Label(test),
+               seq(ct.stm, seq(new IR::Label(begin),
+                               seq(this->loop->ast2ir(venv, fenv, done, test, name),
+                                   seq(new IR::Jump(new IR::Name(test), Temp_LabelList(1, test)),
+                                       new IR::Label(done))))));
+}
+IR::Stm* AST::BreakStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+    return new IR::Jump(new IR::Name(brelabel), Temp_LabelList(1, brelabel));
+}
+IR::Stm* AST::ContinueStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
+                                   Temp_Label conlabel, Temp_Label name) {
+    return new IR::Jump(new IR::Name(conlabel), Temp_LabelList(1, conlabel));
+}
+IR::Stm* AST::ReturnStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {}
 IR::ExpTy AST::Exp::calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                              Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
     IR::ExpTy expty = this->ast2ir(venv, fenv, name);
@@ -287,8 +327,8 @@ IR::ExpTy AST::RelExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
     IR::ExpTy lExpTy = this->lhs->ast2ir(venv, fenv, name);
     IR::ExpTy rExpTy = this->rhs->ast2ir(venv, fenv, name);
     IR::Cjump* stm = new IR::Cjump(bop, lExpTy.exp->unEx(), rExpTy.exp->unEx(), NULL, NULL);
-    IR::PatchList* trues = new IR::PatchList(stm->trueLabel, NULL);
-    IR::PatchList* falses = new IR::PatchList(stm->falseLabel, NULL);
+    IR::PatchList* trues = new IR::PatchList(&stm->trueLabel, NULL);
+    IR::PatchList* falses = new IR::PatchList(&stm->falseLabel, NULL);
     return IR::ExpTy(new IR::Tr_Exp(trues, falses, stm), t);
 }
 IR::ExpTy AST::EqExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
@@ -303,8 +343,8 @@ IR::ExpTy AST::EqExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::
     IR::ExpTy lExpTy = this->lhs->ast2ir(venv, fenv, name);
     IR::ExpTy rExpTy = this->rhs->ast2ir(venv, fenv, name);
     IR::Cjump* stm = new IR::Cjump(bop, lExpTy.exp->unEx(), rExpTy.exp->unEx(), NULL, NULL);
-    IR::PatchList* trues = new IR::PatchList(stm->trueLabel, NULL);
-    IR::PatchList* falses = new IR::PatchList(stm->falseLabel, NULL);
+    IR::PatchList* trues = new IR::PatchList(&stm->trueLabel, NULL);
+    IR::PatchList* falses = new IR::PatchList(&stm->falseLabel, NULL);
     return IR::ExpTy(new IR::Tr_Exp(trues, falses, stm), t);
 }
 IR::ExpTy AST::LAndExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
@@ -352,16 +392,34 @@ IR::ExpTy AST::IdExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::
     // assume that array is not in "IdExp"
     IR::ExpTy(new IR::Tr_Exp(exp), t);
 }
-IR::Stm* AST::PutintStmt::ast2ir() {}
-IR::Stm* AST::PutchStmt::ast2ir() {}
-IR::Stm* AST::PutarrayStmt::ast2ir() {}
-IR::Stm* AST::PutfloatStmt::ast2ir() {}
-IR::Stm* AST::PutfarrayStmt::ast2ir() {}
-IR::Stm* AST::PutfStmt::ast2ir() {}
-IR::Stm* AST::StarttimeStmt::ast2ir() {}
-IR::Stm* AST::StoptimeStmt::ast2ir() {}
-IR::ExpTy AST::GetintExp::ast2ir() {}
-IR::ExpTy AST::GetchExp::ast2ir() {}
-IR::ExpTy AST::GetfloatExp::ast2ir() {}
-IR::ExpTy AST::GetarrayExp::ast2ir() {}
-IR::ExpTy AST::GetfarrayExp::ast2ir() {}
+IR::Stm* AST::PutintStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::PutchStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::PutarrayStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
+                                   Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::PutfloatStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
+                                   Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::PutfarrayStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
+                                    Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::PutfStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                               Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::StarttimeStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
+                                    Temp_Label conlabel, Temp_Label name) {}
+IR::Stm* AST::StoptimeStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
+                                   Temp_Label conlabel, Temp_Label name) {}
+IR::ExpTy AST::GetintExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                 Temp_Label name) {}
+IR::ExpTy AST::GetchExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                                Temp_Label name) {}
+IR::ExpTy AST::GetfloatExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {}
+IR::ExpTy AST::GetarrayExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {}
+IR::ExpTy AST::GetfarrayExp::ast2ir(Table::Stable<TY::Entry*>* venv,
+                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {}

@@ -117,9 +117,9 @@ public:
     Call(Exp* fu, vector<Exp*> ar) { args = ar, fun = fu; }
 };
 struct PatchList {
-    Temp_Label head;
+    Temp_Label* head;
     PatchList* tail;
-    PatchList(Temp_Label _head,PatchList* _tail):head(_head),tail(_tail){}
+    PatchList(Temp_Label* _head,PatchList* _tail):head(_head),tail(_tail){}
 };
 struct Cx {
     PatchList* trues;
