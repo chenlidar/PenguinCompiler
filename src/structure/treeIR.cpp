@@ -61,8 +61,8 @@ Cx IR::Tr_Exp::unCx() {
             Cx cx;
             cx.stm = stm;
             cx.falses =
-                new PatchList(static_cast<Cjump*>(stm)->falseLabel, NULL);
-            cx.trues = new PatchList(static_cast<Cjump*>(stm)->trueLabel, NULL);
+                new PatchList(&static_cast<Cjump*>(stm)->falseLabel, NULL);
+            cx.trues = new PatchList(&static_cast<Cjump*>(stm)->trueLabel, NULL);
             return cx;
         } break;
         default:

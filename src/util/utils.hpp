@@ -65,4 +65,18 @@ TY::Type* binopResType(const TY::Type* a, const TY::Type* b,IR::binop op) {
         default:assert(0);
     }
 }
+TY::Type* typeAst2ir(AST::btype_t btype){
+    switch(btype){
+        case AST::btype_t::INT:{
+            return TY::intType(new int(0),false);
+        }break;
+        case AST::btype_t::FLOAT:{
+            return TY::floatType(new int(0),false);
+        }break;
+        case AST::btype_t::VOID:{
+            return TY::voidType();
+        }break;
+        default:assert(0);
+    }
+}
 #endif

@@ -317,7 +317,8 @@ struct FuncDef : public CompUnit {
         , parameters(_parameters)
         , block(_block)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir();
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct Parameters : public NullableList<Parameter*> {
@@ -356,7 +357,8 @@ struct Block : public Stmt {
     Block(BlockItemList* _items, int _lineno)
         : items(_items)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir();
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct BlockItemList : public NullableList<BlockItem*> {

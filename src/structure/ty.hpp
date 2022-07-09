@@ -29,6 +29,7 @@ public:
 };
 
 Type* intType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_int, val,_isconst); }
+Type* voidType() { return new TY::Type(0, TY::tyType::Ty_void, NULL,false); }
     //FIXME
 Type* floatType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_float, val,_isconst); }
 Type* arrayType(Type* ty,int _dim,bool isconst) { return new TY::Type(ty, TY::tyType::Ty_array, NULL,_dim); }
