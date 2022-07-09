@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <list>
-#include "treeIR.hpp"
+#include "../structure/treeIR.hpp"
 #include "../util/temptemp.hpp"
 #include "../util/templabel.hpp"
 #include "../util/table.hpp"
