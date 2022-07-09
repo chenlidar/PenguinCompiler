@@ -74,8 +74,6 @@ Cx IR::Tr_Exp::unCx() {
     }
 }
 Exp* IR::Tr_Exp::unEx() {
-    if (this == 0)
-        return 0;
     switch (this->kind) {
         case Tr_ty::Tr_ex: {
             return this->ex;
@@ -130,14 +128,14 @@ IR::Tr_Exp::Tr_Exp(Stm* stm) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //   TILE
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Label::ir2asm(ASM::InstrList* ls) {
-    ls->push_back(ASM::Label(label));
-}
-void Jump::ir2asm(ASM::InstrList* ls) {
-    auto tname = static_cast<IR::Name*>(exp);
-    ls->push_back(ASM::Oper(string("b ") + tname->name, vector<int>(),
-                            vector<int>(), jumps));
-}
+// void Label::ir2asm(ASM::InstrList* ls) {
+//     ls->push_back(ASM::Label(label));
+// }
+// void Jump::ir2asm(ASM::InstrList* ls) {
+//     auto tname = static_cast<IR::Name*>(exp);
+//     ls->push_back(ASM::Oper(string("b ") + tname->name, vector<int>(),
+//                             vector<int>(), jumps));
+// }
 // void Cjump::ir2asm(ASM::InstrList* ls) {
 //     // FIXME
 //     do {

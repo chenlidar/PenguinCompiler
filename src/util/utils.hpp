@@ -2,35 +2,36 @@
 #define __UTILS
 #include "../structure/treeIR.hpp"
 #include "../structure/ty.hpp"
-inline IR::Stm* nopStm() {
+#include "../structure/ast.h"
+static inline IR::Stm* nopStm() {
     return (new IR::ExpStm(new IR::ConstInt(0)));
 }
-bool isNop(IR::Stm* x) {
+static bool isNop(IR::Stm* x) {
     return typeid(*x) == typeid(IR::ExpStm) &&
            (typeid(*static_cast<IR::ExpStm*>(x)->exp) == typeid(IR::ConstInt) ||
             typeid(*static_cast<IR::ExpStm*>(x)->exp) ==
                 typeid(IR::ConstFloat));
 }
 
-IR::Stm* seq(IR::Stm* x, IR::Stm* y) {
+static IR::Stm* seq(IR::Stm* x, IR::Stm* y) {
     if (isNop(x))
         return y;
     if (isNop(y))
         return x;
     return new IR::Seq(x, y);
 }
-void doPatch(IR::PatchList* tList, Temp_Label label) {
+static void doPatch(IR::PatchList* tList, Temp_Label label) {
     for (; tList; tList = tList->tail)
         *(tList->head) = label;
 }
-IR::PatchList* joinPatch(IR::PatchList* first,IR::PatchList* second) {
+static IR::PatchList* joinPatch(IR::PatchList* first,IR::PatchList* second) {
     if(!first)return second;
 	IR::PatchList* tmp=first;
     for (;tmp->tail;tmp=tmp->tail);
     tmp->tail=second;
     return first;
 }
-TY::Type* binopResType(const TY::Type* a, const TY::Type* b,IR::binop op) {
+static TY::Type* binopResType(const TY::Type* a, const TY::Type* b,IR::binop op) {
     assert(a->kind==TY::tyType::Ty_float||a->kind==TY::tyType::Ty_int);
     assert(b->kind==TY::tyType::Ty_float||b->kind==TY::tyType::Ty_int);
     switch(op){
@@ -64,8 +65,10 @@ TY::Type* binopResType(const TY::Type* a, const TY::Type* b,IR::binop op) {
         }break;
         default:assert(0);
     }
+    assert(0);
+    return NULL;
 }
-TY::Type* typeAst2ir(AST::btype_t btype){
+static TY::Type* typeAst2ir(AST::btype_t btype){
     switch(btype){
         case AST::btype_t::INT:{
             return TY::intType(new int(0),false);

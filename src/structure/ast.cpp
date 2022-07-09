@@ -8,6 +8,7 @@ IR::StmList* AST::CompUnitList::ast2ir(Table::Stable<TY::Entry*>* venv,
                                        Table::Stable<TY::EnFunc*>* fenv) {
     IR::StmList *ret, *tail;
     ret = tail = NULL;
+    assert(list.size());
     for (const auto& it : list) {
         if (ret == NULL)
             ret = tail = new IR::StmList(it->ast2ir(venv, fenv, "", "", ""), NULL);
@@ -159,7 +160,7 @@ IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
             TY::Type* head = TY::intType(NULL, false);
             for (int i = (int)(it->arrayindex->list.size()) - 1; i >= 0; i--) {
                 AST::Exp* exp = it->arrayindex->list[i];
-                head = TY::arrayType(head, NULL, false);
+                head = TY::arrayType(head, 0, false);
             }
             head->value = new int[head->arraysize];
             if (it->arrayindex == NULL) ty->param.push_back(head);
@@ -247,7 +248,7 @@ IR::ExpTy AST::Exp::calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entr
 }
 IR::ExpTy AST::InitValList::calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                                      Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
-    ty->value == new int[ty->arraysize];
+    ty->value = new int[ty->arraysize];
     int doff = 0;
     IR::Stm* cat_stm = nopStm();
     for (const auto& it : this->list) {
@@ -449,7 +450,7 @@ IR::ExpTy AST::IdExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::
         exp = new IR::Temp(static_cast<TY::LocVar*>(entry)->temp);
     }
     // assume that array is not in "IdExp"
-    IR::ExpTy(new IR::Tr_Exp(exp), t);
+    return IR::ExpTy(new IR::Tr_Exp(exp), t);
 }
 IR::Stm* AST::PutintStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                  Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {

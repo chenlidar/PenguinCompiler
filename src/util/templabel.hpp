@@ -16,7 +16,7 @@ class labelManager {
    private:
     int labelno;
 };
-
+std::string Temp_newlabel();
 typedef std::string Temp_Label;
 typedef std::vector<Temp_Label> Temp_LabelList; 
 #endif

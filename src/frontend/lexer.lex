@@ -10,7 +10,7 @@
 	int get8(char *, int);
 	int get16(char *, int);
 
-	extern int yylen;
+	extern int yyleng;
 
 %}
 
@@ -73,17 +73,17 @@ stoptime	{ return STOPTIME; }
 }
 
 0[0-7]+ {
-	yylval.token = get8(yytext, yylen);
+	yylval.token = get8(yytext, yyleng);
 	return INTNUMBER;
 }
 
 0[xX][0-9a-fA-F]+ {
-	yylval.token = get16(yytext, yylen);
+	yylval.token = get16(yytext, yyleng);
 	return INTNUMBER;
 }
 
 [1-9][0-9]* {
-	yylval.token = get10(yytext, yylen);
+	yylval.token = get10(yytext, yyleng);
 	return INTNUMBER;
 }
 

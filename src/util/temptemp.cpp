@@ -1,5 +1,5 @@
 #include"singleton.hpp"
 #include"temptemp.hpp"
 int Temp_newtemp() {
-    Singleton::instance().TempManager.newtemp();
+    return Singleton::instance().TempManager.newtemp();
 }

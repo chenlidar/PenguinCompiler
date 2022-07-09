@@ -53,14 +53,14 @@ RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
 class Stm {
    public:
     stmType kind;
-    virtual ~Stm();
-    virtual void ir2asm(ASM::InstrList* ls);
+    virtual ~Stm()=default;
+    // virtual void ir2asm(ASM::InstrList* ls);
 };
 class Exp {
    public:
     expType kind;
-    virtual ~Exp();
-    virtual void ir2asm(ASM::InstrList* ls);
+    virtual ~Exp()=default;
+    // virtual void ir2asm(ASM::InstrList* ls);
 };
 class Seq : public Stm {
    public:
@@ -77,7 +77,7 @@ class Label : public Stm {
         label = lb;
         kind = stmType::label;
     }
-    void ir2asm(ASM::InstrList* ls);
+    // void ir2asm(ASM::InstrList* ls);
 };
 class Jump : public Stm {
    public:
@@ -87,7 +87,7 @@ class Jump : public Stm {
         exp = ep, jumps = s;
         kind = stmType::jump;
     }
-    void ir2asm(ASM::InstrList* ls);
+    // void ir2asm(ASM::InstrList* ls);
 };
 class Cjump : public Stm {
    public:
@@ -98,7 +98,7 @@ class Cjump : public Stm {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
         kind = stmType::cjump;
     }
-    void ir2asm(ASM::InstrList* ls);
+    // void ir2asm(ASM::InstrList* ls);
 };
 class Move : public Stm {
    public:
@@ -116,11 +116,8 @@ class ExpStm : public Stm {
         kind = stmType::exp;
     }
 };
-class Const : public Exp {
-   public:
-    virtual ~Const();
-};
-class ConstInt : public Const {
+
+class ConstInt : public Exp {
    public:
     int val;
     ConstInt(int x) {
@@ -128,7 +125,7 @@ class ConstInt : public Const {
         kind = expType::constint;
     }
 };
-class ConstFloat : public Const {
+class ConstFloat : public Exp {
    public:
     float val;
     ConstFloat(float f) {

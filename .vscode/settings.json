@@ -1,10 +1,10 @@
 {
     "files.associations": {
+        "*.lex": "lex",
+        "*.sy": "c",
         "*.cpp": "cpp",
         "*.svh": "systemverilog",
         "*.html": "html",
-        "*.lex": "lex",
-        "*.sy": "c",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -78,6 +78,10 @@
         "stack": "cpp",
         "compare": "cpp",
         "concepts": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "condition_variable": "cpp",
+        "map": "cpp",
+        "shared_mutex": "cpp",
+        "thread": "cpp"
     }
 }

@@ -28,12 +28,12 @@ public:
     }
 };
 
-Type* intType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_int, val,_isconst); }
-Type* voidType() { return new TY::Type(0, TY::tyType::Ty_void, NULL,false); }
+static inline Type* intType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_int, val,_isconst); }
+static inline Type* voidType() { return new TY::Type(0, TY::tyType::Ty_void, NULL,false); }
     //FIXME
-Type* floatType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_float, val,_isconst); }
-Type* arrayType(Type* ty,int _dim,bool isconst) { return new TY::Type(ty, TY::tyType::Ty_array, NULL,_dim); }
-Type* funcType(Type* rtn, std::vector<Type*> _param) {
+static inline Type* floatType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_float, val,_isconst); }
+static inline Type* arrayType(Type* ty,int _dim,bool isconst) { return new TY::Type(ty, TY::tyType::Ty_array, NULL,_dim); }
+static inline Type* funcType(Type* rtn, std::vector<Type*> _param) {
     return new TY::Type(0, TY::tyType::Ty_func, _param,rtn);
 }
 enum class tyEntry { Ty_local, Ty_global, Ty_func };

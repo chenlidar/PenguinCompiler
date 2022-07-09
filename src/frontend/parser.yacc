@@ -2,11 +2,11 @@
 	#include "../structure/ast.h"
 
 	#include <string>
-	AST::CompUnitList *root;
+	AST::CompUnitList *root = 0;
 
 	extern int yylex();
 	extern int yyget_lineno();
-	extern void yyerror(const char *s);
+	void yyerror(const char *s) { assert(0); }
 
 %}
 
@@ -109,9 +109,12 @@ COMPUNITLIST: COMPUNITLIST COMPUNIT {
 	$$ = $1;
 	$$->list.push_back($2);
 
+	root = $$;
+
 } | COMPUNIT {
 	/* CompUnitList -> CompUnit */
 	$$ = new AST::CompUnitList(yyget_lineno());
+	$$->list.push_back($1);
 	
 	root = $$;
 }
