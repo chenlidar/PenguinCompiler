@@ -60,7 +60,7 @@ class Exp {
    public:
     expType kind;
     virtual ~Exp();
-    virtual void ir2asm(ASM::InstrList* ls);
+    virtual Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Seq : public Stm {
    public:
@@ -107,6 +107,7 @@ class Move : public Stm {
         src = sr, dst = ds;
         kind = stmType::move;
     }
+    void ir2asm(ASM::InstrList* ls);
 };
 class ExpStm : public Stm {
    public:
@@ -115,6 +116,7 @@ class ExpStm : public Stm {
         exp = e;
         kind = stmType::exp;
     }
+    void ir2asm(ASM::InstrList* ls);
 };
 class Const : public Exp {
    public:
@@ -127,6 +129,7 @@ class ConstInt : public Const {
         val = x;
         kind = expType::constint;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class ConstFloat : public Const {
    public:
@@ -135,6 +138,7 @@ class ConstFloat : public Const {
         val = f;
         kind = expType::constfloat;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 
 class Binop : public Exp {
@@ -144,14 +148,16 @@ class Binop : public Exp {
     Binop(binop o, Exp* lf, Exp* rg) {
         op = o, left = lf, kind = expType::binop, right = rg;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Temp : public Exp {
    public:
-    int tempid;
+    Temp_Temp tempid;
     Temp(int id) {
         tempid = id;
         kind = expType::temp;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Mem : public Exp {
    public:
@@ -160,6 +166,7 @@ class Mem : public Exp {
         mem = e;
         kind = expType::mem;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Eseq : public Exp {
    public:
@@ -169,6 +176,7 @@ class Eseq : public Exp {
         stm = s, exp = e;
         kind = expType::eseq;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 // TBD TODO:
 class Name : public Exp {
@@ -178,6 +186,7 @@ class Name : public Exp {
         name = s;
         kind = expType::name;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Call : public Exp {
    public:
@@ -187,6 +196,7 @@ class Call : public Exp {
         args = ar, fun = fu;
         kind = expType::call;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 struct PatchList {
     Temp_Label* head;
