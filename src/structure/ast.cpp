@@ -127,8 +127,10 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 Temp_Temp tmp = Temp_newtemp();
                 IR::Stm* cat_stm = new IR::Move(
                     new IR::Temp(tmp),
-                    new IR::Call(new IR::Name("malloc"),
-                                 IR::ExpList(1, new IR::ConstInt(head->arraysize))));//assume malloc space is zero
+                    new IR::Call(
+                        new IR::Name("malloc"),
+                        IR::ExpList(1, new IR::ConstInt(
+                                           head->arraysize))));  // assume malloc space is zero
                 if (this->initval) {
                     IR::ExpTy expty
                         = this->initval->calArray(new IR::Temp(tmp), head, venv, fenv, name);
@@ -148,27 +150,28 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
 }
 IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                               Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
-    TY::Type* ty=TY::funcType(NULL,std::vector<TY::Type*>());
-    ty->tp=typeAst2ir(this->btype);
+    TY::Type* ty = TY::funcType(NULL, std::vector<TY::Type*>());
+    ty->tp = typeAst2ir(this->btype);
     for (AST::Parameter* it : this->parameters->list) {
-        if(it->arrayindex==NULL)ty->param.push_back(typeAst2ir(it->btype));
-        else{//FIXME: only int[]
+        if (it->arrayindex == NULL)
+            ty->param.push_back(typeAst2ir(it->btype));
+        else {  // FIXME: only int[]
             TY::Type* head = TY::intType(NULL, false);
             for (int i = (int)(it->arrayindex->list.size()) - 1; i >= 0; i--) {
                 AST::Exp* exp = it->arrayindex->list[i];
                 head = TY::arrayType(head, NULL, false);
             }
-            head->value=new int[head->arraysize];
-            if(it->arrayindex==NULL)ty->param.push_back(head);
+            head->value = new int[head->arraysize];
+            if (it->arrayindex == NULL) ty->param.push_back(head);
         }
     }
-    fenv->enter(*this->id->str,new TY::EnFunc(ty,Temp_newlabel()));
+    fenv->enter(*this->id->str, new TY::EnFunc(ty, Temp_newlabel()));
     name = *this->id->str;
     venv->beginScope(NULL);
     for (AST::Parameter* it : this->parameters->list) {
-        AST::VarDef(it->id,it->arrayindex,NULL,it->lineno).ast2ir(it->btype,venv,fenv,name);
+        AST::VarDef(it->id, it->arrayindex, NULL, it->lineno).ast2ir(it->btype, venv, fenv, name);
     }
-    IR::Stm* stm=this->block->ast2ir(venv,fenv,brelabel,conlabel,name);
+    IR::Stm* stm = this->block->ast2ir(venv, fenv, brelabel, conlabel, name);
     venv->endScope();
     return stm;
 }
@@ -231,7 +234,9 @@ IR::Stm* AST::ContinueStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
     return new IR::Jump(new IR::Name(conlabel), Temp_LabelList(1, conlabel));
 }
 IR::Stm* AST::ReturnStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {}
+                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+    return new IR::Jump(new IR::Name("RETURN"), Temp_LabelList(1, conlabel));
+}
 IR::ExpTy AST::Exp::calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                              Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
     IR::ExpTy expty = this->ast2ir(venv, fenv, name);
