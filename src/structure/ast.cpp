@@ -165,13 +165,14 @@ IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
             if (it->arrayindex == NULL) ty->param.push_back(head);
         }
     }
-    fenv->enter(*this->id->str, new TY::EnFunc(ty, Temp_newlabel()));
+    Temp_Label fb=Temp_newlabel();
+    fenv->enter(*this->id->str, new TY::EnFunc(ty, fb));
     name = *this->id->str;
     venv->beginScope(NULL);
     for (AST::Parameter* it : this->parameters->list) {
         AST::VarDef(it->id, it->arrayindex, NULL, it->lineno).ast2ir(it->btype, venv, fenv, name);
     }
-    IR::Stm* stm = this->block->ast2ir(venv, fenv, brelabel, conlabel, name);
+    IR::Stm* stm = seq(new IR::Label(fb),this->block->ast2ir(venv, fenv, brelabel, conlabel, name));
     venv->endScope();
     return stm;
 }
