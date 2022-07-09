@@ -9,7 +9,7 @@
 namespace ASM {
 typedef Temp_LabelList Targets;
 struct Instr {
-    virtual void print() = 0;
+    virtual void print() ;
 };
 typedef std::vector<Instr> InstrList;
 struct Oper : public Instr {

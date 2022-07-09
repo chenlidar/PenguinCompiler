@@ -3,7 +3,7 @@
 %{
 
 	#include <string>
-	#include "../ast.h"
+	#include "../structure/ast.h"
 	#include "parser.hpp"
 
 	int get10(char *, int);

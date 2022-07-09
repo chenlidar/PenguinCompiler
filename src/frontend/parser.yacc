@@ -1,5 +1,5 @@
 %{
-	#include "../ast.h"
+	#include "../structure/ast.h"
 
 	#include <string>
 	AST::CompUnitList *root;
@@ -360,8 +360,6 @@ EXP: PRIMARYEXP {
 } | GETARRAYEXP {
 	$$ = $1;
 } | GETFARRAYEXP {
-	$$ = $1;
-} | IDEXP {
 	$$ = $1;
 }
 

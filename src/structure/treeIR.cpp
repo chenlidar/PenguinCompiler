@@ -138,9 +138,9 @@ void Jump::ir2asm(ASM::InstrList* ls) {
     ls->push_back(ASM::Oper(string("b ") + tname->name, vector<int>(),
                             vector<int>(), jumps));
 }
-void Cjump::ir2asm(ASM::InstrList* ls) {
-    // FIXME
-    do {
-        if ()
-    } while (0);
-}
+// void Cjump::ir2asm(ASM::InstrList* ls) {
+//     // FIXME
+//     do {
+//         if ()
+//     } while (0);
+// }

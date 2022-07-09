@@ -2,7 +2,6 @@
 #define __TEMPLABEL
 #include <string>
 #include <vector>
-#include "singleton.hpp"
 using std::string;
 using std::to_string;
 class labelManager {
@@ -17,9 +16,7 @@ class labelManager {
    private:
     int labelno;
 };
-string Temp_newlabel() {
-    return Singleton::instance().LabelManager.newlabel();
-}
+
 typedef std::string Temp_Label;
 typedef std::vector<Temp_Label> Temp_LabelList; 
 #endif
