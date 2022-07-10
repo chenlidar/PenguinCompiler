@@ -24,7 +24,7 @@ ast() {
 		do
 			test_name=${x%.sy}
 			
-			$build_dir/test-ast < $func_testcase_dir/$test_file > $build_dir/$test_name.ast
+			$build_dir/test-ast < $func_testcase_dir/$x > $build_dir/$test_name.ast
 		done
 
 		# echo $test_name_list

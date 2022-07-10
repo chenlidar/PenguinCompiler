@@ -221,9 +221,14 @@ PARAMETERS:  {
 }
 
 PARAMETER: BTYPE IDEXP {
-	$$ = new AST::Parameter($1, $2, nullptr, yyget_lineno());
+	$$ = new AST::Parameter($1, $2, new AST::ArrayIndex(yyget_lineno()), yyget_lineno());
 } | BTYPE IDEXP '[' ']' ARRAYINDEX {
-	$$ = new AST::Parameter($1, $2, $5, yyget_lineno());
+	auto x = new AST::ArrayIndex(yyget_lineno());
+	x->list.push_back(nullptr);
+	for (const auto &y:$5->list) {
+		x->list.push_back(y);
+	}
+	$$ = new AST::Parameter($1, $2, x, yyget_lineno());
 }
 
 BLOCK: '{' BLOCKITEMLIST '}' {
