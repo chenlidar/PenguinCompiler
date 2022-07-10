@@ -54,13 +54,13 @@ class Stm {
    public:
     stmType kind;
     virtual ~Stm()=default;
-    virtual void ir2asm(ASM::InstrList* ls);
+    virtual void ir2asm(ASM::InstrList* ls)=0;
 };
 class Exp {
    public:
     expType kind;
-    virtual ~Exp();
-    virtual Temp_Temp ir2asm(ASM::InstrList* ls);
+    virtual ~Exp()=default;
+    virtual Temp_Temp ir2asm(ASM::InstrList* ls)=0;
 };
 class Seq : public Stm {
    public:
@@ -69,6 +69,7 @@ class Seq : public Stm {
         left = lf, right = rg;
         kind = stmType::seq;
     }
+    void ir2asm(ASM::InstrList* ls){assert(0);}
 };
 class Label : public Stm {
    public:

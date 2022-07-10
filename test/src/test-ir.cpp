@@ -14,6 +14,14 @@ int main() {
     for (IR::StmList* l = stmlist; l; l = l->tail) {
         IR::Stm* stm = l->stm;
         IR::StmList* out = CANON::handle(stm);
+        ASM::InstrList *ls=new std::vector<ASM::Instr*>();
+        for(IR::StmList* ll = out; ll; ll = ll->tail){
+            IR::Stm* s = ll->stm;
+            s->ir2asm(ls);
+        }
+        for (auto instr : *ls) {
+            instr->print();
+        }
     }
     return 0;
 }

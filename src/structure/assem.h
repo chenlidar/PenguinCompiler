@@ -9,9 +9,9 @@
 namespace ASM {
 typedef Temp_LabelList Targets;
 struct Instr {
-    virtual void print() ;
+    virtual void print()=0 ;
 };
-typedef std::vector<Instr> InstrList;
+typedef std::vector<Instr*> InstrList;
 struct Oper : public Instr {
     std::string assem;
     Temp_TempList dst, src;
@@ -25,13 +25,13 @@ struct Oper : public Instr {
         int i = 0;
         std::string out = assem;
         for (auto d : dst) {
-            std::string s = std::to_string(i++);
-            out = out.replace(out.find("`d" + s), 1, std::to_string(d));
+            std::string s = "`d"+std::to_string(i++);
+            out = out.replace(out.find(s), s.size(), Temp_tempname(d));
         }
         i = 0;
         for (auto sr : src) {
-            std::string s = std::to_string(i++);
-            out = out.replace(out.find("`s" + s), 1, std::to_string(sr));
+            std::string s = "`s" +std::to_string(i++);
+            out = out.replace(out.find(s), s.size(), Temp_tempname(sr));
         }
         std::cout << out << std::endl;
     }
@@ -48,8 +48,8 @@ struct Move : public Instr {
         : assem(_assem), dst(_dst), src(_src) {}
     void print() {
         std::string out = assem;
-        out = out.replace(out.find("`d0"), 1, std::to_string(dst));
-        out = out.replace(out.find("`s0"), 1, std::to_string(src));
+        out = out.replace(out.find("`d0"), 3, Temp_tempname(dst));
+        out = out.replace(out.find("`s0"), 3, Temp_tempname(src));
         std::cout << out << std::endl;
     }
 };
@@ -57,7 +57,7 @@ struct Proc {
     InstrList body;
     void print() {
         for (auto instr : body) {
-            instr.print();
+            instr->print();
         }
     }
 };

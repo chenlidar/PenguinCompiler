@@ -17,4 +17,5 @@ class tempManager {
 int Temp_newtemp();
 typedef int Temp_Temp;
 typedef std::vector<Temp_Temp> Temp_TempList;
+std::string Temp_tempname(Temp_Temp);
 #endif

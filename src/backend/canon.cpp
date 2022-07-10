@@ -172,7 +172,6 @@ static void trace(std::unordered_map<std::string, StmList*>* block_env, Block* g
     Stm* s = last->tail->stm;
     block_env->erase(static_cast<IR::Label*>(lab)->label);
     if (s->kind == stmType::jump) {
-        printf("%s\n", static_cast<IR::Jump*>(s)->jumps[0].c_str());
         const auto& x = static_cast<IR::Jump*>(s)->jumps[0];
         StmList* target = nullptr;
         if (block_env->find(x) != block_env->end()) target = block_env->at(x);
