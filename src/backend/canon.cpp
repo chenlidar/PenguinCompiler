@@ -159,11 +159,6 @@ Block CANON::basicBlocks(StmList* stmList) {
  * Trace Block
  */
 static StmList* getNext(std::unordered_map<std::string, StmList*>* block_env, Block* global_block);
-static StmList* getLast(StmList* list) {
-    StmList* last = list;
-    while (last->tail->tail) last = last->tail;
-    return last;
-}
 
 static void trace(std::unordered_map<std::string, StmList*>* block_env, Block* global_block,
                   StmList* list) {

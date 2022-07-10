@@ -54,7 +54,7 @@ class Stm {
    public:
     stmType kind;
     virtual ~Stm()=default;
-    virtual void ir2asm(ASM::InstrList* ls)=0;
+    virtual void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel)=0;
 };
 class Exp {
    public:
@@ -69,7 +69,7 @@ class Seq : public Stm {
         left = lf, right = rg;
         kind = stmType::seq;
     }
-    void ir2asm(ASM::InstrList* ls){assert(0);}
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel){assert(0);}
 };
 class Label : public Stm {
    public:
@@ -78,7 +78,7 @@ class Label : public Stm {
         label = lb;
         kind = stmType::label;
     }
-    void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 class Jump : public Stm {
    public:
@@ -88,7 +88,7 @@ class Jump : public Stm {
         exp = ep, jumps = s;
         kind = stmType::jump;
     }
-    void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 class Cjump : public Stm {
    public:
@@ -99,7 +99,7 @@ class Cjump : public Stm {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
         kind = stmType::cjump;
     }
-    void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 class Move : public Stm {
    public:
@@ -108,7 +108,7 @@ class Move : public Stm {
         src = sr, dst = ds;
         kind = stmType::move;
     }
-    void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 class ExpStm : public Stm {
    public:
@@ -117,7 +117,7 @@ class ExpStm : public Stm {
         exp = e;
         kind = stmType::exp;
     }
-    void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 
 class ConstInt : public Exp {
@@ -236,7 +236,9 @@ class StmList {
     Stm* stm;
     StmList* tail;
     StmList(Stm* _stm, StmList* _tail) : stm(_stm), tail(_tail) {}
+    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 typedef std::vector<Exp*> ExpList;
+ASM::Proc* ir2asm(StmList* stmlist);
 }  // namespace IR
 #endif

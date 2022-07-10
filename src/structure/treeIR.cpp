@@ -98,179 +98,234 @@ IR::Tr_Exp::Tr_Exp(Stm* stm) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //   TILE
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Label::ir2asm(ASM::InstrList* ls) {
+void Label::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     ls->push_back(new ASM::Label(label));
 }
-void Jump::ir2asm(ASM::InstrList* ls) {
-    if(exp->kind==IR::expType::name)//Jump(Name(Label(L)),LabelList(Lable(L)))
+void Jump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+    if (exp->kind == IR::expType::name)  // Jump(Name(Label(L)),LabelList(Lable(L)))
     {
-        assert(this->jumps.size()!=0);//seems have no jumps in our language
+        assert(this->jumps.size() != 0);  // must have jumps in our language
         auto tname = static_cast<IR::Name*>(exp);
-        ls->push_back(new ASM::Oper(string("b ") + tname->name, Temp_TempList(),
-                            Temp_TempList(), jumps));
-    }
-    else if(exp->kind == IR::expType::temp)
-    {
+        if (tname->name == "RETURN") {
+            jumps[0] = exitlabel;
+            ls->push_back(
+                new ASM::Oper(string("b ") + exitlabel, Temp_TempList(), Temp_TempList(), jumps));
+        } else
+            ls->push_back(new ASM::Oper(string("b ") + tname->name, Temp_TempList(),
+                                        Temp_TempList(), jumps));
+    } else if (exp->kind == IR::expType::temp) {
         auto ttmp = static_cast<IR::Temp*>(exp);
         ls->push_back(new ASM::Oper(string("bx `s0"), Temp_TempList(),
-                            Temp_TempList(1,ttmp->tempid), jumps));
-    }
-    else
+                                    Temp_TempList(1, ttmp->tempid), jumps));
+    } else
         assert(0);
-    //Jump( temp ,LabelList( NamedLabel("END") ))
+    // Jump( temp ,LabelList( NamedLabel("END") ))
 }
-void Cjump::ir2asm(ASM::InstrList* ls) {
+void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     // TODO
-    //Cjump(op , e1 , Binop(mul, e2, Const(2^k)) , Lable(L) , falselabel)
-        //Cjump(op , e1 , Binop(mul, Const(2^k), e2) , Lable(L) , falselabel)
-        //Cjump(op , Binop(mul, e2, Const(2^k)) , e1 , Lable(L) , falselabel)
-        //Cjump(op , Binop(mul, Const(2^k), e2) , e1 ,  Lable(L) , falselabel)
-        //Cjump(op , e1 , Binop(div, Const(2^k), e2) , Lable(L) , falselabel)
-        //Cjump(op, Binop(div, Const(2^k), e2)  , e1 , Lable(L) , falselabel)
+    // Cjump(op , e1 , Binop(mul, e2, Const(2^k)) , Lable(L) , falselabel)
+    // Cjump(op , e1 , Binop(mul, Const(2^k), e2) , Lable(L) , falselabel)
+    // Cjump(op , Binop(mul, e2, Const(2^k)) , e1 , Lable(L) , falselabel)
+    // Cjump(op , Binop(mul, Const(2^k), e2) , e1 ,  Lable(L) , falselabel)
+    // Cjump(op , e1 , Binop(div, Const(2^k), e2) , Lable(L) , falselabel)
+    // Cjump(op, Binop(div, Const(2^k), e2)  , e1 , Lable(L) , falselabel)
     Temp_Temp tmp[4];
-    Temp_TempList src=Temp_TempList(),dst=Temp_TempList();
+    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
 
-    {//Most naive tile method
+    {  // Most naive tile method
         tmp[0] = this->left->ir2asm(ls);
         tmp[1] = this->right->ir2asm(ls);
-        src.push_back(tmp[0]);src.push_back(tmp[1]);
-        ls->push_back(new ASM::Oper(std::string("cmp `s0 `s1"),dst,src,ASM::Targets()));
+        src.push_back(tmp[0]);
+        src.push_back(tmp[1]);
+        ls->push_back(new ASM::Oper(std::string("cmp `s0 `s1"), dst, src, ASM::Targets()));
         std::string branch_type;
-        if(this->op == RelOp::T_ne)branch_type=std::string("bne");
-        else if(this->op == RelOp::T_eq)branch_type=std::string("beq");
-        else if(this->op == RelOp::T_lt)branch_type=std::string("blt");
-        else if(this->op == RelOp::T_gt)branch_type=std::string("bgt");
-        else if(this->op == RelOp::T_le)branch_type=std::string("ble");
-        else if(this->op == RelOp::T_ge)branch_type=std::string("bge");
-        else assert(0);
-        ls->push_back(new ASM::Oper(branch_type+" "+this->trueLabel,Temp_TempList(),Temp_TempList(),ASM::Targets()));
+        if (this->op == RelOp::T_ne)
+            branch_type = std::string("bne");
+        else if (this->op == RelOp::T_eq)
+            branch_type = std::string("beq");
+        else if (this->op == RelOp::T_lt)
+            branch_type = std::string("blt");
+        else if (this->op == RelOp::T_gt)
+            branch_type = std::string("bgt");
+        else if (this->op == RelOp::T_le)
+            branch_type = std::string("ble");
+        else if (this->op == RelOp::T_ge)
+            branch_type = std::string("bge");
+        else
+            assert(0);
+        ls->push_back(new ASM::Oper(branch_type + " " + this->trueLabel, Temp_TempList(),
+                                    Temp_TempList(), ASM::Targets()));
     }
 }
-void Move::ir2asm(ASM::InstrList* ls){
-/* TODO
-//Move(Mem(Binop(minus, e1, Const(k))), e2)
-//Move(Mem(Binop(plus, e1, Const(k))), e2)
-//Move(Mem(Binop(plus, Const(k), e1)), e2)
-//Move(Mem(Binop(plus, e1, e2)), e3)
-//Move(Mem(e1), e2)
-//Move(temp,Mem(Binop(plus,e1,Const(k))))
-//Move(temp,Mem(Binop(plus,Const(k),e1)))
-//Move(temp,Mem(Binop(minus,e1,Const(k))))
-//Move(temp, Binop(mul,e1,Const(2^k)))
-//Move(temp, Binop(mul,Const(2^k),e1))
-//Move(temp, Binop(div,e1,Const(2^k)))
-//Move(temp,Mem(Binop(plus,e1,e2)))
-//Move(temp, Const(k))
-//Move(temp,Name(Label(L)))
-////Move(temp,Mem(e))
-//Move(temp, e1)
-*/
+void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+    /* TODO
+    //Move(Mem(Binop(minus, e1, Const(k))), e2)
+    //Move(Mem(Binop(plus, e1, Const(k))), e2)
+    //Move(Mem(Binop(plus, Const(k), e1)), e2)
+    //Move(Mem(Binop(plus, e1, e2)), e3)
+    //Move(Mem(e1), e2)
+    //Move(temp,Mem(Binop(plus,e1,Const(k))))
+    //Move(temp,Mem(Binop(plus,Const(k),e1)))
+    //Move(temp,Mem(Binop(minus,e1,Const(k))))
+    //Move(temp, Binop(mul,e1,Const(2^k)))
+    //Move(temp, Binop(mul,Const(2^k),e1))
+    //Move(temp, Binop(div,e1,Const(2^k)))
+    //Move(temp,Mem(Binop(plus,e1,e2)))
+    //Move(temp, Const(k))
+    //Move(temp,Name(Label(L)))
+    ////Move(temp,Mem(e))
+    //Move(temp, e1)
+    */
     Temp_Temp tmp[4];
-    Temp_TempList src=Temp_TempList(),dst=Temp_TempList();
+    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     int int_const;
-    if(this->dst->kind == IR::expType::mem)//Move(Mem(e1), e2)
+    if (this->dst->kind == IR::expType::mem)  // Move(Mem(e1), e2)
     {
         tmp[0] = this->src->ir2asm(ls);
         tmp[1] = static_cast<IR::Mem*>(this->dst)->mem->ir2asm(ls);
-        src.push_back(tmp[0]);src.push_back(tmp[1]);
-        ls->push_back(new ASM::Oper(std::string("str `s0, [`s1]"),dst,src,ASM::Targets()));
-    }
-    else if(this->dst->kind == IR::expType::temp && this->src->kind == IR::expType::constint)//Move(temp, Const(k))
+        src.push_back(tmp[0]);
+        src.push_back(tmp[1]);
+        ls->push_back(new ASM::Oper(std::string("str `s0, [`s1]"), dst, src, ASM::Targets()));
+    } else if (this->dst->kind == IR::expType::temp
+               && this->src->kind == IR::expType::constint)  // Move(temp, Const(k))
     {
         int_const = static_cast<IR::ConstInt*>(this->src)->val;
         tmp[0] = this->dst->ir2asm(ls);
         dst.push_back(tmp[0]);
-        ls->push_back(new ASM::Oper(std::string("mov `d0, #")+std::to_string(int_const),dst,src,ASM::Targets()));
-    }
-    else if(this->dst->kind == IR::expType::temp && this->src->kind == IR::expType::name)//Move(temp,Name(Label(L)))
+        ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
+                                    src, ASM::Targets()));
+    } else if (this->dst->kind == IR::expType::temp
+               && this->src->kind == IR::expType::name)  // Move(temp,Name(Label(L)))
     {
-        dst.push_back(static_cast<IR::Temp*> (this->dst)->tempid);
-        ls->push_back(new ASM::Oper(std::string("ldr `d0, =")+static_cast<IR::Name*>(this->src)->name,dst,src,ASM::Targets()));
-    }
-    else if(this->dst->kind == IR::expType::temp && this->src->kind == IR::expType::mem)//Move(temp,Mem(e))
+        dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
+        ls->push_back(
+            new ASM::Oper(std::string("ldr `d0, =") + static_cast<IR::Name*>(this->src)->name, dst,
+                          src, ASM::Targets()));
+    } else if (this->dst->kind == IR::expType::temp
+               && this->src->kind == IR::expType::mem)  // Move(temp,Mem(e))
     {
-        dst.push_back(static_cast<IR::Temp*> (this->dst)->tempid);
-        src.push_back(static_cast<IR::Mem*> (this->src)->ir2asm(ls));
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"),dst[0],src[0]));
-    }
-    else if(this->dst->kind == IR::expType::temp)//Move(temp, e1)
+        dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
+        src.push_back(static_cast<IR::Mem*>(this->src)->ir2asm(ls));
+        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst[0], src[0]));
+    } else if (this->dst->kind == IR::expType::temp)  // Move(temp, e1)
     {
-        dst.push_back(static_cast<IR::Temp*> (this->dst)->tempid);
-        printf("%s\n",static_cast<IR::Name*>(static_cast<IR::Call*>(this->src)->fun)->name.c_str());
+        dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
+        printf("%s\n",
+               static_cast<IR::Name*>(static_cast<IR::Call*>(this->src)->fun)->name.c_str());
         src.push_back(this->src->ir2asm(ls));
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"),dst[0],src[0]));
-    }
-    else assert(0);
+        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst[0], src[0]));
+    } else
+        assert(0);
 }
-void ExpStm::ir2asm(ASM::InstrList* ls){
-    //TODO
-    // assert(0);
+void ExpStm::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+    // TODO
+    //  assert(0);
 }
 
-Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls){
+Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls) {
     int int_const = this->val;
     Temp_Temp tmp[4];
-    Temp_TempList src=Temp_TempList(),dst=Temp_TempList();
+    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    ls->push_back(new ASM::Oper(std::string("mov `d0, #")+std::to_string(int_const),dst,src,ASM::Targets()));
+    ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst, src,
+                                ASM::Targets()));
     return dst[0];
 }
-Temp_Temp ConstFloat::ir2asm(ASM::InstrList* ls){
-    //TODO
+Temp_Temp ConstFloat::ir2asm(ASM::InstrList* ls) {
+    // TODO
     return Temp_newtemp();
 }
-Temp_Temp Binop::ir2asm(ASM::InstrList* ls){
+Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
     Temp_Temp exp_l = this->left->ir2asm(ls);
     Temp_Temp exp_r = this->right->ir2asm(ls);
-    Temp_TempList src=Temp_TempList(),dst=Temp_TempList();
-    src.push_back(exp_l);src.push_back(exp_r);
+    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
+    src.push_back(exp_l);
+    src.push_back(exp_r);
     dst.push_back(Temp_newtemp());
 
-    switch (this->op)
-    {
+    switch (this->op) {
     case IR::binop::T_plus:
-        ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1"),dst,src,ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1"), dst, src, ASM::Targets()));
         return dst[0];
         break;
     case IR::binop::T_minus:
-        ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"),dst,src,ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"), dst, src, ASM::Targets()));
         return dst[0];
     case IR::binop::T_mul:
-        ls->push_back(new ASM::Oper(std::string("mul `d0, `s0, `s1"),dst,src,ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("mul `d0, `s0, `s1"), dst, src, ASM::Targets()));
         return dst[0];
     case IR::binop::T_div:
-        ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"),dst,src,ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), dst, src, ASM::Targets()));
         return dst[0];
     case IR::binop::T_mod:
-        assert(0);//FIXME
+        assert(0);  // FIXME
         return dst[0];
-    default:
-        assert(0);
-        break;
+    default: assert(0); break;
     }
 }
-Temp_Temp Temp::ir2asm(ASM::InstrList* ls){
-    return this->tempid;
-}
-Temp_Temp Mem::ir2asm(ASM::InstrList* ls){
-    Temp_TempList src=Temp_TempList(),dst=Temp_TempList();
+Temp_Temp Temp::ir2asm(ASM::InstrList* ls) { return this->tempid; }
+Temp_Temp Mem::ir2asm(ASM::InstrList* ls) {
+    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     src.push_back(this->mem->ir2asm(ls));
     dst.push_back(Temp_newtemp());
-    ls->push_back(new ASM::Oper(std::string("ldr `d0, [`s0]"),dst,src,ASM::Targets()));
+    ls->push_back(new ASM::Oper(std::string("ldr `d0, [`s0]"), dst, src, ASM::Targets()));
     return dst[0];
 }
-Temp_Temp Eseq::ir2asm(ASM::InstrList* ls){
-    assert(0);//Shoudn't Exist
+Temp_Temp Eseq::ir2asm(ASM::InstrList* ls) {
+    assert(0);  // Shoudn't Exist
     return 0;
 }
-Temp_Temp Name::ir2asm(ASM::InstrList* ls){
-    Temp_TempList src=Temp_TempList(),dst=Temp_TempList();
+Temp_Temp Name::ir2asm(ASM::InstrList* ls) {
+    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    ls->push_back(new ASM::Oper(std::string("ldr `d0, =")+this->name,dst,src,ASM::Targets()));
+    ls->push_back(new ASM::Oper(std::string("ldr `d0, =") + this->name, dst, src, ASM::Targets()));
     return dst[0];
 }
-Temp_Temp Call::ir2asm(ASM::InstrList* ls){
-    //TODO
-    
-    return 0;
+Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
+    // DOING
+    assert(this->fun->kind == expType::name);
+    int cnt = 0, stksize = 0;
+    IR::StmList *head = nullptr, *tail = nullptr;
+    for (auto it : this->args) {
+        assert(it->kind == expType::temp);
+        IR::Stm* stm;
+        if (cnt < 4) {
+            stm = new IR::Move(new IR::Temp(cnt), it);
+        } else {
+            stm = new IR::Move(new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
+                                                         new IR::ConstInt(stksize))),
+                               it);
+            stksize += 4;
+        }  // low ..now stack..sp 5 6 7 8 ... high
+        if (head == nullptr)
+            head = tail = new IR::StmList(stm, nullptr);
+        else
+            tail = tail->tail = new IR::StmList(stm, nullptr);
+    }
+    if (stksize) {
+        (new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
+                                                      new IR::ConstInt(-stksize))))
+            ->ir2asm(ls, "");
+    }
+    head->ir2asm(ls, "");
+    ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name,
+                                Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    if (stksize) {
+        (new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
+                                                      new IR::ConstInt(stksize))))
+            ->ir2asm(ls, "");
+    }
+    return 0;  // r0
+}
+void StmList::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+    this->stm->ir2asm(ls, exitlabel);
+    if (this->tail) this->tail->ir2asm(ls, exitlabel);
+}
+ASM::Proc* IR::ir2asm(StmList* stmlist) {
+    ASM::Proc* proc = new ASM::Proc();
+    IR::Stm* label = getLast(stmlist)->tail->stm;
+    assert(label->kind == stmType::label);
+    Temp_Label exitlabel = static_cast<IR::Label*>(label)->label;
+    stmlist->ir2asm(&proc->body, exitlabel);
+    return proc;
 }

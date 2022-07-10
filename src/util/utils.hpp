@@ -26,6 +26,11 @@ static IR::PatchList* joinPatch(IR::PatchList* first, IR::PatchList* second) {
     tmp->tail = second;
     return first;
 }
+static IR::StmList* getLast(IR::StmList* list) {
+    IR::StmList* last = list;
+    while (last->tail->tail) last = last->tail;
+    return last;
+}
 static TY::Type* binopResType(const TY::Type* a, const TY::Type* b, IR::binop op) {
     assert(a->kind == TY::tyType::Ty_float || a->kind == TY::tyType::Ty_int);
     assert(b->kind == TY::tyType::Ty_float || b->kind == TY::tyType::Ty_int);

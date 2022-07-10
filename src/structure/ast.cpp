@@ -177,27 +177,16 @@ IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
         TY::LocVar* entry
             = static_cast<TY::LocVar*>(venv->look(*static_cast<AST::IdExp*>(it->id)->str));
         if (cnt < 4) {
-            cat_stm = seq(cat_stm, new IR::Move(new IR::Temp(cnt), new IR::Temp(entry->temp)));
+            cat_stm = seq(cat_stm, new IR::Move(new IR::Temp(entry->temp), new IR::Temp(cnt)));
         } else {
             cat_stm
                 = seq(cat_stm,
-                      new IR::Move(new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Temp(11),
-                                                             new IR::ConstInt(stksize))),
-                                   new IR::Temp(entry->temp)));
+                      new IR::Move(new IR::Temp(entry->temp),
+                                   new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Temp(11),
+                                                             new IR::ConstInt(stksize)))));
             stksize += 4;
         }  // low ..now stack..fp 5 6 7 8 ... high
     }
-    // IR::Stm* restk = nopStm();
-    // if (stksize) {
-    //     cat_stm
-    //         = seq(new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new
-    //         IR::Temp(13),
-    //                                                            new IR::ConstInt(-stksize))),
-    //               cat_stm);
-    //     restk = new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new
-    //     IR::Temp(13),
-    //                                                          new IR::ConstInt(stksize)));
-    // }
     IR::Stm* stm
         = seq(new IR::Label(fb), this->block->ast2ir(venv, fenv, brelabel, conlabel, name));
     venv->endScope();
