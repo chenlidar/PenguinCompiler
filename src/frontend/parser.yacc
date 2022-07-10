@@ -2,11 +2,13 @@
 	#include "../structure/ast.h"
 
 	#include <string>
-	AST::CompUnitList *root = 0;
+	#include <cstdio>
+	#include <iostream>
+	AST::CompUnitList *root;
 
 	extern int yylex();
 	extern int yyget_lineno();
-	void yyerror(const char *s) { assert(0); }
+	void yyerror(const char *s) { std::cerr << s << std::endl;}
 
 %}
 
@@ -195,7 +197,9 @@ ARRAYINIT: '{' INITVALLIST '}' {
 	$$ = $2;
 }
 
-INITVALLIST: INITVAL {
+INITVALLIST: {
+	$$ = new AST::InitValList(yyget_lineno());
+} | INITVAL {
 	$$ = new AST::InitValList($1, yyget_lineno());
 } | INITVALLIST ',' INITVAL {
 	$$ = $1;
@@ -208,6 +212,8 @@ FUNCDEF: BTYPE IDEXP '(' PARAMETERS ')' BLOCK {
 
 PARAMETERS:  {
 	$$ = new AST::Parameters(yyget_lineno());
+} | PARAMETER {
+	$$ = new AST::Parameters($1, yyget_lineno());
 } | PARAMETERS ',' PARAMETER {
 	$$ = $1;
 	$$->list.push_back($3);

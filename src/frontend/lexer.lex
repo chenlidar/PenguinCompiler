@@ -27,6 +27,8 @@
 	BEGIN INITIAL;
 }
 
+<LINECOMMENT>[^\n]* {}
+
 <INITIAL>"/*" {
 	BEGIN COMMENT;
 }
@@ -34,6 +36,9 @@
 <COMMENT>"*/" {
 	BEGIN INITIAL;
 }
+
+<COMMENT>[^\n\*]* {}
+<COMMENT>\* {}
 
 return		{ return RETURN; }
 if			{ return IF;}
@@ -61,7 +66,7 @@ starttime	{ return STARTTIME; }
 stoptime	{ return STOPTIME; }
 
 
-[a-z_A-Z][0-9a-zA-Z]* {
+[a-z_A-Z][0-9a-z_A-Z]* {
 	yylval.id = new std::string(yytext);
 	return ID;
 }
@@ -87,8 +92,9 @@ stoptime	{ return STOPTIME; }
 	return INTNUMBER;
 }
 
+[ \n\t\r] {}
 
-([0-9]|[1-9][0-9]*)\.[0-9]* {
+([0-9]*)\.[0-9]* {
 	yylval.floatnumber = new std::string(yytext);
 	return FLOATNUMBER;
 }
