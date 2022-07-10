@@ -54,13 +54,13 @@ class Stm {
    public:
     stmType kind;
     virtual ~Stm()=default;
-    // virtual void ir2asm(ASM::InstrList* ls);
+    virtual void ir2asm(ASM::InstrList* ls);
 };
 class Exp {
    public:
     expType kind;
-    virtual ~Exp()=default;
-    // virtual void ir2asm(ASM::InstrList* ls);
+    virtual ~Exp();
+    virtual Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Seq : public Stm {
    public:
@@ -77,7 +77,7 @@ class Label : public Stm {
         label = lb;
         kind = stmType::label;
     }
-    // void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls);
 };
 class Jump : public Stm {
    public:
@@ -87,7 +87,7 @@ class Jump : public Stm {
         exp = ep, jumps = s;
         kind = stmType::jump;
     }
-    // void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls);
 };
 class Cjump : public Stm {
    public:
@@ -98,7 +98,7 @@ class Cjump : public Stm {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
         kind = stmType::cjump;
     }
-    // void ir2asm(ASM::InstrList* ls);
+    void ir2asm(ASM::InstrList* ls);
 };
 class Move : public Stm {
    public:
@@ -107,6 +107,7 @@ class Move : public Stm {
         src = sr, dst = ds;
         kind = stmType::move;
     }
+    void ir2asm(ASM::InstrList* ls);
 };
 class ExpStm : public Stm {
    public:
@@ -115,6 +116,7 @@ class ExpStm : public Stm {
         exp = e;
         kind = stmType::exp;
     }
+    void ir2asm(ASM::InstrList* ls);
 };
 
 class ConstInt : public Exp {
@@ -124,6 +126,7 @@ class ConstInt : public Exp {
         val = x;
         kind = expType::constint;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class ConstFloat : public Exp {
    public:
@@ -132,6 +135,7 @@ class ConstFloat : public Exp {
         val = f;
         kind = expType::constfloat;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 
 class Binop : public Exp {
@@ -141,14 +145,16 @@ class Binop : public Exp {
     Binop(binop o, Exp* lf, Exp* rg) {
         op = o, left = lf, kind = expType::binop, right = rg;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Temp : public Exp {
    public:
-    int tempid;
+    Temp_Temp tempid;
     Temp(int id) {
         tempid = id;
         kind = expType::temp;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Mem : public Exp {
    public:
@@ -157,6 +163,7 @@ class Mem : public Exp {
         mem = e;
         kind = expType::mem;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Eseq : public Exp {
    public:
@@ -166,6 +173,7 @@ class Eseq : public Exp {
         stm = s, exp = e;
         kind = expType::eseq;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 // TBD TODO:
 class Name : public Exp {
@@ -175,6 +183,7 @@ class Name : public Exp {
         name = s;
         kind = expType::name;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 class Call : public Exp {
    public:
@@ -184,6 +193,7 @@ class Call : public Exp {
         args = ar, fun = fu;
         kind = expType::call;
     }
+    Temp_Temp ir2asm(ASM::InstrList* ls);
 };
 struct PatchList {
     Temp_Label* head;
