@@ -52,8 +52,8 @@ ir() {
 		for x in $test_file_list
 		do
 			test_name=${x%.sy}
-			
-			$build_dir/test-ir < $func_testcase_dir/$test_file > $build_dir/$test_name.ast
+			echo $test_name
+			$build_dir/test-ir < $func_testcase_dir/$x > $build_dir/$test_name.ast
 		done
 
 		# echo $test_name_list
@@ -63,10 +63,10 @@ ir() {
 		test_name=${test_file%.sy}
 		#ref_output_file=$func_testcase_dir/$test_name.out
 		
-		#echo $test_name
+		echo $test_name
 
 		#cd $build_dir
-		$build_dir/test-ir < $func_testcase_dir/$test_file > $build_dir/$test_name.ast
+		$build_dir/test-ir < $func_testcase_dir/$test_file || exit
 	fi
 }
 

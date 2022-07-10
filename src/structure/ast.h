@@ -155,7 +155,6 @@ template <typename T> struct NullableList {
         : lineno(_lineno) {
         list.push_back(x);
     }
-
 };
 
 /* CompUnit -> [CompUnit] (Decl | FuncDef) */
@@ -167,24 +166,32 @@ struct CompUnitList {
     int lineno;
 
     CompUnitList(int _lineno)
-        : lineno(_lineno) { list.reserve(1); printf("???\n");}
+        : lineno(_lineno) {
+        list.reserve(1);
+    }
     IR::StmList* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv);
 };
 
 /* CompUnit -> FuncDef | Decl */
 struct CompUnit {
     virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) { assert(0); }
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct BlockItem {
     virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) { assert(0); }
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct Decl : CompUnit, BlockItem {
-    // virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-    //                         Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
+    virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct ConstDecl : Decl {
@@ -239,7 +246,7 @@ struct VarDecl : public Decl {
         , defs(_defs)
         , lineno(_lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                    Temp_Label name);
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct VarDefList : public NullableList<VarDef*> {
@@ -277,14 +284,20 @@ struct ArrayIndex : NullableList<Exp*> {
 
 struct InitVal {
     virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                             Temp_Label name) { assert(0); }
+                             Temp_Label name) {
+        assert(0);
+    }
     virtual IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
-                               Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {assert(0);}
+                               Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct ArrayInit : public InitVal {
     virtual IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
-                               Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) { assert(0); }
+                               Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct InitValList : public ArrayInit, NullableList<InitVal*> {
@@ -312,7 +325,7 @@ struct FuncDef : public CompUnit {
         , block(_block)
         , lineno(_lineno) {}
     IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) override;
 };
 
 struct Parameters : public NullableList<Parameter*> {
@@ -340,7 +353,9 @@ struct Parameter {
 struct Stmt : public BlockItem {
     /* Empty */
     virtual IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) { assert(0); }
+                            Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct Block : public Stmt {
@@ -449,7 +464,9 @@ struct Exp : InitVal {
 
     bool ast_isconst() { return constval.is_const; }
     virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                             Temp_Label name) { assert(0); }
+                             Temp_Label name) {
+        assert(0);
+    }
     IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                        Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
@@ -462,11 +479,15 @@ struct IdExp : public Exp {
         : str(_str)
         , lineno(_lineno) {}
     IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                                 Temp_Label name);
+                     Temp_Label name);
 };
 
 struct PrimaryExp : public Exp {
     // IR::ExpTy AST::PrimaryExp::ast2ir();
+    virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                             Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct Lval : public PrimaryExp {
@@ -482,10 +503,14 @@ struct Lval : public PrimaryExp {
         constval = ConstVal(nullptr);
     }
     IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                                Temp_Label name);
+                     Temp_Label name);
 };
 
 struct Number : public PrimaryExp {
+    virtual IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                             Temp_Label name) {
+        assert(0);
+    }
 };
 
 struct IntNumber : Number {
@@ -497,7 +522,8 @@ struct IntNumber : Number {
         , lineno(_lineno) {
         constval = ConstVal(value);
     }
-    IR::ExpTy ast2ir();
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct FloatNumber : Number {
@@ -509,7 +535,8 @@ struct FloatNumber : Number {
         , lineno(_lineno) {
         constval = ConstVal(std::stof(*float_in_string));
     }
-    IR::ExpTy ast2ir();
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct UnaryExp : public Exp {
@@ -536,8 +563,8 @@ struct UnaryExp : public Exp {
             }
         }
     }
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct CallExp : public Exp {
@@ -549,8 +576,8 @@ struct CallExp : public Exp {
         : id(_id)
         , params(_params)
         , lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct ExpList : public NullableList<Exp*> {
@@ -583,8 +610,8 @@ struct MulExp : public Exp {
             }
         }
     }
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct AddExp : public Exp {
@@ -606,8 +633,8 @@ struct AddExp : public Exp {
             }
         }
     }
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct RelExp : public Exp {
@@ -621,8 +648,8 @@ struct RelExp : public Exp {
         , op(_op)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct EqExp : public Exp {
@@ -637,7 +664,7 @@ struct EqExp : public Exp {
         , rhs(_rhs)
         , lineno(_lineno) {}
     IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
-                                 Temp_Label name);
+                     Temp_Label name);
 };
 
 struct LAndExp : public Exp {
@@ -649,8 +676,8 @@ struct LAndExp : public Exp {
         : lhs(_lhs)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct LOrExp : public Exp {
@@ -662,8 +689,8 @@ struct LOrExp : public Exp {
         : lhs(_lhs)
         , rhs(_rhs)
         , lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                  Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct PutintStmt : public Stmt {
@@ -673,9 +700,8 @@ struct PutintStmt : public Stmt {
     PutintStmt(Exp* _exp, int _lineno)
         : exp(_exp)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                     Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                     Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct PutchStmt : public Stmt {
@@ -685,9 +711,8 @@ struct PutchStmt : public Stmt {
     PutchStmt(Exp* _exp, int _lineno)
         : exp(_exp)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                    Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct PutarrayStmt : public Stmt {
@@ -699,9 +724,8 @@ struct PutarrayStmt : public Stmt {
         : len(_len)
         , arr(_arr)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                       Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct PutfloatStmt : public Stmt {
@@ -711,9 +735,8 @@ struct PutfloatStmt : public Stmt {
     PutfloatStmt(Exp* _exp, int _lineno)
         : exp(_exp)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                       Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct PutfarrayStmt : public Stmt {
@@ -725,9 +748,8 @@ struct PutfarrayStmt : public Stmt {
         : len(_len)
         , arr(_arr)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                        Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                        Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct PutfStmt : public Stmt {
@@ -737,9 +759,8 @@ struct PutfStmt : public Stmt {
     PutfStmt(ExpList* _args, int _lineno)
         : args(_args)
         , lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                   Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                   Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct StarttimeStmt : public Stmt {
@@ -747,9 +768,8 @@ struct StarttimeStmt : public Stmt {
 
     StarttimeStmt(int _lineno)
         : lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                        Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                        Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct StoptimeStmt : public Stmt {
@@ -757,9 +777,8 @@ struct StoptimeStmt : public Stmt {
 
     StoptimeStmt(int _lineno)
         : lineno(_lineno) {}
-    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv,
-                                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
-                                       Temp_Label conlabel, Temp_Label name);
+    IR::Stm* ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                    Temp_Label brelabel, Temp_Label conlabel, Temp_Label name);
 };
 
 struct GetintExp : public Exp {
@@ -767,8 +786,8 @@ struct GetintExp : public Exp {
 
     GetintExp(int _lineno)
         : lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                     Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct GetchExp : public Exp {
@@ -776,8 +795,8 @@ struct GetchExp : public Exp {
 
     GetchExp(int _lineno)
         : lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct GetfloatExp : public Exp {
@@ -785,8 +804,8 @@ struct GetfloatExp : public Exp {
 
     GetfloatExp(int _lineno)
         : lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct GetarrayExp : public Exp {
@@ -796,8 +815,8 @@ struct GetarrayExp : public Exp {
     GetarrayExp(Exp* _arr, int _lineno)
         : arr(_arr)
         , lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                       Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 struct GetfarrayExp : public Exp {
@@ -807,8 +826,8 @@ struct GetfarrayExp : public Exp {
     GetfarrayExp(Exp* _arr, int _lineno)
         : arr(_arr)
         , lineno(_lineno) {}
-    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv,
-                                        Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
+    IR::ExpTy ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
+                     Temp_Label name);
 };
 
 };  // namespace AST

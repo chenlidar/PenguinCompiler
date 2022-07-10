@@ -29,4 +29,5 @@ struct Block {
 StmList* linearize(Stm* stm);
 Block basicBlocks(StmList* stmList);
 StmList* traceSchedule(Block b);
+StmList* handle(Stm* stm);
 }  // namespace CANON

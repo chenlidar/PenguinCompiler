@@ -144,6 +144,7 @@ CONSTDECL: CONST BTYPE CONSTDEFLIST ';' {
 
 CONSTDEFLIST: CONSTDEF {
 	$$ = new AST::ConstDefList(yyget_lineno());
+	$$->list.push_back($1);
 } | CONSTDEFLIST ',' CONSTDEF {
 	$$ = $1;
 	$1->list.push_back($3);
@@ -245,7 +246,7 @@ BLOCKITEM: DECL {
 STMT: ASSIGNSTMT ';' {
 	$$ = $1;
 } | ';' {
-	$$ = nullptr;
+	$$ = new AST::ExpStmt(new AST::IntNumber(0, yyget_lineno()), yyget_lineno());
 } | EXPSTMT ';' {
 	$$ = $1;
 } | BLOCK {

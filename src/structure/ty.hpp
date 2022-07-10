@@ -13,28 +13,44 @@ public:
     int arraysize;
     bool isconst;
     int* value;
-    //FIXME
-    // int arity;
-    Type(){}
-    Type(Type* t, tyType k, int* _value,bool _isconst) { arraysize=1;dim=1;tp = t, kind = k; value=_value;isconst=_isconst;}
-    Type(Type* t, tyType k, int* _value,int _dim,bool _isconst) { 
+    // FIXME
+    //  int arity;
+    Type() {}
+    Type(Type* t, tyType k, int* _value, bool _isconst) {
+        arraysize = 1;
+        dim = 1;
+        tp = t, kind = k;
+        value = _value;
+        isconst = _isconst;
+    }
+    Type(Type* t, tyType k, int* _value, int _dim, bool _isconst) {
         assert(t);
-        arraysize = _dim*t->arraysize;
-        tp = t, kind = k; value=_value;dim=_dim;isconst=_isconst;}
-    Type(Type* t, tyType k, std::vector<Type*> _param,Type* rtn) {
+        arraysize = _dim * t->arraysize;
+        tp = t, kind = k;
+        value = _value;
+        dim = _dim;
+        isconst = _isconst;
+    }
+    Type(Type* t, tyType k, std::vector<Type*> _param, Type* rtn) {
         tp = t, kind = k;
         param = _param;
-        tp=rtn;
+        tp = rtn;
     }
 };
 
-static inline Type* intType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_int, val,_isconst); }
-static inline Type* voidType() { return new TY::Type(0, TY::tyType::Ty_void, NULL,false); }
-    //FIXME
-static inline Type* floatType(int* val,bool _isconst) { return new TY::Type(0, TY::tyType::Ty_float, val,_isconst); }
-static inline Type* arrayType(Type* ty,int _dim,bool isconst) { return new TY::Type(ty, TY::tyType::Ty_array, NULL,_dim); }
+static inline Type* intType(int* val, bool _isconst) {
+    return new TY::Type(0, TY::tyType::Ty_int, val, _isconst);
+}
+static inline Type* voidType() { return new TY::Type(0, TY::tyType::Ty_void, NULL, false); }
+// FIXME
+static inline Type* floatType(int* val, bool _isconst) {
+    return new TY::Type(0, TY::tyType::Ty_float, val, _isconst);
+}
+static inline Type* arrayType(Type* ty, int _dim, bool _isconst) {
+    return new TY::Type(ty, TY::tyType::Ty_array, NULL, _dim, _isconst);
+}
 static inline Type* funcType(Type* rtn, std::vector<Type*> _param) {
-    return new TY::Type(0, TY::tyType::Ty_func, _param,rtn);
+    return new TY::Type(0, TY::tyType::Ty_func, _param, rtn);
 }
 enum class tyEntry { Ty_local, Ty_global, Ty_func };
 struct Entry {
@@ -62,7 +78,7 @@ struct GloVar : public Entry {
 struct EnFunc : public Entry {
     Temp_Label label;
     EnFunc(Type* _ty, Temp_Label _label) {
-        assert(_ty->kind==tyType::Ty_func);
+        assert(_ty->kind == tyType::Ty_func);
         kind = tyEntry::Ty_func;
         ty = _ty;
         label = _label;
