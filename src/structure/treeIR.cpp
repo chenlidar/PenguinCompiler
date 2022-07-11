@@ -210,15 +210,19 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     } else if (this->dst->kind == IR::expType::temp)  // Move(temp, e1)
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
-        printf("%s\n",
-               static_cast<IR::Name*>(static_cast<IR::Call*>(this->src)->fun)->name.c_str());
+        // printf("%s\n",
+        //        static_cast<IR::Name*>(static_cast<IR::Call*>(this->src)->fun)->name.c_str());
         src.push_back(this->src->ir2asm(ls));
         ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst[0], src[0]));
+    } else if (this->dst->kind == IR::expType::name) {
+        src.push_back(this->src->ir2asm(ls));
+        ls->push_back(
+            new ASM::Oper(std::string("str `s0, =") + static_cast<IR::Name*>(this->dst)->name,
+                          Temp_TempList(), src, ASM::Targets()));
     } else
         assert(0);
 }
 void ExpStm::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
-    // TODO
     //  assert(0);
 }
 
@@ -258,7 +262,7 @@ Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), dst, src, ASM::Targets()));
         return dst[0];
     case IR::binop::T_mod:
-        assert(0);  // FIXME
+        // assert(0);  // FIXME
         return dst[0];
     default: assert(0); break;
     }
@@ -282,12 +286,11 @@ Temp_Temp Name::ir2asm(ASM::InstrList* ls) {
     return dst[0];
 }
 Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
-    // DOING
     assert(this->fun->kind == expType::name);
     int cnt = 0, stksize = 0;
     IR::StmList *head = nullptr, *tail = nullptr;
     for (auto it : this->args) {
-        assert(it->kind == expType::temp);
+        //
         IR::Stm* stm;
         if (cnt < 4) {
             stm = new IR::Move(new IR::Temp(cnt), it);
@@ -307,7 +310,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
                                                       new IR::ConstInt(-stksize))))
             ->ir2asm(ls, "");
     }
-    head->ir2asm(ls, "");
+    if(head!=nullptr)head->ir2asm(ls, "");
     ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name,
                                 Temp_TempList(), Temp_TempList(), ASM::Targets()));
     if (stksize) {
@@ -319,7 +322,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
 }
 void StmList::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     this->stm->ir2asm(ls, exitlabel);
-    if (this->tail) this->tail->ir2asm(ls, exitlabel);
+    if (this->tail!=nullptr) this->tail->ir2asm(ls, exitlabel);
 }
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();

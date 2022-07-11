@@ -91,9 +91,10 @@ static Stm* do_stm(Stm* stm) {
         return seq(reorder(new ExpRefList(&s->left, new ExpRefList(&s->right, NULL))), stm);
     } else if (stm->kind == stmType::move) {
         Move* s = static_cast<Move*>(stm);
-        if (s->dst->kind == expType::temp && s->src->kind == expType::call)
+        if ((s->dst->kind == expType::temp || s->dst->kind == expType::name)
+            && s->src->kind == expType::call)
             return seq(reorder(get_call_rlist(s->src)), stm);
-        else if (s->dst->kind == expType::temp)
+        else if (s->dst->kind == expType::temp || s->dst->kind == expType::name)
             return seq(reorder(new ExpRefList(&s->src, NULL)), stm);
         else if (s->dst->kind == expType::mem)
             return seq(reorder(new ExpRefList(&static_cast<Mem*>(s->dst)->mem,

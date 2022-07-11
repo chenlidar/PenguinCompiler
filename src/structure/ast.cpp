@@ -119,9 +119,13 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 int offset = 0;
                 TY::Type* head = TY::intType(new int(0), false);
                 for (int i = (int)(this->index->list.size()) - 1; i >= 0; i--) {
-                    AST::Exp* it = this->index->list[i];
-                    IR::ExpTy expty = it->ast2ir(venv, fenv, name);
-                    head = TY::arrayType(head, *expty.ty->value, false);
+                    AST::Exp* it = this->index->list[i];  // FIXME: nullptr
+                    if (it != nullptr) {
+                        IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+                        head = TY::arrayType(head, *expty.ty->value, false);
+                    } else {
+                        head = TY::arrayType(head, 1, false);
+                    }
                 }
                 // head->value = new int[head->arraysize];
                 //
@@ -253,8 +257,11 @@ IR::Stm* AST::ContinueStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
 }
 IR::Stm* AST::ReturnStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                  Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
-    return seq(new IR::Move(new IR::Temp(0), this->exp->ast2ir(venv, fenv, name).exp->unEx()),
-               new IR::Jump(new IR::Name("RETURN"), Temp_LabelList(1, "RETURN")));
+    if (this->exp == nullptr) {
+        return new IR::Jump(new IR::Name("RETURN"), Temp_LabelList(1, "RETURN"));
+    } else
+        return seq(new IR::Move(new IR::Temp(0), this->exp->ast2ir(venv, fenv, name).exp->unEx()),
+                   new IR::Jump(new IR::Name("RETURN"), Temp_LabelList(1, "RETURN")));
 }
 IR::ExpTy AST::Exp::calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                              Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
