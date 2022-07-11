@@ -70,11 +70,42 @@ ir() {
 	fi
 }
 
+asm() {
+	#ast func_name
+	#echo $2
+	#compile ast
+
+	if [ -z $1 ]; then
+		# all test
+		test_file_list=`realpath --relative-base=$func_testcase_dir $func_testcase_dir/*.sy`
+		for x in $test_file_list
+		do
+			test_name=${x%.sy}
+			echo $test_name
+			$build_dir/test-ir < $func_testcase_dir/$x > $build_dir/$test_name.asm
+		done
+
+		# echo $test_name_list
+	else
+		test_file=`realpath --relative-base=$func_testcase_dir $func_testcase_dir/$1*.sy`
+		
+		test_name=${test_file%.sy}
+		#ref_output_file=$func_testcase_dir/$test_name.out
+		
+		echo $test_name
+
+		#cd $build_dir
+		$build_dir/test-ir < $func_testcase_dir/$test_file  > $build_dir/$test_name.asm
+	fi
+}
+
 main() {
 	if [ $1 = 'ast' ]; then
 		ast $2
 	elif [ $1 = 'ir' ]; then
 		ir $2
+	fi elif [ $1 = 'asm' ]; then
+		asm $2
 	fi
 }
 

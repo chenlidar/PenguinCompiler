@@ -11,38 +11,39 @@
 
 //#include "util.h"
 
-namespace Graph{
+namespace GRAPH {
 
-class graph;
-class node_;
-typedef node_ *node;    /* The "node" type */
-typedef std::vector<node> nodeList;
+class Graph;
+class Node;
+typedef std::vector<Node*> NodeList;
 
-struct node_{
+struct Node {
     int mykey;
-    graph *mygraph;
-    nodeList succs;
-    nodeList preds;
-    void *info;
+    Graph* mygraph;
+    NodeList succs;
+    NodeList preds;
+    void* info;
 
-    node_(){}
-    node_(int _mykey,graph* _mygraph,void *_info=NULL):mykey(_mykey),mygraph(_mygraph),info(_info)
-    {
-        succs = nodeList();
-        preds = nodeList();
+    Node() {}
+    Node(int _mykey, Graph* _mygraph, void* _info = NULL)
+        : mykey(_mykey)
+        , mygraph(_mygraph)
+        , info(_info) {
+        succs = NodeList();
+        preds = NodeList();
     }
 
     /* Get the "info" associated with node*/
-    void *nodeInfo(); 
+    void* nodeInfo();
 
     /* Tell if node is in the list "l" */
-    bool inNodeList(nodeList &l); 
+    bool inNodeList(NodeList& l);
 
     /* Get all the successors of node*/
-    nodeList succ(); 
+    NodeList succ();
 
     /* Get all the predecessors of node */
-    nodeList pred(); 
+    NodeList pred();
 
     /* Tell how many edges lead to or from "n" */
     int degree();
@@ -51,95 +52,84 @@ struct node_{
     int nodeid();
 
     /* Get all the successors and predecessors of "n" */
-    nodeList adj();
+    NodeList adj();
+    int outDegree();
+    int inDegree();
 };
 
-class graph{
+class Graph {
 private:
     int nodecount;
-	nodeList mynodes;
+    NodeList mynodes;
 
 public:
-    graph(){
+    Graph() {
         nodecount = 0;
-        mynodes = nodeList();
+        mynodes = NodeList();
     }
-	~graph(){
-		for(auto &i: mynodes)
-			delete i;
-	}
+    ~Graph() {
+        for (auto& i : mynodes) delete i;
+    }
 
     /*create new node and return its pointer */
-    node newNode();
+    Node* newNode();
 
     /* Get the "info" associated with node "n" */
-    void *nodeInfo(node n); 
+    void* nodeInfo(Node* n);
 
     /* Tell if "a" is in the list "l" */
-    bool inNodeList(node n,nodeList &l); 
+    bool inNodeList(Node* n, NodeList& l);
 
     /* Get all the successors of node "n" */
-    nodeList succ(node n); 
+    NodeList succ(Node* n);
 
     /* Get all the predecessors of node "n" */
-    nodeList pred(node n); 
+    NodeList pred(Node* n);
 
     /* Tell how many edges lead to or from "n" */
-    int degree(node n);
+    int degree(Node* n);
 
     /* Tell the id of "n" */
-    int nodeid(node n);
+    int nodeid(Node* n);
 
     /* Get all the successors and predecessors of "n" */
-    nodeList adj(node n);
+    NodeList adj(Node* n);
 
-    /* Make a new graph */
-    graph Graph(void); 
     /* Make a new node in graph "g", with associated "info" */
-    node Node(graph g, void *info);
+    Node* addNode(void* info);
 
     /* Get the list of nodes belonging to "g" */
-    nodeList nodes(graph g);
+    NodeList nodes();
 
     /* Make a new edge joining nodes "from" and "to", which must belong
         to the same graph */
-    void addEdge(node from, node to);
+    void addEdge(Node* from, Node* to);
 
     /* Delete the edge joining "from" and "to" */
-    void rmEdge(node from, node to);
+    void rmEdge(Node* from, Node* to);
 
     /* Show all the nodes and edges in the graph, using the function "showInfo"
         to print the name of each node */
-    void show(FILE *out, nodeList p, void showInfo(void *));
+    void show(std::ofstream out, NodeList p, void showInfo(void*));
 
     /* Tell if there is an edge from "from" to "to" */
-    bool goesTo(node from, node n);
-
+    bool goesTo(Node* from, Node* n);
+    void rmNode(GRAPH::Node* node);
+    void reverseNode(GRAPH::Node* node);
 };
 
-template <typename T>
-class table{
-	std::unordered_map<int,T> t;
+template <typename T> class Table {
+    std::unordered_map<int, T> t;
+
 public:
-	table(){}
-	void enter(node node, T value);
-	T look(node node);
+    Table() {}
+    void enter(Node* node, T value);
+    T look(Node* node);
 };
 
+template <typename T> void Table<T>::enter(Node* node, T value) { this->t[node->mykey] = value; }
+template <typename T> T Table<T>::look(Node* node) { this->t.erase(node->mykey); }
 
-template <typename T>
-void table<T>::enter(node node, T value)
-{
-	this->t[node->mykey]=value;
-}
-template <typename T>
-T table<T>::look(node node)
-{
-	this->t.erase(node->mykey);
-}
-
-
-}
-
+}  // namespace GRAPH
 
 #endif
