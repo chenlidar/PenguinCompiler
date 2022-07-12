@@ -67,7 +67,7 @@ ir() {
 		echo $test_name
 
 		#cd $build_dir
-		$build_dir/test-ir < $func_testcase_dir/$test_file || exit
+		$build_dir/test-ir < $func_testcase_dir/$test_file > $build_dir/$test_name.s
 	fi
 }
 

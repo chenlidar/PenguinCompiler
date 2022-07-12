@@ -5,6 +5,7 @@
 #include "util/table.hpp"
 #include "backend/canon.hpp"
 #include "backend/regalloc.hpp"
+#include "util/utils.hpp"
 extern int yyparse();
 extern AST::CompUnitList* root;
 int main() {
@@ -12,19 +13,17 @@ int main() {
     auto venv = new Table::Stable<TY::Entry*>();
     auto fenv = new Table::Stable<TY::EnFunc*>();
     std::cout << ".global main\n";
-    //global var handle
-
+    // global var handle
+    
     IR::StmList* stmlist = root->ast2ir(venv, fenv);
     for (IR::StmList* l = stmlist; l; l = l->tail) {
         IR::Stm* stm = l->stm;
+        if (isNop(stm)) continue;  // global var
+        //function
         IR::StmList* out = CANON::handle(stm);
         std::string funcname = static_cast<IR::Label*>(out->stm)->label;
-        if (!fenv->exist(funcname))continue;//global var
-        else {//function
-            bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
-            RA::RA_RegAlloc(
-                CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main"));
-        }
+        bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
+        RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main"));
         // for(auto it:*CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main")){
         //     it->print();
         // }
