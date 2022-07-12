@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include "assem.h"
+#include "../backend/canon.hpp"
 using std::string;
 using namespace IR;
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
@@ -206,14 +207,14 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
         src.push_back(static_cast<IR::Mem*>(this->src)->ir2asm(ls));
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst[0], src[0]));
+        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
     } else if (this->dst->kind == IR::expType::temp)  // Move(temp, e1)
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
         // printf("%s\n",
         //        static_cast<IR::Name*>(static_cast<IR::Call*>(this->src)->fun)->name.c_str());
         src.push_back(this->src->ir2asm(ls));
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst[0], src[0]));
+        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
     } else if (this->dst->kind == IR::expType::name) {
         src.push_back(this->src->ir2asm(ls));
         ls->push_back(
@@ -310,9 +311,12 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
                                                       new IR::ConstInt(-stksize))))
             ->ir2asm(ls, "");
     }
-    if(head!=nullptr)head->ir2asm(ls, "");
-    ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name,
-                                Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    if (head != nullptr) head->ir2asm(ls, "");
+    Temp_TempList defs = Temp_TempList();
+    for (int i = 0; i < 4; i++) { defs.push_back(i); }
+    defs.push_back(14);
+    ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name, defs,
+                                defs, ASM::Targets()));
     if (stksize) {
         (new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
                                                       new IR::ConstInt(stksize))))
@@ -322,13 +326,14 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
 }
 void StmList::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     this->stm->ir2asm(ls, exitlabel);
-    if (this->tail!=nullptr) this->tail->ir2asm(ls, exitlabel);
+    if (this->tail != nullptr) this->tail->ir2asm(ls, exitlabel);
 }
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();
     IR::Stm* label = getLast(stmlist)->tail->stm;
     assert(label->kind == stmType::label);
     Temp_Label exitlabel = static_cast<IR::Label*>(label)->label;
+    stmlist = CANON::funcEntryExit1(stmlist);
     stmlist->ir2asm(&proc->body, exitlabel);
     return proc;
 }

@@ -14,7 +14,6 @@ int main() {
     for (IR::StmList* l = stmlist; l; l = l->tail) {
         IR::Stm* stm = l->stm;
         IR::StmList* out = CANON::handle(stm);
-        ASM::InstrList *ls=new std::vector<ASM::Instr*>();
         IR::ir2asm(out)->print();
     }
     return 0;

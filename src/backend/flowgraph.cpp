@@ -1,5 +1,6 @@
 #include "flowgraph.hpp"
 #include <unordered_map>
+#include <assert.h>
 /* Interfaces */
 using LabelNodeMap = std::unordered_map<Temp_Label, GRAPH::Node*>;
 
@@ -13,10 +14,8 @@ struct UDinfo {
         , isMove(_isMove) {}
 };
 using NodeInfoMap = std::unordered_map<GRAPH::Node*, UDinfo*>;
-static void UD_init();
 static void UD_enter(GRAPH::Node* n, UDinfo* info);
 static UDinfo* UD_lookup(GRAPH::Node* n);
-static UDinfo* UDInfo(Temp_TempList uses, Temp_TempList defs, bool isMove);
 static LabelNodeMap* LNTable();
 static void LT_enter(GRAPH::Node* l, UDinfo* n);
 static GRAPH::Node* LT_lookup(Temp_Label l);
@@ -24,9 +23,7 @@ static GRAPH::Node* LT_lookup(Temp_Label l);
 /* Implementation */
 static NodeInfoMap* UDTable = nullptr;
 
-static void UD_init() {
-    if (UDTable == nullptr) { UDTable = new NodeInfoMap(); }
-}
+static void UD_init() { UDTable = new NodeInfoMap(); }
 
 static void UD_enter(GRAPH::Node* n, UDinfo* info) { UDTable->insert(std::make_pair(n, info)); }
 
@@ -65,14 +62,12 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
     UD_init();
 
     //(I) Iterate over the entire instruction list
-    ASM::Instr* instr = nullptr;
-    GRAPH::Node* prev = NULL;
-    GRAPH::Node* curr = NULL;
+    GRAPH::Node* prev = nullptr;
+    GRAPH::Node* curr = nullptr;
     GRAPH::Graph* graph = new GRAPH::Graph();
-    GRAPH::NodeList* jumpList = nullptr;
-    GRAPH::NodeList* jumpListHead = new GRAPH::NodeList();
+    GRAPH::NodeList* jumpList = new GRAPH::NodeList();
     for (auto instr : *il) {
-        if (instr != NULL) {
+        if (instr != nullptr) {
             // 1) create a node (and put it into the graph), using the
             //    instruction as the associated info.
             curr = graph->addNode(instr);
@@ -89,12 +84,7 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
                 if (!static_cast<ASM::Oper*>(instr)->jumps.empty()) {
                     type = IT_JUMP;
                     // put this instruction into a separate list
-                    if (jumpList == NULL) {
-                        jumpList = new GRAPH::NodeList(1, curr);
-                        jumpListHead = jumpList;
-                    } else {
-                        jumpList->push_back(curr);
-                    }
+                    jumpList->push_back(curr);
                 }
                 defs = static_cast<ASM::Oper*>(instr)->dst;
                 uses = static_cast<ASM::Oper*>(instr)->src;
@@ -106,13 +96,14 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
             case ASM::InstrType::move:
                 // 2.3) it's a move instruction
                 type = IT_MOVE;
-                defs = Temp_TempList(1, static_cast<ASM::Move*>(instr)->dst);
-                uses = Temp_TempList(1, static_cast<ASM::Move*>(instr)->src);
+                defs = static_cast<ASM::Move*>(instr)->dst;
+                uses = static_cast<ASM::Move*>(instr)->src;
+                assert(defs.size() == 1 && uses.size() == 1);
                 break;
             }
 
             // 3) put information into table
-            UD_enter(curr, UDInfo(uses, defs, type == IT_MOVE));
+            UD_enter(curr, new UDinfo(uses, defs, type == IT_MOVE));
 
             // 4) link with the previous node for falling through, if possible.
             //    Note that prev is NULL if the previous instruction is a JUMP.
@@ -125,8 +116,7 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
 
     //(II) Iterate over the list that has all the JUMP instruction collected.
     Temp_LabelList labels;
-    for (auto& curr : *jumpListHead) {
-        // curr = jumpListHead->head;
+    for (auto& curr : *jumpList) {
         ASM::Instr* x = (ASM::Instr*)(curr->nodeInfo());
         labels = static_cast<ASM::Oper*>(x)->jumps;  // no need to check its nullity again
         Temp_Label label;
@@ -138,7 +128,6 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
                 // quickly retieve the target node using the label-node table
                 dest = LT_lookup(label);
                 // establish edge between this node and its jump target
-                // G_addEdge(curr, dest);
                 curr->mygraph->addEdge(curr, dest);
             }
         }

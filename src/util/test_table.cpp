@@ -1,4 +1,4 @@
-#include <iostream>
+/* #include <iostream>
 #include "table.hpp"
 
 using namespace Table;
@@ -37,4 +37,4 @@ int main()
     std::cout<<(S.look(std::string("plover")).C)<<std::endl;//-3
 
     return 0;
-}
+} */

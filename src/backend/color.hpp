@@ -23,6 +23,6 @@ struct COL_result {
         : coloring(new std::unordered_map<Temp_Temp, Temp_Temp>())
         , spills(new Temp_TempList()) {}
 };
-COL_result COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, Temp_Temp>* stkuse);
+COL_result* COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, Temp_Temp>* stkuse);
 }  // namespace COLOR
 #endif

@@ -170,9 +170,9 @@ IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
             if (it->arrayindex->list.empty()) ty->param.push_back(head);
         }
     }
-    Temp_Label fb = Temp_newlabel();
-    fenv->enter(*this->id->str, new TY::EnFunc(ty, fb));
     name = *this->id->str;
+    Temp_Label fb = name;
+    fenv->enter(*this->id->str, new TY::EnFunc(ty, fb));
     venv->beginScope(NULL);
     IR::Stm* cat_stm = nopStm();
     int stksize = 0, cnt = 0;

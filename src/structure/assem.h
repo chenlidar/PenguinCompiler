@@ -3,14 +3,16 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include "../util/templabel.hpp"
 #include "../util/temptemp.hpp"
+#include <assert.h>
 
 namespace ASM {
 typedef Temp_LabelList Targets;
 enum class InstrType { oper, move, label };
 struct Instr {
-    virtual void print() = 0;
+    virtual void print(std::unordered_map<Temp_Temp, Temp_Temp>* tempMap = nullptr) = 0;
     InstrType kind;
 };
 typedef std::vector<Instr*> InstrList;
@@ -25,17 +27,19 @@ struct Oper : public Instr {
         , jumps(_jumps) {
         this->kind = InstrType::oper;
     }
-    void print() {
+    void print(std::unordered_map<Temp_Temp, Temp_Temp>* tempMap = nullptr) {
         int i = 0;
         std::string out = assem;
         for (auto d : dst) {
             std::string s = "`d" + std::to_string(i++);
-            out = out.replace(out.find(s), s.size(), Temp_tempname(d));
+            if(out.find(s)==std::string::npos)break;
+            out = out.replace(out.find(s), s.size(), Temp_tempname(tempMap, d));
         }
         i = 0;
         for (auto sr : src) {
             std::string s = "`s" + std::to_string(i++);
-            out = out.replace(out.find(s), s.size(), Temp_tempname(sr));
+            if(out.find(s)==std::string::npos)break;
+            out = out.replace(out.find(s), s.size(), Temp_tempname(tempMap, sr));
         }
         std::cout << out << std::endl;
     }
@@ -46,28 +50,31 @@ struct Label : public Instr {
         : label(_label) {
         this->kind = InstrType::label;
     }
-    void print() { std::cout << label << ":" << std::endl; }
+    void print(std::unordered_map<Temp_Temp, Temp_Temp>* tempMap = nullptr) {
+        std::cout << label << ":" << std::endl;
+    }
 };
 struct Move : public Instr {
     std::string assem;
-    Temp_Temp dst, src;
-    Move(std::string _assem, Temp_Temp _dst, Temp_Temp _src)
+    Temp_TempList dst, src;
+    Move(std::string _assem, Temp_TempList _dst, Temp_TempList _src)
         : assem(_assem)
         , dst(_dst)
         , src(_src) {
+            assert(_dst.size()==1&&_src.size()==1);
         this->kind = InstrType::move;
     }
-    void print() {
+    void print(std::unordered_map<Temp_Temp, Temp_Temp>* tempMap = nullptr) {
         std::string out = assem;
-        out = out.replace(out.find("`d0"), 3, Temp_tempname(dst));
-        out = out.replace(out.find("`s0"), 3, Temp_tempname(src));
+        out = out.replace(out.find("`d0"), 3, Temp_tempname(tempMap, dst[0]));
+        out = out.replace(out.find("`s0"), 3, Temp_tempname(tempMap, src[0]));
         std::cout << out << std::endl;
     }
 };
 struct Proc {
     InstrList body;
-    void print() {
-        for (auto instr : body) { instr->print(); }
+    void print(std::unordered_map<Temp_Temp, Temp_Temp>* tempMap = nullptr) {
+        for (auto instr : body) { instr->print(tempMap); }
     }
 };
 }  // namespace ASM

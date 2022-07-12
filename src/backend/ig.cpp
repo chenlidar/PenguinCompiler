@@ -5,23 +5,23 @@ static GRAPH::Graph* RA_ig;  // info of this graph is a Temp_Temp
 
 void Ig_empty() { RA_ig = new GRAPH::Graph(); }
 
-GRAPH::Graph* Ig_graph() { return RA_ig; }
+GRAPH::Graph* IG::Ig_graph() { return RA_ig; }
 
-GRAPH::Node* Look_ig(Temp_Temp t) {
+static GRAPH::Node* Look_ig(Temp_Temp t) {
     GRAPH::Node* n1 = NULL;
-    for (const auto& x : RA_ig->nodes()) {
-        if ((Temp_Temp)(x->nodeInfo()) == t) {
+    for (const auto& x : *RA_ig->nodes()) {
+        if ((Temp_Temp)(uint64_t)(x->nodeInfo()) == t) {
             n1 = x;
             break;
         }
     }
     if (n1 == NULL)
-        return (RA_ig->addNode((void*)t));
+        return (RA_ig->addNode((void*)(uint64_t)t));
     else
         return n1;
 }
 
-void Enter_ig(Temp_Temp t1, Temp_Temp t2) {
+void IG::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
     GRAPH::Node* n1 = Look_ig(t1);
     GRAPH::Node* n2 = Look_ig(t2);
     // G_addEdge(n1, n2);
@@ -31,7 +31,7 @@ void Enter_ig(Temp_Temp t1, Temp_Temp t2) {
 
 // input flowgraph after liveness analysis (so FG_In and FG_Out are available)
 
-GRAPH::NodeList* Create_ig(GRAPH::NodeList* flowgraph) {
+GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
     // DONE:You need to fill in here!
     RA_ig = new GRAPH::Graph();
     for (auto it : *flowgraph) {
@@ -61,7 +61,7 @@ GRAPH::NodeList* Create_ig(GRAPH::NodeList* flowgraph) {
             }
         }
     }
-    return &RA_ig->nodes();
+    return (RA_ig->nodes());
 }
 
 // static void show_temp(Temp_Temp t) {

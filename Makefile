@@ -15,5 +15,13 @@ test-ir: frontend treeIR.cpp treeIR.hpp ast.cpp ast.h table.hpp canon.cpp canon.
 	src/util/temptemp.cpp src/util/templabel.cpp \
 	-I./src -o build/test-ir
 
+test-asm: frontend
+	clang++-10 -O0 -g \
+	src/**/*.cpp \
+	test/src/test-asm.cpp \
+	-I./src -o build/test-asm
+
 compiler:
 	clang++-10 
+
+.PHONY: test-asm

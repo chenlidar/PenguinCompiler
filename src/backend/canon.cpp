@@ -244,3 +244,48 @@ StmList* CANON::handle(Stm* stm) {
     CANON::Block b = CANON::basicBlocks(ll);
     return CANON::traceSchedule(b);
 }
+
+//
+StmList* CANON::funcEntryExit1(StmList* stmlist) {
+    assert(stmlist);
+    assert(stmlist->stm->kind == IR::stmType::label);
+    StmList *end = stmlist, *end_entry;
+    for (; end->tail; end = end->tail)
+        ;
+    assert(end->stm->kind == IR::stmType::label);
+    assert(end != stmlist);
+
+    StmList *entry = new StmList(NULL, NULL), *exit = new StmList(NULL, NULL);
+    for (int i = 4; i <= 10; i++) {
+        Temp_Temp temp = Temp_newtemp();
+        entry->tail = new StmList(new Move(new Temp(temp), new Temp(i)), entry->tail);
+        exit->tail = new StmList(new Move(new Temp(i), new Temp(temp)), exit->tail);
+    }
+    end_entry = entry;
+    for (; end_entry->tail; end_entry = end_entry->tail)
+        ;
+    end_entry->tail = stmlist->tail;
+    stmlist->tail = entry->tail;
+    end->tail = exit->tail;
+    assert(stmlist->stm->kind == IR::stmType::label);
+    return stmlist;
+}
+ASM::InstrList* CANON::funcEntryExit2(ASM::InstrList* list, bool isvoid, bool ismain) {
+    if (!isvoid) {
+        list->push_back(
+            new ASM::Oper("", Temp_TempList(), Temp_TempList(1, 0), Temp_LabelList()));  // sink
+    }
+    if (ismain) {
+        list->push_back(new ASM::Oper(std::string("mov r7, r0"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
+        list->push_back(
+            new ASM::Oper("bl putint", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
+        list->push_back(new ASM::Oper(std::string("mov r0, #10"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
+        list->push_back(
+            new ASM::Oper("bl putch", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
+        list->push_back(new ASM::Oper(std::string("mov r0, r7"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
+    }
+    return list;
+}

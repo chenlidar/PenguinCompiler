@@ -3,6 +3,7 @@ compiler_src_dir=$(realpath $(dirname "$0")/../../src)
 test_src_dir=$(realpath $(dirname "$0")/../src)
 func_testcase_dir=$(realpath $(dirname "$0")/../functional)
 build_dir=$(realpath $(dirname "$0")/../../build)
+libsysy=/home/chenlida/F/term6/compile/HW/compiler/raspi/libsysy.a
 
 compile() {
 	cd $build_dir
@@ -82,7 +83,7 @@ asm() {
 		do
 			test_name=${x%.sy}
 			echo $test_name
-			$build_dir/test-ir < $func_testcase_dir/$x > $build_dir/$test_name.asm
+			$build_dir/test-asm < $func_testcase_dir/$x > $build_dir/$test_name.s
 		done
 
 		# echo $test_name_list
@@ -95,7 +96,9 @@ asm() {
 		echo $test_name
 
 		#cd $build_dir
-		$build_dir/test-ir < $func_testcase_dir/$test_file  > $build_dir/$test_name.asm
+		$build_dir/test-asm < $func_testcase_dir/$test_file  > $build_dir/$test_name.s
+		arm-linux-gnueabihf-gcc $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name.out
+		qemu-arm $build_dir/$test_name.out
 	fi
 }
 
@@ -104,7 +107,7 @@ main() {
 		ast $2
 	elif [ $1 = 'ir' ]; then
 		ir $2
-	fi elif [ $1 = 'asm' ]; then
+	elif [ $1 = 'asm' ]; then
 		asm $2
 	fi
 }

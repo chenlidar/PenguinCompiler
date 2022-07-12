@@ -82,6 +82,7 @@
         "condition_variable": "cpp",
         "map": "cpp",
         "shared_mutex": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "*.def": "cpp"
     }
 }

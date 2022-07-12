@@ -40,10 +40,10 @@ struct Node {
     bool inNodeList(NodeList& l);
 
     /* Get all the successors of node*/
-    NodeList succ();
+    NodeList* succ();
 
     /* Get all the predecessors of node */
-    NodeList pred();
+    NodeList* pred();
 
     /* Tell how many edges lead to or from "n" */
     int degree();
@@ -51,8 +51,6 @@ struct Node {
     /* Tell the id of "n" */
     int nodeid();
 
-    /* Get all the successors and predecessors of "n" */
-    NodeList adj();
     int outDegree();
     int inDegree();
 };
@@ -71,9 +69,6 @@ public:
         for (auto& i : mynodes) delete i;
     }
 
-    /*create new node and return its pointer */
-    Node* newNode();
-
     /* Get the "info" associated with node "n" */
     void* nodeInfo(Node* n);
 
@@ -81,10 +76,10 @@ public:
     bool inNodeList(Node* n, NodeList& l);
 
     /* Get all the successors of node "n" */
-    NodeList succ(Node* n);
+    NodeList* succ(Node* n);
 
     /* Get all the predecessors of node "n" */
-    NodeList pred(Node* n);
+    NodeList* pred(Node* n);
 
     /* Tell how many edges lead to or from "n" */
     int degree(Node* n);
@@ -92,14 +87,11 @@ public:
     /* Tell the id of "n" */
     int nodeid(Node* n);
 
-    /* Get all the successors and predecessors of "n" */
-    NodeList adj(Node* n);
-
     /* Make a new node in graph "g", with associated "info" */
     Node* addNode(void* info);
 
     /* Get the list of nodes belonging to "g" */
-    NodeList nodes();
+    NodeList *nodes();
 
     /* Make a new edge joining nodes "from" and "to", which must belong
         to the same graph */
@@ -107,10 +99,6 @@ public:
 
     /* Delete the edge joining "from" and "to" */
     void rmEdge(Node* from, Node* to);
-
-    /* Show all the nodes and edges in the graph, using the function "showInfo"
-        to print the name of each node */
-    void show(std::ofstream out, NodeList p, void showInfo(void*));
 
     /* Tell if there is an edge from "from" to "to" */
     bool goesTo(Node* from, Node* n);
