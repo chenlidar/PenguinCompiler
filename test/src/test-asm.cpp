@@ -13,8 +13,6 @@ int main() {
     auto venv = new Table::Stable<TY::Entry*>();
     auto fenv = new Table::Stable<TY::EnFunc*>();
     std::cout << ".global main\n";
-    // global var handle
-    
     IR::StmList* stmlist = root->ast2ir(venv, fenv);
     for (IR::StmList* l = stmlist; l; l = l->tail) {
         IR::Stm* stm = l->stm;
@@ -27,6 +25,29 @@ int main() {
         // for(auto it:*CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main")){
         //     it->print();
         // }
+    }
+    // global var handle
+    for(auto it=venv->begin();it!=venv->end();++it){
+        TY::Entry * entry=venv->look(it->first);
+        assert(entry&&entry->kind==TY::tyEntry::Ty_global);
+        if(entry->ty->isconst)continue;//const
+        Temp_Label name=static_cast<TY::GloVar*>(entry)->label;
+        switch(entry->ty->kind){
+            case TY::tyType::Ty_int:{
+                assert(entry->ty->value);
+                std::cout<<name+":\n"+".word "+std::to_string(*entry->ty->value)<<std::endl;
+            }break;
+            case TY::tyType::Ty_float:{
+                assert(0);
+            }break;
+            case TY::tyType::Ty_array:{//int
+                std::cout<<name+":\n";
+                for(int i=0;i<entry->ty->arraysize;i++){
+                    std::cout<<".word "+std::to_string(*(entry->ty->value+i))<<std::endl;
+                }
+            }break;
+            default:assert(0);
+        }
     }
     return 0;
 }

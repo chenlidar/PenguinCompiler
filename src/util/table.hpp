@@ -32,10 +32,10 @@ class table {
     bool exist(T_key);
     T_value look(T_key);
     std::pair<T_key, T_value> pop();
-    std::vector<std::pair<T_key, std::pair<T_value, bool>>>::iterator begin() {
+    auto begin() -> decltype(stk.begin()){
         return stk.begin();
     }
-    std::vector<std::pair<T_key, std::pair<T_value, bool>>>::iterator end() {
+    auto end() -> decltype(stk.end()) {
         return stk.end();
     }
 };
@@ -55,12 +55,11 @@ class Stable {
     void beginScope(T_value useless);  // anything
     void endScope();
     std::pair<std::string, T_value> pop();
-    std::vector<std::pair<std::string, std::pair<T_value, bool>>>::iterator
-    begin() {
+    auto
+    begin() -> decltype(table.begin()){
         return table.begin();
     }
-    std::vector<std::pair<std::string, std::pair<T_value, bool>>>::iterator
-    end() {
+    auto end() -> decltype(table.end()){
         return table.end();
     }
 };

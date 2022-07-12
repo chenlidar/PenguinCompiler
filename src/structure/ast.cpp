@@ -335,8 +335,10 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
     } else {  // not array
         if (ty->isconst)
             return IR::ExpTy(new IR::Tr_Exp(new IR::ConstInt(*ty->value)), ty);
-        else
-            return IR::ExpTy(new IR::Tr_Exp(idIR), ty);
+        else{
+            if(exp->kind == TY::tyEntry::Ty_global)return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(idIR)), ty);
+            else return IR::ExpTy(new IR::Tr_Exp(idIR), ty);
+        }
     }
 }
 IR::ExpTy AST::IntNumber::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
