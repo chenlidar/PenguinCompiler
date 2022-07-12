@@ -55,6 +55,14 @@ class Stable {
     void beginScope(T_value useless);  // anything
     void endScope();
     std::pair<std::string, T_value> pop();
+    std::vector<std::pair<std::string, std::pair<T_value, bool>>>::iterator
+    begin() {
+        return table.begin();
+    }
+    std::vector<std::pair<std::string, std::pair<T_value, bool>>>::iterator
+    end() {
+        return table.end();
+    }
 };
 
 // implementation
