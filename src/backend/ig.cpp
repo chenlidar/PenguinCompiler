@@ -8,6 +8,7 @@ void Ig_empty() { RA_ig = new GRAPH::Graph(); }
 GRAPH::Graph* IG::Ig_graph() { return RA_ig; }
 
 static GRAPH::Node* Look_ig(Temp_Temp t) {
+    if(t==11||t==13)return nullptr;
     GRAPH::Node* n1 = NULL;
     for (const auto& x : *RA_ig->nodes()) {
         if ((Temp_Temp)(uint64_t)(x->nodeInfo()) == t) {
@@ -22,6 +23,7 @@ static GRAPH::Node* Look_ig(Temp_Temp t) {
 }
 
 void IG::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
+    if(t1==11||t1==13||t2==11||t2==13)return;
     GRAPH::Node* n1 = Look_ig(t1);
     GRAPH::Node* n2 = Look_ig(t2);
     // G_addEdge(n1, n2);

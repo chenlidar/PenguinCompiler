@@ -49,6 +49,12 @@ void Graph::addEdge(Node* from, Node* to) {
     assert(from->mygraph==to->mygraph);
     if (goesTo(from, to)) return;
     to->preds.push_back(from);
+    assert((uint64_t)to->nodeInfo() != 11);
+    assert((uint64_t)to->nodeInfo() != 12);
+    assert((uint64_t)to->nodeInfo() != 13);
+    assert((uint64_t)from->nodeInfo() != 11);
+    assert((uint64_t)from->nodeInfo() != 12);
+    assert((uint64_t)from->nodeInfo() != 13);
     from->succs.push_back(to);
 }
 void Graph::rmEdge(Node* from, Node* to) {

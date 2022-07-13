@@ -224,7 +224,7 @@ PARAMETER: BTYPE IDEXP {
 	$$ = new AST::Parameter($1, $2, new AST::ArrayIndex(yyget_lineno()), yyget_lineno());
 } | BTYPE IDEXP '[' ']' ARRAYINDEX {
 	auto x = new AST::ArrayIndex(yyget_lineno());
-	x->list.push_back(nullptr);
+	x->list.push_back(new AST::IntNumber(1, yyget_lineno()));
 	for (const auto &y:$5->list) {
 		x->list.push_back(y);
 	}

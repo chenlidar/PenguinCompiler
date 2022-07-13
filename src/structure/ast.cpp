@@ -121,12 +121,9 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 TY::Type* head = TY::intType(new int(0), false);
                 for (int i = (int)(this->index->list.size()) - 1; i >= 0; i--) {
                     AST::Exp* it = this->index->list[i];  // FIXME: nullptr
-                    if (it != nullptr) {
+                    assert (it != nullptr) ;
                         IR::ExpTy expty = it->ast2ir(venv, fenv, name);
                         head = TY::arrayType(head, *expty.ty->value, false);
-                    } else {
-                        head = TY::arrayType(head, 1, false);
-                    }
                 }
                 // head->value = new int[head->arraysize];
                 //
@@ -339,12 +336,21 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
                 offset = offset * dim + *expty.ty->value;
                 ty = ty->tp;
             }
-            TY::Type* LvalType
-                = TY::intType(new int(exp->ty->value[offset % exp->ty->arraysize]), 0);
-            return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(new IR::Binop(
-                                 IR::binop::T_plus, idIR,
-                                 new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e)))),
-                             LvalType);
+            if (ty->kind == TY::tyType::Ty_array) {
+                TY::Type* LvalType
+                    = ty;
+                return IR::ExpTy(new IR::Tr_Exp(new IR::Binop(
+                                     IR::binop::T_plus, idIR,
+                                     new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e))),
+                                 LvalType);
+            } else {
+                TY::Type* LvalType
+                    = TY::intType(new int(exp->ty->value[offset % exp->ty->arraysize]), 0);
+                return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(new IR::Binop(
+                                     IR::binop::T_plus, idIR,
+                                     new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e)))),
+                                 LvalType);
+            }
         }
 
     } else {  // not array
@@ -437,7 +443,7 @@ IR::ExpTy AST::RelExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
     TY::Type* t = TY::intType(new int(0), false);
     IR::RelOp bop;
     switch (this->op) {
-    case AST::rel_t::GE: bop = IR::RelOp::T_eq; break;
+    case AST::rel_t::GE: bop = IR::RelOp::T_ge; break;
     case AST::rel_t::GT: bop = IR::RelOp::T_gt; break;
     case AST::rel_t::LE: bop = IR::RelOp::T_le; break;
     case AST::rel_t::LT: bop = IR::RelOp::T_lt; break;

@@ -53,6 +53,12 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, 
     // precolor
     for (auto node : *ig) {
         Temp_Temp n = (Temp_Temp)(uint64_t)node->nodeInfo();
+        if(n>=100)std::cerr<<stkuse->count(n)<<n<<' '<<node->outDegree()<<std::endl;
+        if (n >= 100) {
+            for (auto &i : node->succs) {
+                fprintf(stderr, "%d%c", (int)(uint64_t)i->nodeInfo(), i == node->succs.back() ? '\n' : ' ');
+            }
+        }
         assert(n < 100);
     }
     for (int i=0;i<16;i++) {

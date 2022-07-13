@@ -19,8 +19,10 @@ struct InOut {
 
 static std::unordered_map<GRAPH::Node*, InOut*> InOutTable;
 
+static int gi = 0;
 static void init_INOUT(GRAPH::NodeList* l) {
     InOutTable = std::unordered_map<GRAPH::Node*, InOut*>();
+    gi=0;
     for (auto it : *l) {
         if (InOutTable.count(it) == 0) {
             std::set<int>*use, *def;
@@ -33,7 +35,6 @@ static void init_INOUT(GRAPH::NodeList* l) {
     }
 }
 
-static int gi = 0;
 
 static bool LivenessInteration(GRAPH::NodeList* gl) {
     bool changed = false;
@@ -50,6 +51,7 @@ static bool LivenessInteration(GRAPH::NodeList* gl) {
         // Now do out[n]=union_s in succ[n] (in[s])
         GRAPH::NodeList* s = n->succ();
         for (auto it : *s) {
+            assert(it!=n);
             InOut* succ=InOutTable.at(it);
             for(auto ite:*succ->in){
                 newOut->insert(ite);
@@ -57,6 +59,8 @@ static bool LivenessInteration(GRAPH::NodeList* gl) {
         }
         // See if any in/out changed
         if(*node->in!=*newIn||*node->out!=*newOut)changed=true;
+        delete node->in;
+        delete node->out;
         node->in=newIn;node->out=newOut;
     }
     return changed;

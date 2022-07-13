@@ -154,7 +154,7 @@ void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
             branch_type = std::string("bge");
         else
             assert(0);
-        auto jumplist=ASM::Targets();
+        auto jumplist = ASM::Targets();
         jumplist.push_back(this->trueLabel);
         jumplist.push_back(this->falseLabel);
         ls->push_back(new ASM::Oper(branch_type + " " + this->trueLabel, Temp_TempList(),
@@ -196,15 +196,26 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         int_const = static_cast<IR::ConstInt*>(this->src)->val;
         tmp[0] = this->dst->ir2asm(ls);
         dst.push_back(tmp[0]);
-        ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
-                                    src, ASM::Targets()));
+        if (int_const > 256) {
+            ls->push_back(
+                new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
+                              src, ASM::Targets()));
+            ls->push_back(
+                new ASM::Oper(std::string("movt `d0, #:upper16:") + std::to_string(int_const), dst,
+                              src, ASM::Targets()));
+        } else
+            ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
+                                        src, ASM::Targets()));
     } else if (this->dst->kind == IR::expType::temp
                && this->src->kind == IR::expType::name)  // Move(temp,Name(Label(L)))
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
-        ls->push_back(
-            new ASM::Oper(std::string("ldr `d0, =") + static_cast<IR::Name*>(this->src)->name, dst,
-                          src, ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("movw `d0,#:lower16:")
+                                        + static_cast<IR::Name*>(this->src)->name,
+                                    dst, src, ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("movt `d0,#:upper16:")
+                                        + static_cast<IR::Name*>(this->src)->name,
+                                    dst, src, ASM::Targets()));
     } else if (this->dst->kind == IR::expType::temp
                && this->src->kind == IR::expType::mem)  // Move(temp,Mem(e))
     {
@@ -219,9 +230,18 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         src.push_back(this->src->ir2asm(ls));
         ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
     } else if (this->dst->kind == IR::expType::name) {
+        Temp_Temp newtemp = Temp_newtemp();
+        dst.push_back(newtemp);
+        ls->push_back(new ASM::Oper(std::string("movw `d0,#:lower16:")
+                                        + static_cast<IR::Name*>(this->dst)->name,
+                                    dst, src, ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("movt `d0,#:upper16:")
+                                        + static_cast<IR::Name*>(this->dst)->name,
+                                    dst, src, ASM::Targets()));
         src.push_back(this->src->ir2asm(ls));
+        src.push_back(newtemp);
         ls->push_back(
-            new ASM::Oper(std::string("str `s0, =") + static_cast<IR::Name*>(this->dst)->name,
+            new ASM::Oper(std::string("str `s0, [`s1]"),
                           Temp_TempList(), src, ASM::Targets()));
     } else
         assert(0);
@@ -236,8 +256,16 @@ Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls) {
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst, src,
-                                ASM::Targets()));
+    if (int_const > 256) {
+        ls->push_back(
+            new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
+                          src, ASM::Targets()));
+        ls->push_back(
+            new ASM::Oper(std::string("movt `d0, #:upper16:") + std::to_string(int_const), dst,
+                          src, ASM::Targets()));
+    } else
+        ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
+                                    src, ASM::Targets()));
     return dst[0];
 }
 Temp_Temp ConstFloat::ir2asm(ASM::InstrList* ls) {
@@ -266,7 +294,7 @@ Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
     case IR::binop::T_div:
         ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), dst, src, ASM::Targets()));
         return dst[0];
-    case IR::binop::T_mod:{
+    case IR::binop::T_mod: {
         // assert(0);  // FIXME
         Temp_Temp temp = Temp_newtemp();
         ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), Temp_TempList(1, temp), src,
@@ -275,9 +303,10 @@ Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("mul `d0, `s0, `s1"), Temp_TempList(1, temp), src,
                                     ASM::Targets()));
         src[0] = exp_l;
-        src[1]=temp;
+        src[1] = temp;
         ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"), dst, src, ASM::Targets()));
-        return dst[0];}
+        return dst[0];
+    }
     default: assert(0); break;
     }
 }
@@ -296,7 +325,10 @@ Temp_Temp Eseq::ir2asm(ASM::InstrList* ls) {
 Temp_Temp Name::ir2asm(ASM::InstrList* ls) {
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    ls->push_back(new ASM::Oper(std::string("ldr `d0, =") + this->name, dst, src, ASM::Targets()));
+    ls->push_back(
+        new ASM::Oper(std::string("movw `d0,#:lower16:") + this->name, dst, src, ASM::Targets()));
+    ls->push_back(
+        new ASM::Oper(std::string("movt `d0,#:upper16:") + this->name, dst, src, ASM::Targets()));
     return dst[0];
 }
 Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
