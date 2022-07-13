@@ -38,6 +38,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, COLOR::COL_result* cr, TempM
                         offset = stk_size;
                         stkmap->insert(std::make_pair(temp, offset));
                     }
+                    else offset=stkmap->at(temp);
                     Temp_Temp newtemp = Temp_newtemp();
                     stkuse->insert(std::make_pair(newtemp, -2));
                     temp = newtemp;  // change temp->newtemp
@@ -57,11 +58,12 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, COLOR::COL_result* cr, TempM
                         offset = stk_size;
                         stkmap->insert(std::make_pair(temp, offset));
                     }
+                    else offset=stkmap->at(temp);
                     Temp_Temp newtemp = Temp_newtemp();
                     stkuse->insert(std::make_pair(newtemp, -2));
                     temp = newtemp;  // change temp->newtemp
                     std::string s = "str `s0,[fp,#-" + std::to_string(offset) + "]";
-                    emit(new ASM::Oper(s, Temp_TempList(1, newtemp), Temp_TempList(),
+                    emit(new ASM::Oper(s, Temp_TempList(), Temp_TempList(1, newtemp),
                                        Temp_LabelList()));
                 }
             }
@@ -86,9 +88,9 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap) {
         auto instrr = il->at(i);
         if (instrr->kind == ASM::InstrType::move) {
             ASM::Move* instr = static_cast<ASM::Move*>(instrr);
-            int dst = instr->dst[0];
-            int src = instr->src[0];
-            if (dst == src) continue;
+            int dst = colormap->at(instr->dst[0]);
+            int src = colormap->at(instr->src[0]);
+            if (dst == src)continue;
         }
         out->push_back(instrr);
     }

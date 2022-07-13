@@ -46,6 +46,7 @@ Node* Graph::addNode(void* info) {
 void Graph::addEdge(Node* from, Node* to) {
     assert(from);
     assert(to);
+    assert(from->mygraph==to->mygraph);
     if (goesTo(from, to)) return;
     to->preds.push_back(from);
     from->succs.push_back(to);

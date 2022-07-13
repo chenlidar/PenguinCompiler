@@ -276,7 +276,18 @@ ASM::InstrList* CANON::funcEntryExit2(ASM::InstrList* list, bool isvoid, bool is
             new ASM::Oper("", Temp_TempList(), Temp_TempList(1, 0), Temp_LabelList()));  // sink
     }
     if (ismain) {
+
+        list->push_back(new ASM::Oper(std::string("mov r8, #0xff"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
+        list->push_back(new ASM::Oper(std::string("and r0, r0, r8"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
         list->push_back(new ASM::Oper(std::string("mov r7, r0"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
+        list->push_back(new ASM::Oper(std::string("mov r0, #10"), Temp_TempList(), Temp_TempList(),
+                                      Temp_LabelList()));
+        list->push_back(
+            new ASM::Oper("bl putch", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
+        list->push_back(new ASM::Oper(std::string("mov r0, r7"), Temp_TempList(), Temp_TempList(),
                                       Temp_LabelList()));
         list->push_back(
             new ASM::Oper("bl putint", Temp_TempList(), Temp_TempList(), Temp_LabelList()));

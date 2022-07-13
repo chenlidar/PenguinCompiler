@@ -287,14 +287,14 @@ struct InitVal {
                              Temp_Label name) {
         assert(0);
     }
-    virtual IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+    virtual IR::ExpTy calArray(IR::Exp* addr,int noff, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                                Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
         assert(0);
     }
 };
 
 struct ArrayInit : public InitVal {
-    virtual IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+    virtual IR::ExpTy calArray(IR::Exp* addr,int noff, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                                Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
         assert(0);
     }
@@ -307,7 +307,7 @@ struct InitValList : public ArrayInit, NullableList<InitVal*> {
         : NullableList(_lineno) {}
     InitValList(InitVal* x, int _lineno)
         : NullableList(x, _lineno) {}
-    IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+    IR::ExpTy calArray(IR::Exp* addr,int noff, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                        Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 
@@ -467,7 +467,7 @@ struct Exp : InitVal {
                              Temp_Label name) {
         assert(0);
     }
-    IR::ExpTy calArray(IR::Exp* addr, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
+    IR::ExpTy calArray(IR::Exp* addr,int noff, TY::Type* ty, Table::Stable<TY::Entry*>* venv,
                        Table::Stable<TY::EnFunc*>* fenv, Temp_Label name);
 };
 

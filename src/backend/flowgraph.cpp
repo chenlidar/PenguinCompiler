@@ -22,8 +22,9 @@ static GRAPH::Node* LT_lookup(Temp_Label l);
 
 /* Implementation */
 static NodeInfoMap* UDTable = nullptr;
+static LabelNodeMap* _lntable = nullptr;
 
-static void UD_init() { UDTable = new NodeInfoMap(); }
+static void UD_init() { UDTable = new NodeInfoMap();_lntable=new LabelNodeMap();}
 
 static void UD_enter(GRAPH::Node* n, UDinfo* info) { UDTable->insert(std::make_pair(n, info)); }
 
@@ -33,7 +34,6 @@ static UDinfo* UD_lookup(GRAPH::Node* n) {
     } else
         return nullptr;
 }
-static LabelNodeMap* _lntable = nullptr;
 
 static LabelNodeMap* LNTable() {
     if (_lntable == nullptr) { _lntable = new LabelNodeMap(); }
@@ -78,9 +78,6 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
             Temp_TempList uses = Temp_TempList();
             switch (instr->kind) {
             case ASM::InstrType::oper:
-                // Check if it's a JUMP instruction
-                // We do this check here by looking if As_target is null,
-                // instead of inspecting the assembly op (j, beq, ...)
                 if (!static_cast<ASM::Oper*>(instr)->jumps.empty()) {
                     type = IT_JUMP;
                     // put this instruction into a separate list
@@ -94,7 +91,6 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
                 LT_enter(static_cast<ASM::Label*>(instr)->label, curr);
                 break;
             case ASM::InstrType::move:
-                // 2.3) it's a move instruction
                 type = IT_MOVE;
                 defs = static_cast<ASM::Move*>(instr)->dst;
                 uses = static_cast<ASM::Move*>(instr)->src;
@@ -119,7 +115,6 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
     for (auto& curr : *jumpList) {
         ASM::Instr* x = (ASM::Instr*)(curr->nodeInfo());
         labels = static_cast<ASM::Oper*>(x)->jumps;  // no need to check its nullity again
-        Temp_Label label;
         GRAPH::Node* dest;
         // for each target it may jump to, add a corresponding edge in the graph
         for (auto& label : labels) {

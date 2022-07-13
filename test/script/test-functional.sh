@@ -82,8 +82,33 @@ asm() {
 		for x in $test_file_list
 		do
 			test_name=${x%.sy}
-			echo $test_name
-			$build_dir/test-asm < $func_testcase_dir/$x > $build_dir/$test_name.s
+			echo -n $test_name
+			echo -n ": "
+			$build_dir/test-asm < $func_testcase_dir/$test_name.sy  > $build_dir/$test_name.s
+			if [ $? != 0 ]; then
+				echo fail; exit
+			fi
+			arm-linux-gnueabihf-gcc -march=armv7 $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
+			if [ $? != 0 ]; then
+				echo "fail to link"; exit
+			fi
+			if [ -f $func_testcase_dir/$test_name.in ]; then
+				qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
+			else
+				qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
+			fi
+			diff -B  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
+			if [ $? == 0 ]; then
+				echo pass; rm $build_dir/$test_name*
+			else
+				echo fail;\
+				echo "Expect:";\
+				cat $func_testcase_dir/$test_name.out;\
+				echo "Got:";\
+				cat $build_dir/$test_name.out;\
+				cp $func_testcase_dir/$test_name.sy $build_dir/
+				#exit
+			fi
 		done
 
 		# echo $test_name_list
@@ -93,12 +118,35 @@ asm() {
 		test_name=${test_file%.sy}
 		#ref_output_file=$func_testcase_dir/$test_name.out
 		
-		echo $test_name
+		echo -n $test_name
+		echo -n ": "
 
 		#cd $build_dir
 		$build_dir/test-asm < $func_testcase_dir/$test_file  > $build_dir/$test_name.s
-		arm-linux-gnueabihf-gcc $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name.out
-		qemu-arm $build_dir/$test_name.out
+		if [ $? != 0 ]; then
+			echo fail; exit
+		fi
+		arm-linux-gnueabihf-gcc -march=armv7 $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
+		if [ $? != 0 ]; then
+			echo "fail to link"; exit
+		fi
+		if [ -f $func_testcase_dir/$test_name.in ]; then
+			qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
+		else
+			qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
+		fi
+		diff -B $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
+		if [ $? == 0 ]; then
+			echo pass; rm $build_dir/$test_name*
+		else
+			echo fail;\
+			echo "Expect:";\
+			cat $func_testcase_dir/$test_name.out;\
+			echo "Got:";\
+			cat $build_dir/$test_name.out;\
+			cp $func_testcase_dir/$test_name.sy $build_dir/ ;\
+			exit
+		fi
 	fi
 }
 

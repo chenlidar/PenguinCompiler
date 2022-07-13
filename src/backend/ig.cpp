@@ -32,14 +32,14 @@ void IG::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
 // input flowgraph after liveness analysis (so FG_In and FG_Out are available)
 
 GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
-    // DONE:You need to fill in here!
     RA_ig = new GRAPH::Graph();
     for (auto it : *flowgraph) {
-        Temp_TempList* outList = LIVENESS::FG_Out(it);
+        std::set<int> * outList = LIVENESS::FG_Out(it);
         Temp_TempList* defList = FLOW::FG_def(it);
         Temp_TempList* useList = FLOW::FG_use(it);
         for (auto ite2 : *defList) Look_ig(ite2);
         for (auto ite2 : *useList) Look_ig(ite2);
+        for (auto ite2 : *outList) Look_ig(ite2);
         if (FLOW::FG_isMove(it)) {
             assert(useList->size() == 1);
             for (auto ite2 : *outList) {
@@ -64,10 +64,4 @@ GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
     return (RA_ig->nodes());
 }
 
-// static void show_temp(Temp_Temp t) {
-//     fprintf(stdout, "%s, ", Temp_look(Temp_name(), t));
-// }
 
-// void Show_ig(FILE* out, G_nodeList l) {
-//         G_show(out, l, (void*)show_temp);
-// }
