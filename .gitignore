@@ -1,3 +1,4 @@
 *.o
 .VSCodeCounter/
 build
+test/performance
