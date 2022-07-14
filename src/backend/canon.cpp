@@ -58,9 +58,9 @@ static Stm* reorder(ExpRefList* rlist) {
 }
 static ExpRefList* get_call_rlist(Exp* exp) {
     ExpRefList *rlist, *curr;
-    ExpList args = static_cast<Call*>(exp)->args;
+    ExpList& args = static_cast<Call*>(exp)->args;
     curr = rlist = new ExpRefList(&static_cast<Call*>(exp)->fun, NULL);
-    for (auto arg : args) { curr = curr->tail = new ExpRefList(&arg, NULL); }
+    for (auto& arg : args) { curr = curr->tail = new ExpRefList(&arg, NULL); }
     return rlist;
 }
 static StmExp do_exp(Exp* exp) {

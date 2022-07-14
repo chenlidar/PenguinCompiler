@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string>
+#include<iostream>
 // #include "./frontend/parser.hpp"
 #include "structure/ast.h"
 #include "util/table.hpp"

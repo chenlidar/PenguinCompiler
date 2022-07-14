@@ -19,8 +19,9 @@ IR::StmList* AST::CompUnitList::ast2ir(Table::Stable<TY::Entry*>* venv,
 }
 IR::Stm* AST::ConstDecl::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
-    for (auto it : defs->list) { it->ast2ir(btype, venv, fenv, name); }
-    return nopStm();
+    IR::Stm* stm = nopStm();
+    for (auto it : defs->list) { stm = seq(stm, it->ast2ir(btype, venv, fenv, name)); }
+    return stm;
 }
 IR::Stm* AST::ConstDef::ast2ir(AST::btype_t btype, Table::Stable<TY::Entry*>* venv,
                                Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
@@ -34,20 +35,56 @@ IR::Stm* AST::ConstDef::ast2ir(AST::btype_t btype, Table::Stable<TY::Entry*>* ve
                         new TY::GloVar(TY::intType(expty.ty->value, true), Temp_newlabel()));
             return nopStm();
         } else {  // int []
-            // get array index
-            int offset = 0;
-            TY::Type* head = TY::intType(NULL, true);
-            for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
-                AST::Exp* it = this->index_list->list[i];
-                IR::ExpTy expty = it->ast2ir(venv, fenv, name);
-                head = TY::arrayType(head, *expty.ty->value, true);
+            if (name == "") {
+                // get array index
+                int offset = 0;
+                TY::Type* head = TY::intType(NULL, true);
+                for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
+                    AST::Exp* it = this->index_list->list[i];
+                    IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+                    head = TY::arrayType(head, *expty.ty->value, true);
+                }
+                // head->value = new int[head->arraysize];
+                //
+                Temp_Label label = Temp_newlabel();
+                IR::ExpTy expty
+                    = this->val->calArray(new IR::Name(label), 0, head, venv, fenv, name);
+                venv->enter(*this->id->str, new TY::GloVar(expty.ty, label));
+                return nopStm();
+            } else {  // local const,same as valdef
+                // get array index
+                int offset = 0;
+                TY::Type* head = TY::intType(new int(0), false);
+                for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
+                    AST::Exp* it = this->index_list->list[i];
+                    IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+                    head = TY::arrayType(head, *expty.ty->value, true);
+                }
+                // head->value = new int[head->arraysize];
+                //
+                Temp_Temp tmp = Temp_newtemp();
+                IR::Stm* cat_stm = new IR::Move(
+                    new IR::Temp(tmp),
+                    new IR::Call(new IR::Name("malloc"),
+                                 IR::ExpList(1, new IR::ConstInt(head->arraysize * 4))));
+                IR::ExpList param = IR::ExpList();
+                param.push_back(new IR::Temp(tmp));
+                param.push_back(new IR::ConstInt(0));
+                param.push_back(new IR::ConstInt(head->arraysize * 4));
+                cat_stm
+                    = seq(cat_stm, new IR::ExpStm(new IR::Call(new IR::Name("memset"), param)));
+                if (this->val) {
+                    IR::ExpTy expty
+                        = this->val->calArray(new IR::Temp(tmp), 0, head, venv, fenv, name);
+                    venv->enter(*this->id->str, new TY::LocVar(head, tmp));
+                    return seq(cat_stm, new IR::ExpStm(expty.exp->unEx()));
+                } else {
+                    head->value = new int[head->arraysize];
+                    memset(head->value, 0, head->arraysize * sizeof(int));
+                    venv->enter(*this->id->str, new TY::LocVar(head, tmp));
+                    return cat_stm;
+                }
             }
-            // head->value = new int[head->arraysize];
-            //
-            Temp_Label label = Temp_newlabel();
-            IR::ExpTy expty = this->val->calArray(new IR::Name(label), 0, head, venv, fenv, name);
-            venv->enter(*this->id->str, new TY::GloVar(expty.ty, label));
-            return nopStm();
         }
 
     } break;
@@ -121,9 +158,9 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 TY::Type* head = TY::intType(new int(0), false);
                 for (int i = (int)(this->index->list.size()) - 1; i >= 0; i--) {
                     AST::Exp* it = this->index->list[i];  // FIXME: nullptr
-                    assert (it != nullptr) ;
-                        IR::ExpTy expty = it->ast2ir(venv, fenv, name);
-                        head = TY::arrayType(head, *expty.ty->value, false);
+                    assert(it != nullptr);
+                    IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+                    head = TY::arrayType(head, *expty.ty->value, false);
                 }
                 // head->value = new int[head->arraysize];
                 //
@@ -276,7 +313,10 @@ IR::ExpTy AST::Exp::calArray(IR::Exp* addr, int noff, TY::Type* ty,
     IR::Exp* exp = expty.exp->unEx();
     IR::Stm* stm = new IR::Move(
         new IR::Mem(new IR::Binop(IR::binop::T_plus, addr, new IR::ConstInt(4 * noff))), exp);
-    return IR::ExpTy(new IR::Tr_Exp(new IR::Eseq(stm, exp)), expty.ty);
+    return IR::ExpTy(
+        new IR::Tr_Exp(new IR::Eseq(
+            stm, new IR::ConstInt(0))),
+        expty.ty);//not use exp
 }
 IR::ExpTy AST::InitValList::calArray(IR::Exp* addr, int noff, TY::Type* ty,
                                      Table::Stable<TY::Entry*>* venv,
@@ -286,8 +326,7 @@ IR::ExpTy AST::InitValList::calArray(IR::Exp* addr, int noff, TY::Type* ty,
     int doff = 0;
     IR::Stm* cat_stm = nopStm();
     for (const auto& it : this->list) {
-        IR::ExpTy expty = it->calArray(addr, noff + doff, ty->tp, venv, fenv,
-                                       name);  // FIXME: use offset to replace binop reduce
+        IR::ExpTy expty = it->calArray(addr, noff + doff, ty->tp, venv, fenv, name);
         IR::Stm* stm = new IR::ExpStm(expty.exp->unEx());
         cat_stm = seq(cat_stm, stm);
         if (expty.ty->tp == NULL) {
@@ -315,7 +354,7 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
     if (!this->arrayindex->list.empty()) {  // array
         IR::Exp* e = new IR::ConstInt(0);
         int offset = 0;
-        if (ty->isconst) {  // NOTE: FIXME: offset may not const
+        if (ty->isconst && 0) {  // NOTE: FIXME: offset may not const
             int* an = ty->value;
             for (AST::Exp* it : this->arrayindex->list) {
                 IR::ExpTy expty = it->ast2ir(venv, fenv, name);
@@ -337,12 +376,12 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
                 ty = ty->tp;
             }
             if (ty->kind == TY::tyType::Ty_array) {
-                TY::Type* LvalType
-                    = ty;
-                return IR::ExpTy(new IR::Tr_Exp(new IR::Binop(
-                                     IR::binop::T_plus, idIR,
-                                     new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e))),
-                                 LvalType);
+                TY::Type* LvalType = ty;
+                return IR::ExpTy(
+                    new IR::Tr_Exp(new IR::Binop(
+                        IR::binop::T_plus, idIR,
+                        new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4 * ty->arraysize), e))),
+                    LvalType);
             } else {
                 TY::Type* LvalType
                     = TY::intType(new int(exp->ty->value[offset % exp->ty->arraysize]), 0);
@@ -357,9 +396,13 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
         if (ty->isconst)
             return IR::ExpTy(new IR::Tr_Exp(new IR::ConstInt(*ty->value)), ty);
         else {
-            if (exp->kind == TY::tyEntry::Ty_global)
-                return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(idIR)), ty);
-            else
+            if (exp->kind == TY::tyEntry::Ty_global) {
+                if (ty->kind == TY::tyType::Ty_array) {
+                    return IR::ExpTy(new IR::Tr_Exp(idIR), ty);
+                } else {
+                    return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(idIR)), ty);
+                }
+            } else
                 return IR::ExpTy(new IR::Tr_Exp(idIR), ty);
         }
     }
@@ -383,6 +426,7 @@ IR::ExpTy AST::UnaryExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<T
     case unaryop_t::ADD: return body;
     case unaryop_t::SUB:
         exp = new IR::Binop(IR::binop::T_minus, new IR::ConstInt(0), body.exp->unEx());
+        body.ty->value[0] = -body.ty->value[0];
         return IR::ExpTy(new IR::Tr_Exp(exp), body.ty);
     case unaryop_t::NOT: {
         IR::Cx cx = body.exp->unCx();

@@ -35,7 +35,10 @@ void IG::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
 
 GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
     RA_ig = new GRAPH::Graph();
+    int cnt=0;
     for (auto it : *flowgraph) {
+        // if(cnt%10000==0)std::cerr<<flowgraph->size()<<' '<<cnt++<<std::endl;
+        // else cnt++;
         std::set<int> * outList = LIVENESS::FG_Out(it);
         Temp_TempList* defList = FLOW::FG_def(it);
         Temp_TempList* useList = FLOW::FG_use(it);

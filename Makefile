@@ -16,7 +16,7 @@ test-ir: frontend treeIR.cpp treeIR.hpp ast.cpp ast.h table.hpp canon.cpp canon.
 	-I./src -o build/test-ir
 
 test-asm: frontend
-	clang++-10 -O0 -g \
+	clang++-10 -O2 -g \
 	src/**/*.cpp \
 	test/src/test-asm.cpp \
 	-I./src -o build/test-asm
