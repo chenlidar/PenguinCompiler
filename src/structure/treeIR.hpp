@@ -76,7 +76,7 @@ class Label : public Stm {
         kind = stmType::label;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
-    Stm* quad() { return new Label(label); }
+    Stm* quad();
 };
 class Jump : public Stm {
    public:
@@ -87,7 +87,7 @@ class Jump : public Stm {
         kind = stmType::jump;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
-    Stm* quad() { return new Jump(exp->quad(), jumps); }
+    Stm* quad();
 };
 class Cjump : public Stm {
    public:
@@ -99,10 +99,7 @@ class Cjump : public Stm {
         kind = stmType::cjump;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
-    Stm* quad() {
-        return new Cjump(op, left->quad(), right->quad(), trueLabel,
-                         falseLabel);
-    }
+    Stm* quad();
 };
 class Move : public Stm {
    public:
@@ -112,22 +109,7 @@ class Move : public Stm {
         kind = stmType::move;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
-    Stm* quad() {
-        if (src->kind == expType::mem && dst->kind == expType::mem) {
-            Temp_Temp ntp = Temp_newtemp();
-            return new Seq(new Move(new Temp(ntp), src->quad()),
-                           new Move(dst->quad(), new Temp(ntp)));
-        }
-        if (dst->kind == expType::mem) {
-            return new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()),
-                            src->quad());
-        }
-        if (src->kind == expType::mem) {
-            return new Move(dst->quad(),
-                            new Mem(static_cast<Mem*>(src)->mem->quad()));
-        }
-        return new Move(dst->quad(), src->quad());
-    }
+    Stm* quad();
 };
 class ExpStm : public Stm {
    public:
@@ -137,7 +119,7 @@ class ExpStm : public Stm {
         kind = stmType::exp;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
-    Stm* quad() { return new ExpStm(exp->quad()); }
+    Stm* quad();
 };
 
 class ConstInt : public Exp {
@@ -148,7 +130,7 @@ class ConstInt : public Exp {
         kind = expType::constint;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() { return new ConstInt(val); }
+    Exp* quad();
 };
 class ConstFloat : public Exp {
    public:
@@ -158,7 +140,7 @@ class ConstFloat : public Exp {
         kind = expType::constfloat;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() { return new ConstFloat(val); }
+    Exp* quad();
 };
 
 class Binop : public Exp {
@@ -169,12 +151,7 @@ class Binop : public Exp {
         op = o, left = lf, kind = expType::binop, right = rg;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() {
-        Temp_Temp ntp = Temp_newtemp();
-        return new Eseq(
-            new Move(new Temp(ntp), new Binop(op, left->quad(), right->quad())),
-            new Temp(ntp));
-    }
+    Exp* quad();
 };
 class Temp : public Exp {
    public:
@@ -184,7 +161,7 @@ class Temp : public Exp {
         kind = expType::temp;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() { return new Temp(tempid); }
+    Exp* quad();
 };
 class Mem : public Exp {
    public:
@@ -194,11 +171,7 @@ class Mem : public Exp {
         kind = expType::mem;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() {
-        Temp_Temp ntp = Temp_newtemp();
-        return new Eseq(new Move(new Temp(ntp), new Mem(mem->quad())),
-                        new Temp(ntp));
-    }
+    Exp* quad();
 };
 class Eseq : public Exp {
    public:
@@ -220,7 +193,7 @@ class Name : public Exp {
         kind = expType::name;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() { return new Name(name); }
+    Exp* quad();
 };
 class Call : public Exp {
    public:
@@ -231,14 +204,7 @@ class Call : public Exp {
         kind = expType::call;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad() {
-        vector<Exp*> tm;
-        for (auto it : args)
-            tm.push_back(it->quad());
-        Temp_Temp ntp = Temp_newtemp();
-        return new Eseq(new Move(new Temp(ntp), new Call(fun->quad(), tm)),
-                        new Temp(ntp));
-    }
+    Exp* quad();
 };
 struct PatchList {
     Temp_Label* head;
