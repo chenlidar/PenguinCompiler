@@ -118,6 +118,14 @@ class Move : public Stm {
             return new Seq(new Move(new Temp(ntp), src->quad()),
                            new Move(dst->quad(), new Temp(ntp)));
         }
+        if (dst->kind == expType::mem) {
+            return new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()),
+                            src->quad());
+        }
+        if (src->kind == expType::mem) {
+            return new Move(dst->quad(),
+                            new Mem(static_cast<Mem*>(src)->mem->quad()));
+        }
         return new Move(dst->quad(), src->quad());
     }
 };
