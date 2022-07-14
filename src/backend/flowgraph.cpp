@@ -24,7 +24,10 @@ static GRAPH::Node* LT_lookup(Temp_Label l);
 static NodeInfoMap* UDTable = nullptr;
 static LabelNodeMap* _lntable = nullptr;
 
-static void UD_init() { UDTable = new NodeInfoMap();_lntable=new LabelNodeMap();}
+static void UD_init() {
+    UDTable = new NodeInfoMap();
+    _lntable = new LabelNodeMap();
+}
 
 static void UD_enter(GRAPH::Node* n, UDinfo* info) { UDTable->insert(std::make_pair(n, info)); }
 
@@ -81,7 +84,7 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
                 if (!static_cast<ASM::Oper*>(instr)->jumps.empty()) {
                     type = IT_JUMP;
                     // put this instruction into a separate list
-                    jumpList->push_back(curr);
+                    jumpList->insert(curr);
                 }
                 defs = static_cast<ASM::Oper*>(instr)->dst;
                 uses = static_cast<ASM::Oper*>(instr)->src;

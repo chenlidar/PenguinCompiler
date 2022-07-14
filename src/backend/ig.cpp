@@ -1,29 +1,27 @@
 #include "ig.hpp"
 #include "flowgraph.hpp"
 #include <assert.h>
+#include <map>
 static GRAPH::Graph* RA_ig;  // info of this graph is a Temp_Temp
 
 void Ig_empty() { RA_ig = new GRAPH::Graph(); }
 
 GRAPH::Graph* IG::Ig_graph() { return RA_ig; }
 
+static std::map<int, GRAPH::Node*> tempNodeMap;
 static GRAPH::Node* Look_ig(Temp_Temp t) {
-    if(t==11||t==13)return nullptr;
-    GRAPH::Node* n1 = NULL;
-    for (const auto& x : *RA_ig->nodes()) {
-        if ((Temp_Temp)(uint64_t)(x->nodeInfo()) == t) {
-            n1 = x;
-            break;
-        }
+    if (t == 11 || t == 13) return nullptr;
+    if (tempNodeMap.count(t)) {
+        return tempNodeMap[t];
+    } else {
+        GRAPH::Node* n = RA_ig->addNode((void*)(uint64_t)t);
+        tempNodeMap.insert(std::make_pair(t, n));
+        return n;
     }
-    if (n1 == NULL)
-        return (RA_ig->addNode((void*)(uint64_t)t));
-    else
-        return n1;
 }
 
 void IG::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
-    if(t1==11||t1==13||t2==11||t2==13)return;
+    if (t1 == 11 || t1 == 13 || t2 == 11 || t2 == 13) return;
     GRAPH::Node* n1 = Look_ig(t1);
     GRAPH::Node* n2 = Look_ig(t2);
     // G_addEdge(n1, n2);
@@ -35,11 +33,9 @@ void IG::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
 
 GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
     RA_ig = new GRAPH::Graph();
-    int cnt=0;
+    tempNodeMap.clear();
     for (auto it : *flowgraph) {
-        // if(cnt%10000==0)std::cerr<<flowgraph->size()<<' '<<cnt++<<std::endl;
-        // else cnt++;
-        std::set<int> * outList = LIVENESS::FG_Out(it);
+        std::set<int>* outList = LIVENESS::FG_Out(it);
         Temp_TempList* defList = FLOW::FG_def(it);
         Temp_TempList* useList = FLOW::FG_use(it);
         for (auto ite2 : *defList) Look_ig(ite2);
@@ -68,5 +64,3 @@ GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
     }
     return (RA_ig->nodes());
 }
-
-

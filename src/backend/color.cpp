@@ -3,8 +3,9 @@
 #include <stack>
 using namespace COLOR;
 #define REGNUM 12
-COL_result* COLOR::COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
-    COL_result* cr =new COL_result();
+COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
+                             std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
+    COL_result* cr = new COL_result();
 
     // DONE:
     int empty = 0;
@@ -22,7 +23,7 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, 
                     change = 1;
                     stk.push(node);
                 } else {
-                    x->push_back(node);
+                    x->insert(node);
                 }
             }
             ig = x;
@@ -33,10 +34,11 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, 
         bool spilled = false;
         for (auto node : *ig) {
             Temp_Temp n = (Temp_Temp)(uint64_t)node->nodeInfo();
-            if (spilled) x->push_back(node);
+            if (spilled)
+                x->insert(node);
             else if (n >= 100
-                && stkuse->find(n)
-                       == stkuse->end()) {  // spill,not spill spilled temp,spilled temp
+                     && stkuse->find(n)
+                            == stkuse->end()) {  // spill,not spill spilled temp,spilled temp
                 // must can be delete at last
                 assert(node->outDegree() >= REGNUM);
                 node->mygraph->rmNode(node);
@@ -45,7 +47,7 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, 
                 stk_spill.push(node);
                 spilled = true;
             } else {
-                x->push_back(node);
+                x->insert(node);
             }
         }
         ig = x;
@@ -53,20 +55,12 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, 
     // precolor
     for (auto node : *ig) {
         Temp_Temp n = (Temp_Temp)(uint64_t)node->nodeInfo();
-        if(n>=100)std::cerr<<stkuse->count(n)<<n<<' '<<node->outDegree()<<std::endl;
-        if (n >= 100) {
-            for (auto &i : node->succs) {
-                fprintf(stderr, "%d%c", (int)(uint64_t)i->nodeInfo(), i == node->succs.back() ? '\n' : ' ');
-            }
-        }
         assert(n < 100);
     }
-    for (int i=0;i<16;i++) {
-        cr->coloring->insert(std::make_pair(i, i));
-    }
+    for (int i = 0; i < 16; i++) { cr->coloring->insert(std::make_pair(i, i)); }
     // color
     int vis[12];
-    
+
     while (!stk.empty()) {
         GRAPH::Node* node = stk.top();
         stk.pop();

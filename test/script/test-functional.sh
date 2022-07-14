@@ -84,7 +84,7 @@ asm() {
 			test_name=${x%.sy}
 			echo -n $test_name
 			echo -n ": "
-			time $build_dir/test-asm < $func_testcase_dir/$test_name.sy  > $build_dir/$test_name.s
+			$build_dir/test-asm < $func_testcase_dir/$test_name.sy  > $build_dir/$test_name.s
 			if [ $? != 0 ]; then
 				echo fail; exit
 			fi
@@ -93,9 +93,9 @@ asm() {
 				echo "fail to link"; exit
 			fi
 			if [ -f $func_testcase_dir/$test_name.in ]; then
-				time qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
+				qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
 			else
-				time qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
+				qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
 			fi
 			diff -B  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 			if [ $? == 0 ]; then
