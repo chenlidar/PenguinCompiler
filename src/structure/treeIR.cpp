@@ -127,9 +127,10 @@ void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     // Cjump(op , e1 , Binop(mul, e2, Const(2^k)) , Lable(L) , falselabel)
     // Cjump(op , e1 , Binop(mul, Const(2^k), e2) , Lable(L) , falselabel)
     // Cjump(op , Binop(mul, e2, Const(2^k)) , e1 , Lable(L) , falselabel)
-    // Cjump(op , Binop(mul, Const(2^k), e2) , e1 ,  Lable(L) , falselabel)
-    // Cjump(op , e1 , Binop(div, Const(2^k), e2) , Lable(L) , falselabel)
-    // Cjump(op, Binop(div, Const(2^k), e2)  , e1 , Lable(L) , falselabel)
+    // Cjump(op , Binop(mul, Const(2^k), e2) , e1 ,  Lable(L) ,
+    // falselabel) Cjump(op , e1 , Binop(div, Const(2^k), e2) , Lable(L) ,
+    // falselabel) Cjump(op, Binop(div, Const(2^k), e2)  , e1 , Lable(L) ,
+    // falselabel)
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
 
@@ -390,7 +391,8 @@ Stm* Cjump::quad() { return new Cjump(op, left->quad(), right->quad(), trueLabel
 Stm* Move::quad() {
     if (src->kind == expType::mem && dst->kind == expType::mem) {
         Temp_Temp ntp = Temp_newtemp();
-        return new Seq(new Move(new Temp(ntp), src->quad()), new Move(dst->quad(), new Temp(ntp)));
+        return new Seq(new Move(new Temp(ntp), new Mem(static_cast<Mem*>(src)->mem->quad())),
+                       new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()), new Temp(ntp)));
     }
     if (dst->kind == expType::mem) {
         return new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()), src->quad());
