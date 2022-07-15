@@ -5,9 +5,11 @@
 #include"../util/utils.hpp"
 namespace QUADRUPLE {
 IR::Stm* handle(IR::StmList* stml) {
-    if (!stml)
-        return nopStm();
-    auto p1=stml->stm->quad();
-    return new IR::Seq(p1, handle(stml->tail));
+    IR::Stm *ret=nopStm();
+    for(;stml;stml=stml->tail){
+        auto p1=stml->stm->quad();
+        ret=new IR::Seq(ret,p1);
+    }
+    return ret;
 }
 };  // namespace QUADRUPLE
