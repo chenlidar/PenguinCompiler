@@ -21,14 +21,6 @@ struct ExpRefList {
         if (!*head) { assert(0); }
     }
 };
-static StmList* linear(Stm* stm, StmList* right) {
-    if (stm->kind == stmType::seq) {
-        Seq* s = static_cast<Seq*>(stm);
-        return linear(s->left, linear(s->right, right));
-    } else {
-        return new StmList(stm, right);
-    }
-}
 static bool commute(Stm* x, Exp* y) {
     if (isNop(x)) return true;
     if (y->kind == expType::name || y->kind == expType::constint || y->kind == expType::constfloat)
@@ -114,6 +106,14 @@ static Stm* do_stm(Stm* stm) {
     } else
         return stm;
 }
+static StmList* linear(Stm* stm, StmList* right) {
+    if (stm->kind == stmType::seq) {
+        Seq* s = static_cast<Seq*>(stm);
+        return linear(s->left, linear(s->right, right));
+    } else {
+        return new StmList(stm, right);
+    }
+}
 StmList* CANON::linearize(Stm* stm) { return linear(do_stm(stm), NULL); }
 
 /**
@@ -184,85 +184,79 @@ Block CANON::basicBlocks(StmList* stmList) {
 /**
  * Trace Block
  */
-static StmList* getNext(std::unordered_map<std::string, StmList*>* block_env, Block* global_block);
 
-static void trace(std::unordered_map<std::string, StmList*>* block_env, Block* global_block,
-                  StmList* list) {
-    StmList* last = getLast(list);
-    Stm* lab = list->stm;
-    Stm* s = last->tail->stm;
-    block_env->erase(static_cast<IR::Label*>(lab)->label);
-    if (s->kind == stmType::jump) {
-        const auto& x = static_cast<IR::Jump*>(s)->jumps[0];
-        StmList* target = nullptr;
-        if (block_env->find(x) != block_env->end()) target = block_env->at(x);
-        if (static_cast<Jump*>(s)->jumps.size() == 1 && target) {
-            last->tail = target; /* merge the 2 lists removing JUMP stm */
-            trace(block_env, global_block, target);
-        } else
-            last->tail->tail = getNext(block_env, global_block); /* merge and keep JUMP stm */
-    }
-    /* we want false label to follow CJUMP */
-    else if (s->kind == stmType::cjump) {
-        const auto& tl = static_cast<IR::Cjump*>(s)->trueLabel;
-        const auto& fl = static_cast<IR::Cjump*>(s)->falseLabel;
-        StmList* truestm = nullptr;
-        StmList* falsestm = nullptr;
-
-        if (block_env->find(tl) != block_env->end()) truestm = block_env->at(tl);
-
-        if (block_env->find(fl) != block_env->end()) falsestm = block_env->at(fl);
-        if (falsestm) {
-            last->tail->tail = falsestm;
-            trace(block_env, global_block, falsestm);
-        } else if (truestm) { /* convert so that existing label is a false label */
-            last->tail->stm
-                = new Cjump(IR::notRel(static_cast<Cjump*>(s)->op), static_cast<Cjump*>(s)->left,
-                            static_cast<Cjump*>(s)->right, static_cast<Cjump*>(s)->falseLabel,
-                            static_cast<Cjump*>(s)->trueLabel);
-            last->tail->tail = truestm;
-            trace(block_env, global_block, truestm);
-        } else {
-            Temp_Label falselabel = Temp_newlabel();
-            last->tail->stm
-                = new Cjump(static_cast<Cjump*>(s)->op, static_cast<Cjump*>(s)->left,
-                            static_cast<Cjump*>(s)->right, static_cast<Cjump*>(s)->trueLabel,
-                            static_cast<Cjump*>(s)->falseLabel);
-            last->tail->tail
-                = new StmList(new Label(falselabel), getNext(block_env, global_block));
-        }
-    } else
-        assert(0);
-}
-
-/* get the next block from the list of stmLists, using only those that have
- * not been traced yet */
-static StmList* getNext(std::unordered_map<std::string, StmList*>* block_env,
-                        Block* global_block) {
-    if (!global_block->llist)
-        return new StmList(new Label(global_block->label), NULL);
-    else {
-        StmList* s = global_block->llist->head;
-        if (block_env->find(static_cast<IR::Label*>(s->stm)->label)
-            != block_env->end()) { /* label exists in the table */
-            trace(block_env, global_block, s);
-            return s;
-        } else {
-            global_block->llist = global_block->llist->tail;
-            return getNext(block_env, global_block);
-        }
-    }
-}
 StmList* CANON::traceSchedule(Block b) {
     StmListList* sList;
     std::unordered_map<std::string, StmList*> block_env;
-    Block* global_block = &b;
-
-    for (sList = global_block->llist; sList; sList = sList->tail) {
-        block_env.insert(
-            std::make_pair(static_cast<IR::Label*>(sList->head->stm)->label, sList->head));
+    for (sList = b.llist; sList; sList = sList->tail) {
+        Temp_Label label = static_cast<IR::Label*>(sList->head->stm)->label;
+        block_env.insert(std::make_pair(label, sList->head));
     }
-    return getNext(&block_env, global_block);
+    StmList *head = new StmList(nullptr, new StmList(nullptr, nullptr)), *tail, *last;
+    last = head;
+    tail = last->tail;
+    for (sList = b.llist; sList; sList = sList->tail) {
+        IR::StmList* block = sList->head;
+        IR::Stm* labelstm = block->stm;
+        assert(labelstm->kind == IR::stmType::label);
+        std::string name = static_cast<IR::Label*>(labelstm)->label;
+        if (block_env.count(name) == 0) continue;
+        block_env.erase(name);
+        tail->tail = block;
+        last = getLast(tail);
+        tail = last->tail;
+        IR::Stm* jump = tail->stm;
+        while (1) {
+            if (jump->kind == IR::stmType::jump) {
+                std::string nextlabel = static_cast<IR::Jump*>(jump)->jumps[0];
+                assert(static_cast<Jump*>(jump)->jumps.size() == 1);
+                if (block_env.count(nextlabel) == 0) break;
+                block = block_env.at(nextlabel);
+                block_env.erase(nextlabel);
+                last->tail = block;  // remove jump ,dont remove next label
+                last = getLast(last);
+                tail = last->tail;
+                jump = tail->stm;
+            } else if (jump->kind == IR::stmType::cjump) {
+                std::string tl = static_cast<IR::Cjump*>(jump)->trueLabel;
+                std::string fl = static_cast<IR::Cjump*>(jump)->falseLabel;
+                if (block_env.count(fl)) {
+                    block = block_env.at(fl);
+                    block_env.erase(fl);
+                    tail->tail = block;
+                    last = getLast(last);
+                    tail = last->tail;
+                    jump = tail->stm;
+                } else if (block_env.count(tl)) {
+                    static_cast<IR::Cjump*>(jump)->trueLabel = fl;
+                    static_cast<IR::Cjump*>(jump)->falseLabel = tl;
+                    IR::RelOp op = static_cast<IR::Cjump*>(jump)->op;
+                    static_cast<IR::Cjump*>(jump)->op = IR::notRel(op);
+
+                    block = block_env.at(tl);
+                    block_env.erase(tl);
+                    tail->tail = block;
+                    last = getLast(last);
+                    tail = last->tail;
+                    jump = tail->stm;
+                } else {
+                    Temp_Label falselabel = Temp_newlabel();
+                    static_cast<IR::Cjump*>(jump)->falseLabel = falselabel;
+                    tail->tail = new StmList(new IR::Label(falselabel), nullptr);
+                    last = tail;
+                    tail = last->tail;
+                    tail->tail = new StmList(new IR::Jump(new IR::Name(fl), Temp_LabelList(1, fl)),
+                                             nullptr);
+                    last = tail;
+                    tail = last->tail;
+                    break;
+                }
+            } else
+                assert(0);
+        }
+    }
+    tail->tail = new StmList(new Label(b.label), nullptr);
+    return head->tail->tail;
 }
 StmList* CANON::handle(Stm* stm) {
     IR::StmList* ll = CANON::linearize(stm);
