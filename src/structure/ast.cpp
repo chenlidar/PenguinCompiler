@@ -603,12 +603,12 @@ IR::Stm* AST::PutfStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY
 IR::Stm* AST::StarttimeStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
                                     Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
                                     Temp_Label conlabel, Temp_Label name) {
-    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_starttime"), IR::ExpList()));
+    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_starttime"), IR::ExpList(1,new IR::ConstInt(this->lineno))));
 }
 IR::Stm* AST::StoptimeStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
                                    Temp_Label conlabel, Temp_Label name) {
-    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_stoptime"), IR::ExpList()));
+    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_stoptime"), IR::ExpList(1,new IR::ConstInt(this->lineno))));
 }
 IR::ExpTy AST::GetintExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                  Temp_Label name) {
