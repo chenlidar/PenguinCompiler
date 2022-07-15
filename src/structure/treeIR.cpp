@@ -1,10 +1,10 @@
 #include "treeIR.hpp"
 #include <assert.h>
-#include "../util/utils.hpp"
 #include <algorithm>
 #include <string>
-#include "assem.h"
 #include "../backend/canon.hpp"
+#include "../util/utils.hpp"
+#include "assem.h"
 using std::string;
 using namespace IR;
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
@@ -241,8 +241,7 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         src.push_back(this->src->ir2asm(ls));
         src.push_back(newtemp);
         ls->push_back(
-            new ASM::Oper(std::string("str `s0, [`s1]"),
-                          Temp_TempList(), src, ASM::Targets()));
+            new ASM::Oper(std::string("str `s0, [`s1]"), Temp_TempList(), src, ASM::Targets()));
     } else
         assert(0);
 }
@@ -382,4 +381,42 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
     stmlist = CANON::funcEntryExit1(stmlist);
     stmlist->ir2asm(&proc->body, exitlabel);
     return proc;
+}
+
+// quad
+Stm* Label::quad() { return new Label(label); }
+Stm* Jump::quad() { return new Jump(exp->quad(), jumps); }
+Stm* Cjump::quad() { return new Cjump(op, left->quad(), right->quad(), trueLabel, falseLabel); }
+Stm* Move::quad() {
+    if (src->kind == expType::mem && dst->kind == expType::mem) {
+        Temp_Temp ntp = Temp_newtemp();
+        return new Seq(new Move(new Temp(ntp), src->quad()), new Move(dst->quad(), new Temp(ntp)));
+    }
+    if (dst->kind == expType::mem) {
+        return new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()), src->quad());
+    }
+    if (src->kind == expType::mem) {
+        return new Move(dst->quad(), new Mem(static_cast<Mem*>(src)->mem->quad()));
+    }
+    return new Move(dst->quad(), src->quad());
+}
+Stm* ExpStm::quad() { return new ExpStm(exp->quad()); }
+Exp* ConstInt::quad() { return new ConstInt(val); }
+Exp* ConstFloat::quad() { return new ConstFloat(val); }
+Exp* Binop::quad() {
+    Temp_Temp ntp = Temp_newtemp();
+    return new Eseq(new Move(new Temp(ntp), new Binop(op, left->quad(), right->quad())),
+                    new Temp(ntp));
+}
+Exp* Temp::quad() { return new Temp(tempid); }
+Exp* Mem::quad() {
+    Temp_Temp ntp = Temp_newtemp();
+    return new Eseq(new Move(new Temp(ntp), new Mem(mem->quad())), new Temp(ntp));
+}
+Exp* Name::quad() { return new Name(name); }
+Exp* Call::quad() {
+    vector<Exp*> tm;
+    for (auto it : args) tm.push_back(it->quad());
+    Temp_Temp ntp = Temp_newtemp();
+    return new Eseq(new Move(new Temp(ntp), new Call(fun->quad(), tm)), new Temp(ntp));
 }
