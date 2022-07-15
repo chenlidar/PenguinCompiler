@@ -119,35 +119,60 @@ StmList* CANON::linearize(Stm* stm) { return linear(do_stm(stm), NULL); }
 /**
  * Basic Block
  */
-static StmListList* mkBlocks(StmList* stms, Temp_Label done);
-static StmListList* next(StmList* prevstms, StmList* stms, Temp_Label done) {
-    if (!stms)
-        return next(prevstms, new StmList(new Jump(new Name(done), Temp_LabelList(1, done)), NULL),
-                    done);
-    if (stms->stm->kind == stmType::jump || stms->stm->kind == stmType::cjump) {
-        StmListList* stmLists;
-        prevstms->tail = stms;
-        stmLists = mkBlocks(stms->tail, done);
-        stms->tail = NULL;
-        return stmLists;
-    } else if (stms->stm->kind == stmType::label) {
-        Temp_Label lab = static_cast<Label*>(stms->stm)->label;
-        return next(prevstms, new StmList(new Jump(new Name(lab), Temp_LabelList(1, lab)), stms),
-                    done);
-    } else {
-        prevstms->tail = stms;
-        return next(stms, stms->tail, done);
-    }
-}
 
-/* Create the beginning of a basic block */
 static StmListList* mkBlocks(StmList* stms, Temp_Label done) {
-    if (!stms) { return NULL; }
-    if (stms->stm->kind != stmType::label) {
-        return mkBlocks(new StmList(new Label(Temp_newlabel()), stms), done);
+    assert(stms && stms->stm->kind == stmType::label);
+    StmList *head = new StmList(nullptr, nullptr), *tail;  // accumulate list
+    tail = head;
+    StmListList *lhead = new StmListList(nullptr, nullptr), *ltail;
+    ltail = lhead;
+    const int IN = 1;
+    const int OUT = 2;
+    int state = OUT;
+    while (stms) {
+        IR::Stm* stm = stms->stm;
+        switch (state) {
+        case IN: {
+            if (stm->kind == IR::stmType::label) {  // only add jump,dont add stm;
+                state = OUT;
+                std::string lab = static_cast<Label*>(stm)->label;
+                tail = tail->tail
+                    = new StmList(new Jump(new Name(lab), Temp_LabelList(1, lab)), nullptr);
+                ltail = ltail->tail = new StmListList(head->tail, nullptr);
+            } else {
+                // state=IN, continue
+                tail = tail->tail = new StmList(stm, nullptr);
+                stms = stms->tail;
+                if (stm->kind == IR::stmType::jump || stm->kind == IR::stmType::cjump) {
+                    state = OUT;
+                    ltail = ltail->tail = new StmListList(head->tail, nullptr);
+                }
+            }
+        } break;
+        case OUT: {
+            if (stm->kind == IR::stmType::label) {  // begin block
+                state = IN;
+                head->tail = nullptr;
+                tail = head;
+                tail = tail->tail = new StmList(stm, nullptr);
+                stms = stms->tail;
+            } else {  // no label,only add label,dont add stm
+                state = IN;
+                head->tail = nullptr;
+                tail = head;
+                tail = tail->tail = new StmList(new Label(Temp_newlabel()), nullptr);  // add label
+            }
+        } break;
+        default: assert(0);
+        }
     }
-    /* else there already is a label */
-    return new StmListList(stms, next(stms, stms->tail, done));
+    if (state == IN) {
+        state = OUT;
+        tail = tail->tail
+            = new StmList(new Jump(new Name(done), Temp_LabelList(1, done)), nullptr);
+        ltail = ltail->tail = new StmListList(head->tail, nullptr);
+    }
+    return lhead->tail;
 }
 
 Block CANON::basicBlocks(StmList* stmList) {
@@ -277,12 +302,10 @@ ASM::InstrList* CANON::funcEntryExit2(ASM::InstrList* list, bool isvoid, bool is
     }
     if (ismain) {
 
-        /* list->push_back(new ASM::Oper(std::string("mov r8, #0xff"), Temp_TempList(), Temp_TempList(),
-                                      Temp_LabelList()));
-        list->push_back(new ASM::Oper(std::string("and r0, r0, r8"), Temp_TempList(), Temp_TempList(),
-                                      Temp_LabelList()));
-        list->push_back(new ASM::Oper(std::string("mov r7, r0"), Temp_TempList(), Temp_TempList(),
-                                      Temp_LabelList()));
+        /* list->push_back(new ASM::Oper(std::string("mov r8, #0xff"), Temp_TempList(),
+        Temp_TempList(), Temp_LabelList())); list->push_back(new ASM::Oper(std::string("and r0, r0,
+        r8"), Temp_TempList(), Temp_TempList(), Temp_LabelList())); list->push_back(new
+        ASM::Oper(std::string("mov r7, r0"), Temp_TempList(), Temp_TempList(), Temp_LabelList()));
         list->push_back(new ASM::Oper(std::string("mov r0, #10"), Temp_TempList(), Temp_TempList(),
                                       Temp_LabelList()));
         list->push_back(

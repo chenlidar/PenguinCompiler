@@ -22,8 +22,8 @@ int main() {
         //function
         IR::StmList* out = CANON::handle(stm);
 
-        // IR::Stm* stmq=QUADRUPLE::handle(out);
-        // out=CANON::handle(stmq);
+        IR::Stm* stmq=QUADRUPLE::handle(out);
+        out=CANON::handle(stmq);
 
         std::string funcname = static_cast<IR::Label*>(out->stm)->label;
         assert(fenv->exist(funcname));
