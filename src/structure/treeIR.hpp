@@ -56,7 +56,7 @@ class Exp {
     virtual ~Exp() = default;
     virtual Temp_Temp ir2asm(ASM::InstrList* ls) = 0;
     // new sth
-    Exp* quad() { assert(0); };
+    virtual Exp* quad() { assert(0); };
 };
 class Seq : public Stm {
    public:

@@ -7,6 +7,7 @@
 #include "backend/canon.hpp"
 #include "backend/regalloc.hpp"
 #include "util/utils.hpp"
+#include"ssa/quadruple.hpp"
 extern int yyparse();
 extern AST::CompUnitList* root;
 int main() {
@@ -20,6 +21,11 @@ int main() {
         if (isNop(stm)) continue;  // global var
         //function
         IR::StmList* out = CANON::handle(stm);
+
+        IR::Stm* stmq=QUADRUPLE::handle(out);
+        out=CANON::handle(stmq);
+
+
         std::string funcname = static_cast<IR::Label*>(out->stm)->label;
         assert(fenv->exist(funcname));
         bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
