@@ -112,14 +112,13 @@ StmList* CANON::linearize(Stm* stm) {
     st.push_back(do_stm(stm));
     while (!st.empty()) {
         auto tp = st.back();
+        st.pop_back();
         if (tp->kind == stmType::seq) {
-            st.pop_back();
             Seq* s = static_cast<Seq*>(tp);
             st.push_back(s->right);
             st.push_back(s->left);
         } else {
-            res.push_back(st.back());
-            st.pop_back();
+            res.push_back(tp);
         }
     }
     int len = res.size();

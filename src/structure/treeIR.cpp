@@ -197,7 +197,7 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         int_const = static_cast<IR::ConstInt*>(this->src)->val;
         tmp[0] = this->dst->ir2asm(ls);
         dst.push_back(tmp[0]);
-        if (int_const > 256||int_const<-128) {
+        if (int_const > 256 || int_const < -128) {
             ls->push_back(
                 new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                               src, ASM::Targets()));
@@ -256,7 +256,7 @@ Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls) {
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    if (int_const > 256||int_const<-128) {
+    if (int_const > 256 || int_const < -128) {
         ls->push_back(
             new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));
@@ -357,7 +357,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
                                                       new IR::ConstInt(-stksize))))
             ->ir2asm(ls, "");
     }
-    if (head != nullptr) head->ir2asm(ls, "");
+    for (; head; head = head->tail) head->stm->ir2asm(ls, "");
     Temp_TempList defs = Temp_TempList();
     for (int i = 0; i < 4; i++) { defs.push_back(i); }
     defs.push_back(14);
@@ -370,17 +370,13 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
     }
     return 0;  // r0
 }
-void StmList::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
-    this->stm->ir2asm(ls, exitlabel);
-    if (this->tail != nullptr) this->tail->ir2asm(ls, exitlabel);
-}
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();
     IR::Stm* label = getLast(stmlist)->tail->stm;
     assert(label->kind == stmType::label);
     Temp_Label exitlabel = static_cast<IR::Label*>(label)->label;
     stmlist = CANON::funcEntryExit1(stmlist);
-    stmlist->ir2asm(&proc->body, exitlabel);
+    for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body, exitlabel);
     return proc;
 }
 

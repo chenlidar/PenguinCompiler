@@ -244,7 +244,6 @@ class StmList {
     Stm* stm;
     StmList* tail;
     StmList(Stm* _stm, StmList* _tail) : stm(_stm), tail(_tail) {}
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
 };
 typedef std::vector<Exp*> ExpList;
 ASM::Proc* ir2asm(StmList* stmlist);
