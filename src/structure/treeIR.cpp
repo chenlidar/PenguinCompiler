@@ -196,7 +196,7 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         int_const = static_cast<IR::ConstInt*>(this->src)->val;
         tmp[0] = this->dst->ir2asm(ls);
         dst.push_back(tmp[0]);
-        if (int_const > 256) {
+        if (int_const > 256||int_const<-128) {
             ls->push_back(
                 new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                               src, ASM::Targets()));
@@ -255,7 +255,7 @@ Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls) {
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    if (int_const > 256) {
+    if (int_const > 256||int_const<-128) {
         ls->push_back(
             new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));

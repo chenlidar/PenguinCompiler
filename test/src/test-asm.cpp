@@ -22,14 +22,14 @@ int main() {
         //function
         IR::StmList* out = CANON::handle(stm);
 
-        IR::Stm* stmq=QUADRUPLE::handle(out);
-        out=CANON::handle(stmq);
-
+        // IR::Stm* stmq=QUADRUPLE::handle(out);
+        // out=CANON::handle(stmq);
 
         std::string funcname = static_cast<IR::Label*>(out->stm)->label;
         assert(fenv->exist(funcname));
         bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
-        RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main"));
+        int stksize=fenv->look(funcname)->stksize;
+        RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main"),stksize);
         // for(auto it:*CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, funcname == "main")){
         //     it->print();
         // }

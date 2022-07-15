@@ -40,7 +40,7 @@ asm() {
 			else
 				qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
 			fi
-			echo $? >> $build_dir/$test_name.out
+			echo -e \\n$? >> $build_dir/$test_name.out
 			diff -B  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 			if [ $? == 0 ]; then
 				echo pass; mv $build_dir/$test_name.s $build_dir/build/;rm $build_dir/$test_name*
@@ -79,7 +79,7 @@ asm() {
 		else
 			time qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
 		fi
-		echo $? >> $build_dir/$test_name.out
+		echo -e \\n$? >> $build_dir/$test_name.out
 		diff -B $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 		if [ $? == 0 ]; then
 			echo pass; mv $build_dir/$test_name.s $build_dir/build/; rm $build_dir/$test_name*
