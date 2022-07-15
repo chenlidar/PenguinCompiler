@@ -12,8 +12,25 @@ extern int yyparse();
 extern AST::CompUnitList* root;
 int main(int argc, char** argv) {
     // compiler testcase.sysy -S -o testcase.s [-O1]
-    const char* sy_input = argv[1];
-    const char* sy_output = argv[4];
+    char* sy_input = 0;
+    char* sy_output = 0;
+
+    /* Get output */
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            if (argv[i][1] == 'o') {
+                sy_output = argv[i + 1];
+                break;
+            }
+        }
+    }
+
+    /* Get intput */
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] != '-' && argv[i] != sy_output) { sy_input = argv[i]; }
+    }
+    assert(sy_input);
+    assert(sy_output);
     freopen(sy_input, "r", stdin);
     yyparse();
     freopen(sy_output, "w", stdout);
