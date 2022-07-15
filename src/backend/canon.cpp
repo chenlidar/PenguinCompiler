@@ -106,15 +106,28 @@ static Stm* do_stm(Stm* stm) {
     } else
         return stm;
 }
-static StmList* linear(Stm* stm, StmList* right) {
-    if (stm->kind == stmType::seq) {
-        Seq* s = static_cast<Seq*>(stm);
-        return linear(s->left, linear(s->right, right));
-    } else {
-        return new StmList(stm, right);
+StmList* CANON::linearize(Stm* stm) {
+    // return linear(do_stm(stm), NULL);
+    std::vector<Stm*> res, st;
+    st.push_back(do_stm(stm));
+    while (!st.empty()) {
+        auto tp = st.back();
+        if (tp->kind == stmType::seq) {
+            st.pop_back();
+            Seq* s = static_cast<Seq*>(tp);
+            st.push_back(s->right);
+            st.push_back(s->left);
+        } else {
+            res.push_back(st.back());
+            st.pop_back();
+        }
     }
+    int len = res.size();
+    if (len == 0) return 0;
+    auto it = new StmList(res.back(), 0);
+    for (int i = len - 2; i >= 0; i--) { it = new StmList(res[i], it); }
+    return it;
 }
-StmList* CANON::linearize(Stm* stm) { return linear(do_stm(stm), NULL); }
 
 /**
  * Basic Block
