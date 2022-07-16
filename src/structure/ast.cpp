@@ -218,8 +218,8 @@ IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
         }
     }
     name = *this->id->str;
-    Temp_Label fb = name=="main"?"main":Temp_newlabel();
-    fenv->enter(name, new TY::EnFunc(ty, fb));
+    Temp_Label fb = name;
+    fenv->enter(fb, new TY::EnFunc(ty, fb));
     venv->beginScope(NULL);
     IR::Stm* cat_stm = new IR::Label(fb);
     int stksize = 0, cnt = 0;
