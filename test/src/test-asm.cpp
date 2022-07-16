@@ -7,6 +7,7 @@
 #include "backend/canon.hpp"
 #include "backend/regalloc.hpp"
 #include "util/utils.hpp"
+#include "util/showIR.hpp"
 #include "ssa/quadruple.hpp"
 #include <sstream>
 #include <typeinfo>
@@ -34,9 +35,9 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
         } break;
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";
-            *globalArray << ".space " + std::to_string(entry->ty->arraysize*4) << std::endl;
+            *globalArray << ".space " + std::to_string(entry->ty->arraysize * 4) << std::endl;
             for (int i = 0; i < entry->ty->arraysize; i++) {
-                if(*(entry->ty->value + i)==0)continue;
+                if (*(entry->ty->value + i) == 0) continue;
                 tail = tail->tail = new IR::StmList(
                     new IR::Move(new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Name(name),
                                                            new IR::ConstInt(4 * i))),
@@ -72,6 +73,7 @@ int main() {
             }
             IR::Stm* stmq = QUADRUPLE::handle(out);
             out = CANON::handle(stmq);
+            showir(out);
             int stksize = fenv->look(funcname)->stksize;
             RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, false, true), stksize);
             std::cout << globalVar->str();
