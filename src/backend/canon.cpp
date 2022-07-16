@@ -278,27 +278,27 @@ StmList* CANON::handle(Stm* stm) {
 
 //
 StmList* CANON::funcEntryExit1(StmList* stmlist) {
-    assert(stmlist);
-    assert(stmlist->stm->kind == IR::stmType::label);
-    StmList *end = stmlist, *end_entry;
-    for (; end->tail; end = end->tail)
-        ;
-    assert(end->stm->kind == IR::stmType::label);
-    assert(end != stmlist);
+    // assert(stmlist);
+    // assert(stmlist->stm->kind == IR::stmType::label);
+    // StmList *end = stmlist, *end_entry;
+    // for (; end->tail; end = end->tail)
+    //     ;
+    // assert(end->stm->kind == IR::stmType::label);
+    // assert(end != stmlist);
 
-    StmList *entry = new StmList(NULL, NULL), *exit = new StmList(NULL, NULL);
-    for (int i = 4; i <= 10; i++) {
-        Temp_Temp temp = Temp_newtemp();
-        entry->tail = new StmList(new Move(new Temp(temp), new Temp(i)), entry->tail);
-        exit->tail = new StmList(new Move(new Temp(i), new Temp(temp)), exit->tail);
-    }
-    end_entry = entry;
-    for (; end_entry->tail; end_entry = end_entry->tail)
-        ;
-    end_entry->tail = stmlist->tail;
-    stmlist->tail = entry->tail;
-    end->tail = exit->tail;
-    assert(stmlist->stm->kind == IR::stmType::label);
+    // StmList *entry = new StmList(NULL, NULL), *exit = new StmList(NULL, NULL);
+    // for (int i = 4; i <= 10; i++) {
+    //     Temp_Temp temp = Temp_newtemp();
+    //     entry->tail = new StmList(new Move(new Temp(temp), new Temp(i)), entry->tail);
+    //     exit->tail = new StmList(new Move(new Temp(i), new Temp(temp)), exit->tail);
+    // }
+    // end_entry = entry;
+    // for (; end_entry->tail; end_entry = end_entry->tail)
+    //     ;
+    // end_entry->tail = stmlist->tail;
+    // stmlist->tail = entry->tail;
+    // end->tail = exit->tail;
+    // assert(stmlist->stm->kind == IR::stmType::label);
     return stmlist;
 }
 ASM::InstrList* CANON::funcEntryExit2(ASM::InstrList* list, bool isvoid, bool ismain) {

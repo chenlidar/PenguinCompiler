@@ -90,4 +90,20 @@ static TY::Type* typeAst2ir(AST::btype_t btype) {
     default: assert(0);
     }
 }
+static float i2f_decode(int i) {
+    union {
+        int i;
+        float f;
+    } ret;
+    ret.i = i;
+    return ret.f;
+}
+static int f2i_encode(float f) {
+    union {
+        int i;
+        float f;
+    } ret;
+    ret.f = f;
+    return ret.i;
+}
 #endif

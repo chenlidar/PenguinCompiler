@@ -26,8 +26,7 @@ IR::Stm* AST::ConstDecl::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<T
 IR::Stm* AST::ConstDef::ast2ir(AST::btype_t btype, Table::Stable<TY::Entry*>* venv,
                                Table::Stable<TY::EnFunc*>* fenv, Temp_Label name) {
     switch (btype) {
-    case AST::btype_t::INT: {  // TODO insert table
-
+    case AST::btype_t::INT: {
         if (index_list->list.empty()) {  // int
             IR::ExpTy expty = this->val->ast2ir(venv, fenv, name);
             assert(expty.ty->value);
@@ -35,33 +34,22 @@ IR::Stm* AST::ConstDef::ast2ir(AST::btype_t btype, Table::Stable<TY::Entry*>* ve
                         new TY::GloVar(TY::intType(expty.ty->value, true), Temp_newlabel()));
             return nopStm();
         } else {  // int []
+            // get array index,make array type
+            int offset = 0;
+            TY::Type* head = TY::intType(new int(0), false);
+            for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
+                AST::Exp* it = this->index_list->list[i];
+                IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+                assert(expty.ty->kind == TY::tyType::Ty_int);
+                head = TY::arrayType(head, *expty.ty->value, true);
+            }
             if (name == "") {
-                // get array index
-                int offset = 0;
-                TY::Type* head = TY::intType(NULL, true);
-                for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
-                    AST::Exp* it = this->index_list->list[i];
-                    IR::ExpTy expty = it->ast2ir(venv, fenv, name);
-                    head = TY::arrayType(head, *expty.ty->value, true);
-                }
-                // head->value = new int[head->arraysize];
-                //
                 Temp_Label label = Temp_newlabel();
                 IR::ExpTy expty
                     = this->val->calArray(new IR::Name(label), 0, head, venv, fenv, name);
                 venv->enter(*this->id->str, new TY::GloVar(expty.ty, label));
                 return nopStm();
             } else {  // local const,same as valdef
-                // get array index
-                int offset = 0;
-                TY::Type* head = TY::intType(new int(0), false);
-                for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
-                    AST::Exp* it = this->index_list->list[i];
-                    IR::ExpTy expty = it->ast2ir(venv, fenv, name);
-                    head = TY::arrayType(head, *expty.ty->value, true);
-                }
-                // head->value = new int[head->arraysize];
-                //
                 Temp_Temp tmp = Temp_newtemp();
                 TY::EnFunc* enfunc = fenv->look(name);
                 // local array in stk
@@ -76,21 +64,68 @@ IR::Stm* AST::ConstDef::ast2ir(AST::btype_t btype, Table::Stable<TY::Entry*>* ve
                 param.push_back(new IR::ConstInt(head->arraysize * 4));
                 cat_stm
                     = seq(cat_stm, new IR::ExpStm(new IR::Call(new IR::Name("memset"), param)));
-                if (this->val) {
-                    IR::ExpTy expty
-                        = this->val->calArray(new IR::Temp(tmp), 0, head, venv, fenv, name);
-                    venv->enter(*this->id->str, new TY::LocVar(head, tmp));
-                    return seq(cat_stm, new IR::ExpStm(expty.exp->unEx()));
-                } else {
-                    head->value = new int[head->arraysize];
-                    memset(head->value, 0, head->arraysize * sizeof(int));
-                    venv->enter(*this->id->str, new TY::LocVar(head, tmp));
-                    return cat_stm;
-                }
+                assert(this->val);
+                IR::ExpTy expty
+                    = this->val->calArray(new IR::Temp(tmp), 0, head, venv, fenv, name);
+                venv->enter(*this->id->str, new TY::LocVar(head, tmp));
+                return seq(cat_stm, new IR::ExpStm(expty.exp->unEx()));
             }
         }
 
     } break;
+    // case AST::btype_t::FLOAT: {
+    //     assert(0);
+    //     if (index_list->list.empty()) {  // float
+    //         IR::ExpTy expty = this->val->ast2ir(venv, fenv, name);
+    //         assert(expty.ty->value);
+    //         int* val = new int(0);
+    //         if (expty.ty->kind != TY::tyType::Ty_float) {  // int to float
+    //             *val = f2i_encode((float)*expty.ty->value);
+    //         } else
+    //             *val = *expty.ty->value;
+    //         venv->enter(*this->id->str,
+    //                     new TY::GloVar(TY::floatType(expty.ty->value, true), Temp_newlabel()));
+    //         return nopStm();
+    //     } else {  // float []
+    //         // get array index,make array type
+    //         int offset = 0;
+    //         TY::Type* head = TY::floatType(new int(0), true);
+    //         for (int i = (int)(this->index_list->list.size()) - 1; i >= 0; i--) {
+    //             AST::Exp* it = this->index_list->list[i];
+    //             IR::ExpTy expty = it->ast2ir(venv, fenv, name);
+    //             assert(expty.ty->kind == TY::tyType::Ty_int);
+    //             head = TY::arrayType(head, *expty.ty->value, true);
+    //         }
+    //         if (name == "") {
+    //             Temp_Label label = Temp_newlabel();
+    //             IR::ExpTy expty
+    //                 = this->val->calArray(new IR::Name(label), 0, head, venv, fenv, name);
+    //             venv->enter(*this->id->str, new TY::GloVar(expty.ty, label));
+    //             return nopStm();
+    //         } else {  // local const,same as valdef,except must have initval
+    //             Temp_Temp tmp = Temp_newtemp();
+    //             TY::EnFunc* enfunc = fenv->look(name);
+    //             // local array in stk
+    //             int stksize = enfunc->stksize + head->arraysize * 4;
+    //             enfunc->stksize = stksize;
+    //             IR::Stm* cat_stm = new IR::Move(new IR::Temp(tmp),
+    //                                             new IR::Binop(IR::binop::T_plus, new
+    //                                             IR::Temp(11),
+    //                                                           new IR::ConstInt(-stksize)));
+    //             IR::ExpList param = IR::ExpList();
+    //             param.push_back(new IR::Temp(tmp));
+    //             param.push_back(new IR::ConstInt(0));
+    //             param.push_back(new IR::ConstInt(head->arraysize * 4));
+    //             cat_stm
+    //                 = seq(cat_stm, new IR::ExpStm(new IR::Call(new IR::Name("memset"), param)));
+    //             assert(this->val);  // must can be calculated
+    //             IR::ExpTy expty
+    //                 = this->val->calArray(new IR::Temp(tmp), 0, head, venv, fenv, name);
+    //             venv->enter(*this->id->str, new TY::LocVar(head, tmp));
+    //             return seq(cat_stm, new IR::ExpStm(expty.exp->unEx()));
+    //         }
+    //     }
+    // } break;
     default: assert(0);
     }
 }
@@ -124,11 +159,8 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                     IR::ExpTy expty = it->ast2ir(venv, fenv, name);
                     head = TY::arrayType(head, *expty.ty->value, false);
                 }
-                //
-                //
                 Temp_Label label = Temp_newlabel();
                 if (this->initval) {
-
                     IR::ExpTy expty
                         = this->initval->calArray(new IR::Name(label), 0, head, venv, fenv, name);
 
@@ -152,21 +184,18 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                     Temp_Temp tmp = Temp_newtemp();
                     venv->enter(*this->id->str,
                                 new TY::LocVar(TY::intType(new int(0), false), tmp));
-                    return new IR::Move(new IR::Temp(tmp), new IR::ConstInt(0));
+                    return nopStm();  // need not be 0
                 }
-
             } else {  // int []
                 // get array index
                 int offset = 0;
                 TY::Type* head = TY::intType(new int(0), false);
                 for (int i = (int)(this->index->list.size()) - 1; i >= 0; i--) {
-                    AST::Exp* it = this->index->list[i];  // FIXME: nullptr
+                    AST::Exp* it = this->index->list[i];
                     assert(it != nullptr);
                     IR::ExpTy expty = it->ast2ir(venv, fenv, name);
                     head = TY::arrayType(head, *expty.ty->value, false);
                 }
-                // head->value = new int[head->arraysize];
-                //
                 Temp_Temp tmp = Temp_newtemp();
                 TY::EnFunc* enfunc = fenv->look(name);
                 // local array in stk
@@ -175,13 +204,14 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 IR::Stm* cat_stm = new IR::Move(new IR::Temp(tmp),
                                                 new IR::Binop(IR::binop::T_plus, new IR::Temp(11),
                                                               new IR::ConstInt(-stksize)));
-                IR::ExpList param = IR::ExpList();
-                param.push_back(new IR::Temp(tmp));
-                param.push_back(new IR::ConstInt(0));
-                param.push_back(new IR::ConstInt(head->arraysize * 4));
-                cat_stm
-                    = seq(cat_stm, new IR::ExpStm(new IR::Call(new IR::Name("memset"), param)));
+                // local array init value dont be defined need not be 0
                 if (this->initval) {
+                    IR::ExpList param = IR::ExpList();
+                    param.push_back(new IR::Temp(tmp));
+                    param.push_back(new IR::ConstInt(0));
+                    param.push_back(new IR::ConstInt(head->arraysize * 4));
+                    cat_stm = seq(cat_stm,
+                                  new IR::ExpStm(new IR::Call(new IR::Name("memset"), param)));
                     IR::ExpTy expty
                         = this->initval->calArray(new IR::Temp(tmp), 0, head, venv, fenv, name);
                     venv->enter(*this->id->str, new TY::LocVar(head, tmp));
@@ -385,8 +415,10 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
                         new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4 * ty->arraysize), e))),
                     LvalType);
             } else {
-                TY::Type* LvalType
-                    = TY::intType(new int(exp->ty->value[(offset% exp->ty->arraysize+exp->ty->arraysize)% exp->ty->arraysize ]), 0);
+                TY::Type* LvalType = TY::intType(
+                    new int(exp->ty->value[(offset % exp->ty->arraysize + exp->ty->arraysize)
+                                           % exp->ty->arraysize]),
+                    0);
                 return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(new IR::Binop(
                                      IR::binop::T_plus, idIR,
                                      new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e)))),
