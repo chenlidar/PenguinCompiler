@@ -31,6 +31,12 @@ static IR::StmList* getLast(IR::StmList* list) {
     while (last->tail->tail) last = last->tail;
     return last;
 }
+static IR::StmList* getEnd(IR::StmList* list) {
+    IR::StmList* last = list;
+    assert(list);
+    while (last->tail) last = last->tail;
+    return last;
+}
 static TY::Type* binopResType(const TY::Type* a, const TY::Type* b, IR::binop op) {
     assert(a->kind == TY::tyType::Ty_float || a->kind == TY::tyType::Ty_int);
     assert(b->kind == TY::tyType::Ty_float || b->kind == TY::tyType::Ty_int);
