@@ -88,16 +88,17 @@ asm() {
 			if [ $? != 0 ]; then
 				echo fail; exit
 			fi
-			arm-linux-gnueabihf-gcc -march=armv7 $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
+			arm-linux-gnueabihf-gcc -march=armv7-a $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
 			if [ $? != 0 ]; then
 				echo "fail to link"; exit
 			fi
-			# if [ -f $func_testcase_dir/$test_name.in ]; then
-			# 	qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
-			# else
-			# 	qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
-			# fi
-			# diff -B  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
+			if [ -f $func_testcase_dir/$test_name.in ]; then
+				qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
+			else
+				qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
+			fi
+			echo -e \\n$? >> $build_dir/$test_name.out
+			diff -Bb  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 			if [ $? == 0 ]; then
 				echo pass; mv $build_dir/$test_name.s $build_dir/build/perf/;rm $build_dir/$test_name*
 			else
@@ -126,7 +127,7 @@ asm() {
 		if [ $? != 0 ]; then
 			echo fail; exit
 		fi
-		arm-linux-gnueabihf-gcc -march=armv7 $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
+		arm-linux-gnueabihf-gcc -march=armv7-a $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
 		if [ $? != 0 ]; then
 			echo "fail to link"; exit
 		fi
@@ -136,7 +137,7 @@ asm() {
 			time qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
 		fi
 		echo -e \\n$? >> $build_dir/$test_name.out
-		diff -B $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
+		diff -Bb $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 		if [ $? == 0 ]; then
 			echo pass; mv $build_dir/$test_name.s $build_dir/build/perf/; rm $build_dir/$test_name*
 		else
