@@ -10,7 +10,7 @@ class labelManager {
     string newlabel() {
         int ret = labelno;
         labelno++;
-        return "L" + to_string(ret);
+        return "AaBbcCL" + to_string(ret);
     }
 
    private:
