@@ -386,7 +386,7 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
                     LvalType);
             } else {
                 TY::Type* LvalType
-                    = TY::intType(new int(exp->ty->value[offset % exp->ty->arraysize]), 0);
+                    = TY::intType(new int(exp->ty->value[(offset% exp->ty->arraysize+exp->ty->arraysize)% exp->ty->arraysize ]), 0);
                 return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(new IR::Binop(
                                      IR::binop::T_plus, idIR,
                                      new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e)))),

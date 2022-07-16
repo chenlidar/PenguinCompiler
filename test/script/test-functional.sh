@@ -27,6 +27,7 @@ asm() {
 			test_name=${x%.sy}
 			echo -n $test_name
 			echo -n ": "
+			cp $func_testcase_dir/$test_name.* $build_dir
 			$build_dir/test-asm < $func_testcase_dir/$test_name.sy  > $build_dir/$test_name.s
 			if [ $? != 0 ]; then
 				echo fail; exit
@@ -41,7 +42,7 @@ asm() {
 				qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
 			fi
 			echo -e \\n$? >> $build_dir/$test_name.out
-			diff -B  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
+			diff -Bb  $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 			if [ $? == 0 ]; then
 				echo pass; mv $build_dir/$test_name.s $build_dir/build/;rm $build_dir/$test_name*
 			else
@@ -66,6 +67,7 @@ asm() {
 		echo -n ": "
 
 		#cd $build_dir
+		cp $func_testcase_dir/$test_name.* $build_dir/
 		time $build_dir/test-asm < $func_testcase_dir/$test_file  > $build_dir/$test_name.s
 		if [ $? != 0 ]; then
 			echo fail; exit
@@ -80,7 +82,7 @@ asm() {
 			time qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
 		fi
 		echo -e \\n$? >> $build_dir/$test_name.out
-		diff -B $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
+		diff -Bb $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null
 		if [ $? == 0 ]; then
 			echo pass; mv $build_dir/$test_name.s $build_dir/build/; rm $build_dir/$test_name*
 		else
