@@ -13,15 +13,7 @@ using std::unique_ptr;
 using std::vector;
 
 // use Binop::plus
-enum class binop {
-    T_plus,
-    T_minus,
-    T_mul,
-    T_div,
-    T_mod,
-    T_and,
-    T_or
-};
+enum class binop { T_plus, T_minus, T_mul, T_div, T_mod, T_and, T_or };
 enum class RelOp {
     T_eq,
     T_ne,
@@ -53,14 +45,18 @@ RelOp notRel(RelOp op);   // a op b    ==     not(a notRel(op) b)
 class Stm {
    public:
     stmType kind;
-    virtual ~Stm()=default;
-    virtual void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel)=0;
+    virtual ~Stm() = default;
+    virtual void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) = 0;
+    // new sth
+    virtual Stm* quad() { assert(0); };
 };
 class Exp {
    public:
     expType kind;
-    virtual ~Exp()=default;
-    virtual Temp_Temp ir2asm(ASM::InstrList* ls)=0;
+    virtual ~Exp() = default;
+    virtual Temp_Temp ir2asm(ASM::InstrList* ls) = 0;
+    // new sth
+    virtual Exp* quad() { assert(0); };
 };
 class Seq : public Stm {
    public:
@@ -69,7 +65,8 @@ class Seq : public Stm {
         left = lf, right = rg;
         kind = stmType::seq;
     }
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel){assert(0);}
+    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) { assert(0); }
+    Stm* quad() { assert(0); }
 };
 class Label : public Stm {
    public:
@@ -78,7 +75,8 @@ class Label : public Stm {
         label = lb;
         kind = stmType::label;
     }
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    Stm* quad();
 };
 class Jump : public Stm {
    public:
@@ -88,7 +86,8 @@ class Jump : public Stm {
         exp = ep, jumps = s;
         kind = stmType::jump;
     }
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    Stm* quad();
 };
 class Cjump : public Stm {
    public:
@@ -99,7 +98,8 @@ class Cjump : public Stm {
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
         kind = stmType::cjump;
     }
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    Stm* quad();
 };
 class Move : public Stm {
    public:
@@ -108,7 +108,8 @@ class Move : public Stm {
         src = sr, dst = ds;
         kind = stmType::move;
     }
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    Stm* quad();
 };
 class ExpStm : public Stm {
    public:
@@ -117,7 +118,8 @@ class ExpStm : public Stm {
         exp = e;
         kind = stmType::exp;
     }
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    Stm* quad();
 };
 
 class ConstInt : public Exp {
@@ -128,6 +130,7 @@ class ConstInt : public Exp {
         kind = expType::constint;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 class ConstFloat : public Exp {
    public:
@@ -137,6 +140,7 @@ class ConstFloat : public Exp {
         kind = expType::constfloat;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 
 class Binop : public Exp {
@@ -147,6 +151,7 @@ class Binop : public Exp {
         op = o, left = lf, kind = expType::binop, right = rg;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 class Temp : public Exp {
    public:
@@ -156,6 +161,7 @@ class Temp : public Exp {
         kind = expType::temp;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 class Mem : public Exp {
    public:
@@ -165,6 +171,7 @@ class Mem : public Exp {
         kind = expType::mem;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 class Eseq : public Exp {
    public:
@@ -175,6 +182,7 @@ class Eseq : public Exp {
         kind = expType::eseq;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad() { assert(0); }
 };
 // TBD TODO:
 class Name : public Exp {
@@ -185,6 +193,7 @@ class Name : public Exp {
         kind = expType::name;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 class Call : public Exp {
    public:
@@ -195,11 +204,12 @@ class Call : public Exp {
         kind = expType::call;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
+    Exp* quad();
 };
 struct PatchList {
     Temp_Label* head;
     PatchList* tail;
-    PatchList(Temp_Label* _head,PatchList* _tail):head(_head),tail(_tail){}
+    PatchList(Temp_Label* _head, PatchList* _tail) : head(_head), tail(_tail) {}
 };
 struct Cx {
     PatchList* trues;
@@ -216,27 +226,24 @@ struct Tr_Exp {
     Stm* nx;
     Cx cx;
     Tr_Exp(Stm* stm);
-    Tr_Exp(PatchList* trues,PatchList* falses,Stm* stm);
+    Tr_Exp(PatchList* trues, PatchList* falses, Stm* stm);
     Tr_Exp(Exp* exp);
     Exp* unEx();
-    Cx   unCx();
-    Stm* unNx() ;
+    Cx unCx();
+    Stm* unNx();
 };
 class ExpTy {
    public:
     Tr_Exp* exp;
     TY::Type* ty;
-    ExpTy(Tr_Exp* _exp, TY::Type *_ty)
-        : exp(_exp)
-        , ty(_ty) {}
-    ExpTy(){}
+    ExpTy(Tr_Exp* _exp, TY::Type* _ty) : exp(_exp), ty(_ty) {}
+    ExpTy() {}
 };
 class StmList {
    public:
     Stm* stm;
     StmList* tail;
     StmList(Stm* _stm, StmList* _tail) : stm(_stm), tail(_tail) {}
-    void ir2asm(ASM::InstrList* ls,Temp_Label exitlabel);
 };
 typedef std::vector<Exp*> ExpList;
 ASM::Proc* ir2asm(StmList* stmlist);

@@ -77,11 +77,13 @@ struct GloVar : public Entry {
 };
 struct EnFunc : public Entry {
     Temp_Label label;
+    int stksize;
     EnFunc(Type* _ty, Temp_Label _label) {
         assert(_ty->kind == tyType::Ty_func);
         kind = tyEntry::Ty_func;
         ty = _ty;
         label = _label;
+        stksize=8;
     }
 };
 };  // namespace TY

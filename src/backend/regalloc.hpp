@@ -11,6 +11,6 @@
 #include "ig.hpp"
 #include "color.hpp"
 namespace RA {
-ASM::InstrList* RA_RegAlloc(ASM::InstrList* il);
+ASM::InstrList* RA_RegAlloc(ASM::InstrList* il,int stksize);
 }
 #endif

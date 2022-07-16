@@ -63,10 +63,13 @@ IR::Stm* AST::ConstDef::ast2ir(AST::btype_t btype, Table::Stable<TY::Entry*>* ve
                 // head->value = new int[head->arraysize];
                 //
                 Temp_Temp tmp = Temp_newtemp();
-                IR::Stm* cat_stm = new IR::Move(
-                    new IR::Temp(tmp),
-                    new IR::Call(new IR::Name("malloc"),
-                                 IR::ExpList(1, new IR::ConstInt(head->arraysize * 4))));
+                TY::EnFunc* enfunc = fenv->look(name);
+                // local array in stk
+                int stksize = enfunc->stksize + head->arraysize * 4;
+                enfunc->stksize = stksize;
+                IR::Stm* cat_stm = new IR::Move(new IR::Temp(tmp),
+                                                new IR::Binop(IR::binop::T_plus, new IR::Temp(11),
+                                                              new IR::ConstInt(-stksize)));
                 IR::ExpList param = IR::ExpList();
                 param.push_back(new IR::Temp(tmp));
                 param.push_back(new IR::ConstInt(0));
@@ -165,12 +168,13 @@ IR::Stm* AST::VarDef::ast2ir(btype_t btype, Table::Stable<TY::Entry*>* venv,
                 // head->value = new int[head->arraysize];
                 //
                 Temp_Temp tmp = Temp_newtemp();
-                IR::Stm* cat_stm = new IR::Move(
-                    new IR::Temp(tmp),
-                    new IR::Call(
-                        new IR::Name("malloc"),
-                        IR::ExpList(1, new IR::ConstInt(head->arraysize
-                                                        * 4))));  // assume malloc space is zero
+                TY::EnFunc* enfunc = fenv->look(name);
+                // local array in stk
+                int stksize = enfunc->stksize + head->arraysize * 4;
+                enfunc->stksize = stksize;
+                IR::Stm* cat_stm = new IR::Move(new IR::Temp(tmp),
+                                                new IR::Binop(IR::binop::T_plus, new IR::Temp(11),
+                                                              new IR::ConstInt(-stksize)));
                 IR::ExpList param = IR::ExpList();
                 param.push_back(new IR::Temp(tmp));
                 param.push_back(new IR::ConstInt(0));
@@ -313,10 +317,8 @@ IR::ExpTy AST::Exp::calArray(IR::Exp* addr, int noff, TY::Type* ty,
     IR::Exp* exp = expty.exp->unEx();
     IR::Stm* stm = new IR::Move(
         new IR::Mem(new IR::Binop(IR::binop::T_plus, addr, new IR::ConstInt(4 * noff))), exp);
-    return IR::ExpTy(
-        new IR::Tr_Exp(new IR::Eseq(
-            stm, new IR::ConstInt(0))),
-        expty.ty);//not use exp
+    return IR::ExpTy(new IR::Tr_Exp(new IR::Eseq(stm, new IR::ConstInt(0))),
+                     expty.ty);  // not use exp
 }
 IR::ExpTy AST::InitValList::calArray(IR::Exp* addr, int noff, TY::Type* ty,
                                      Table::Stable<TY::Entry*>* venv,
@@ -384,7 +386,7 @@ IR::ExpTy AST::Lval::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::E
                     LvalType);
             } else {
                 TY::Type* LvalType
-                    = TY::intType(new int(exp->ty->value[offset % exp->ty->arraysize]), 0);
+                    = TY::intType(new int(exp->ty->value[(offset% exp->ty->arraysize+exp->ty->arraysize)% exp->ty->arraysize ]), 0);
                 return IR::ExpTy(new IR::Tr_Exp(new IR::Mem(new IR::Binop(
                                      IR::binop::T_plus, idIR,
                                      new IR::Binop(IR::binop::T_mul, new IR::ConstInt(4), e)))),
@@ -603,12 +605,14 @@ IR::Stm* AST::PutfStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY
 IR::Stm* AST::StarttimeStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
                                     Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
                                     Temp_Label conlabel, Temp_Label name) {
-    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_starttime"), IR::ExpList(1,new IR::ConstInt(this->lineno))));
+    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_starttime"),
+                                       IR::ExpList(1, new IR::ConstInt(this->lineno))));
 }
 IR::Stm* AST::StoptimeStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
                                    Table::Stable<TY::EnFunc*>* fenv, Temp_Label brelabel,
                                    Temp_Label conlabel, Temp_Label name) {
-    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_stoptime"), IR::ExpList(1,new IR::ConstInt(this->lineno))));
+    return new IR::ExpStm(new IR::Call(new IR::Name("_sysy_stoptime"),
+                                       IR::ExpList(1, new IR::ConstInt(this->lineno))));
 }
 IR::ExpTy AST::GetintExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                  Temp_Label name) {
