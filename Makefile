@@ -16,10 +16,15 @@ test-ir: frontend treeIR.cpp treeIR.hpp ast.cpp ast.h table.hpp canon.cpp canon.
 	-I./src -o build/test-ir
 
 test-asm: frontend
-	clang++-10 -O2 -g \
+	clang++-10 -O2 -g -DDEBUG \
 	src/**/*.cpp \
-	test/src/test-asm.cpp \
+	src/main.cpp \
 	-I./src -o build/test-asm
+
+submit: frontend
+	clang++-10 -O2 -g \
+	src/**/*.cpp src/main.cpp \
+	-o build/main
 
 compiler:
 	clang++-10 

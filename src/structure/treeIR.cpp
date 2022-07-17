@@ -1,10 +1,10 @@
 #include "treeIR.hpp"
 #include <assert.h>
-#include "../util/utils.hpp"
 #include <algorithm>
 #include <string>
-#include "assem.h"
 #include "../backend/canon.hpp"
+#include "../util/utils.hpp"
+#include "assem.h"
 using std::string;
 using namespace IR;
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
@@ -15,10 +15,6 @@ RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     case RelOp::T_ge: return RelOp::T_le;
     case RelOp::T_gt: return RelOp::T_lt;
     case RelOp::T_le: return RelOp::T_ge;
-    case RelOp::T_ult: return RelOp::T_ugt;
-    case RelOp::T_uge: return RelOp::T_ule;
-    case RelOp::T_ule: return RelOp::T_uge;
-    case RelOp::T_ugt: return RelOp::T_ult;
     }
 }
 RelOp IR::notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
@@ -29,10 +25,6 @@ RelOp IR::notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
     case RelOp::T_ge: return RelOp::T_lt;
     case RelOp::T_gt: return RelOp::T_le;
     case RelOp::T_le: return RelOp::T_gt;
-    case RelOp::T_ult: return RelOp::T_uge;
-    case RelOp::T_uge: return RelOp::T_ult;
-    case RelOp::T_ule: return RelOp::T_ugt;
-    case RelOp::T_ugt: return RelOp::T_ule;
     }
 }
 Cx IR::Tr_Exp::unCx() {
@@ -41,7 +33,7 @@ Cx IR::Tr_Exp::unCx() {
         return this->cx;
     } break;
     case Tr_ty::Tr_ex: {
-        Stm* stm = new Cjump(RelOp::T_ne, this->ex, new ConstInt(0), "", "");
+        Stm* stm = new Cjump(RelOp::T_ne, this->ex, new Const(0), "", "");
         Cx cx;
         cx.stm = stm;
         cx.falses = new PatchList(&static_cast<Cjump*>(stm)->falseLabel, NULL);
@@ -62,9 +54,9 @@ Exp* IR::Tr_Exp::unEx() {
         doPatch(this->cx.trues, t);
         doPatch(this->cx.falses, f);
         return new Eseq(
-            new Move(new Temp(r), new ConstInt(1)),
+            new Move(new Temp(r), new Const(1)),
             new Eseq(this->cx.stm,
-                     new Eseq(new Label(f), new Eseq(new Move(new Temp(r), new ConstInt(0)),
+                     new Eseq(new Label(f), new Eseq(new Move(new Temp(r), new Const(0)),
                                                      new Eseq(new Label(t), new Temp(r))))));
     } break;
     default: assert(0);
@@ -127,9 +119,10 @@ void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     // Cjump(op , e1 , Binop(mul, e2, Const(2^k)) , Lable(L) , falselabel)
     // Cjump(op , e1 , Binop(mul, Const(2^k), e2) , Lable(L) , falselabel)
     // Cjump(op , Binop(mul, e2, Const(2^k)) , e1 , Lable(L) , falselabel)
-    // Cjump(op , Binop(mul, Const(2^k), e2) , e1 ,  Lable(L) , falselabel)
-    // Cjump(op , e1 , Binop(div, Const(2^k), e2) , Lable(L) , falselabel)
-    // Cjump(op, Binop(div, Const(2^k), e2)  , e1 , Lable(L) , falselabel)
+    // Cjump(op , Binop(mul, Const(2^k), e2) , e1 ,  Lable(L) ,
+    // falselabel) Cjump(op , e1 , Binop(div, Const(2^k), e2) , Lable(L) ,
+    // falselabel) Cjump(op, Binop(div, Const(2^k), e2)  , e1 , Lable(L) ,
+    // falselabel)
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
 
@@ -191,12 +184,12 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         src.push_back(tmp[1]);
         ls->push_back(new ASM::Oper(std::string("str `s0, [`s1]"), dst, src, ASM::Targets()));
     } else if (this->dst->kind == IR::expType::temp
-               && this->src->kind == IR::expType::constint)  // Move(temp, Const(k))
+               && this->src->kind == IR::expType::constx)  // Move(temp, Const(k))
     {
-        int_const = static_cast<IR::ConstInt*>(this->src)->val;
+        int_const = static_cast<IR::Const*>(this->src)->val;
         tmp[0] = this->dst->ir2asm(ls);
         dst.push_back(tmp[0]);
-        if (int_const > 256) {
+        if (int_const > 256 || int_const < -128) {
             ls->push_back(
                 new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                               src, ASM::Targets()));
@@ -241,8 +234,7 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
         src.push_back(this->src->ir2asm(ls));
         src.push_back(newtemp);
         ls->push_back(
-            new ASM::Oper(std::string("str `s0, [`s1]"),
-                          Temp_TempList(), src, ASM::Targets()));
+            new ASM::Oper(std::string("str `s0, [`s1]"), Temp_TempList(), src, ASM::Targets()));
     } else
         assert(0);
 }
@@ -251,12 +243,12 @@ void ExpStm::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     if (this->exp->kind == expType::call) this->exp->ir2asm(ls);
 }
 
-Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls) {
+Temp_Temp Const::ir2asm(ASM::InstrList* ls) {
     int int_const = this->val;
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    if (int_const > 256) {
+    if (int_const > 256 || int_const < -128) {
         ls->push_back(
             new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));
@@ -267,10 +259,6 @@ Temp_Temp ConstInt::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
                                     src, ASM::Targets()));
     return dst[0];
-}
-Temp_Temp ConstFloat::ir2asm(ASM::InstrList* ls) {
-    // TODO
-    return Temp_newtemp();
 }
 Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
     Temp_Temp exp_l = this->left->ir2asm(ls);
@@ -343,7 +331,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
             cnt++;
         } else {
             stm = new IR::Move(new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
-                                                         new IR::ConstInt(stksize))),
+                                                         new IR::Const(stksize))),
                                it);
             stksize += 4;
         }  // low ..now stack..sp 5 6 7 8 ... high
@@ -354,25 +342,43 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
     }
     if (stksize) {
         (new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
-                                                      new IR::ConstInt(-stksize))))
+                                                      new IR::Const(-stksize))))
             ->ir2asm(ls, "");
     }
-    if (head != nullptr) head->ir2asm(ls, "");
+    for (; head; head = head->tail) head->stm->ir2asm(ls, "");
     Temp_TempList defs = Temp_TempList();
     for (int i = 0; i < 4; i++) { defs.push_back(i); }
     defs.push_back(14);
+#ifndef VFP
+    Temp_Temp ftemp=Temp_newtemp();
+    if (static_cast<IR::Name*>(this->fun)->name == "putfloat") {
+        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1,ftemp), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    }
+    if (static_cast<IR::Name*>(this->fun)->name == "putfarray") {
+        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1,ftemp), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    }
+#endif
     ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name, defs,
                                 defs, ASM::Targets()));
+#ifndef VFP
+    if (static_cast<IR::Name*>(this->fun)->name == "putfloat" || (static_cast<IR::Name*>(this->fun)->name == "putfarray")) {
+        ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), Temp_TempList(), Temp_TempList(1,ftemp), ASM::Targets()));
+    }
+    if (static_cast<IR::Name*>(this->fun)->name == "getfloat") {
+        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    }
+#endif
     if (stksize) {
         (new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
-                                                      new IR::ConstInt(stksize))))
+                                                      new IR::Const(stksize))))
             ->ir2asm(ls, "");
     }
     return 0;  // r0
-}
-void StmList::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
-    this->stm->ir2asm(ls, exitlabel);
-    if (this->tail != nullptr) this->tail->ir2asm(ls, exitlabel);
 }
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();
@@ -380,6 +386,44 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
     assert(label->kind == stmType::label);
     Temp_Label exitlabel = static_cast<IR::Label*>(label)->label;
     stmlist = CANON::funcEntryExit1(stmlist);
-    stmlist->ir2asm(&proc->body, exitlabel);
+    for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body, exitlabel);
     return proc;
+}
+
+// quad
+Stm* Label::quad() { return new Label(label); }
+Stm* Jump::quad() { return new Jump(exp->quad(), jumps); }
+Stm* Cjump::quad() { return new Cjump(op, left->quad(), right->quad(), trueLabel, falseLabel); }
+Stm* Move::quad() {
+    if (src->kind == expType::mem && dst->kind == expType::mem) {
+        Temp_Temp ntp = Temp_newtemp();
+        return new Seq(new Move(new Temp(ntp), new Mem(static_cast<Mem*>(src)->mem->quad())),
+                       new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()), new Temp(ntp)));
+    }
+    if (dst->kind == expType::mem) {
+        return new Move(new Mem(static_cast<Mem*>(dst)->mem->quad()), src->quad());
+    }
+    if (src->kind == expType::mem) {
+        return new Move(dst->quad(), new Mem(static_cast<Mem*>(src)->mem->quad()));
+    }
+    return new Move(dst->quad(), src->quad());
+}
+Stm* ExpStm::quad() { return new ExpStm(exp->quad()); }
+Exp* Const::quad() { return new Const(val); }
+Exp* Binop::quad() {
+    Temp_Temp ntp = Temp_newtemp();
+    return new Eseq(new Move(new Temp(ntp), new Binop(op, left->quad(), right->quad())),
+                    new Temp(ntp));
+}
+Exp* Temp::quad() { return new Temp(tempid); }
+Exp* Mem::quad() {
+    Temp_Temp ntp = Temp_newtemp();
+    return new Eseq(new Move(new Temp(ntp), new Mem(mem->quad())), new Temp(ntp));
+}
+Exp* Name::quad() { return new Name(name); }
+Exp* Call::quad() {
+    vector<Exp*> tm;
+    for (auto it : args) tm.push_back(it->quad());
+    Temp_Temp ntp = Temp_newtemp();
+    return new Eseq(new Move(new Temp(ntp), new Call(fun->quad(), tm)), new Temp(ntp));
 }

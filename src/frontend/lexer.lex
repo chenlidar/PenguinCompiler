@@ -95,7 +95,32 @@ stoptime	{ return STOPTIME; }
 [ \n\t\r] {}
 
 ([0-9]*)\.[0-9]* {
+	// fprintf(stderr,"%s\n", yytext);
 	yylval.floatnumber = new std::string(yytext);
+	// fprintf(stderr, "%f\n", std::stof(*yylval.floatnumber));
+	return FLOATNUMBER;
+}
+
+[0-9]+[eE][\+\-]?[0-9]+ {
+	/* decimal fps without . */
+	// fprintf(stderr,"%s\n", yytext);
+	yylval.floatnumber = new std::string(yytext);
+	// fprintf(stderr, "%f\n", std::stof(*yylval.floatnumber));
+	return FLOATNUMBER;
+}
+
+[0-9]*\.[0-9]*[eE][\+\-]?[0-9]+ {
+	/* decimal fps with . */
+	// fprintf(stderr,"%s\n", yytext);
+	yylval.floatnumber = new std::string(yytext);
+	// fprintf(stderr, "%f\n", std::stof(*yylval.floatnumber));
+	return FLOATNUMBER;
+}
+
+0[xX][0-9a-fA-F]*[\.]?[0-9a-fA-F]*[pP][\+\-]?[0-9]+ {
+	// fprintf(stderr,"%s\n", yytext);
+	yylval.floatnumber = new std::string(yytext);
+	// fprintf(stderr, "%f\n", std::stof(*yylval.floatnumber));
 	return FLOATNUMBER;
 }
 

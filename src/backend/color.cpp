@@ -55,6 +55,9 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
     // precolor
     for (auto node : *ig) {
         Temp_Temp n = (Temp_Temp)(uint64_t)node->nodeInfo();
+        if(n>=100){
+            for(auto it:*node->succ())std::cerr<<(uint64_t)it->nodeInfo()<<std::endl;
+        }
         assert(n < 100);
     }
     for (int i = 0; i < 16; i++) { cr->coloring->insert(std::make_pair(i, i)); }
