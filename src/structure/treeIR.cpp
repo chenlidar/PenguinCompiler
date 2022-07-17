@@ -2,11 +2,43 @@
 #include <assert.h>
 #include <algorithm>
 #include <string>
+#include <iostream>
 #include "../backend/canon.hpp"
 #include "../util/utils.hpp"
 #include "assem.h"
+using std::cout;
+using std::endl;
 using std::string;
 using namespace IR;
+
+string binop2string(binop op) {
+    switch (op) {
+    case binop::T_and: return "and";
+    case binop::T_div: return "div";
+    case binop::T_minus: return "minus";
+    case binop::T_mod: return "mod";
+    case binop::T_mul: return "mul";
+    case binop::T_or: return "or";
+    case binop::T_plus: return "plus";
+    default: return "unknown";
+    }
+}
+
+string relop2string(RelOp op) {
+    switch (op) {
+    case RelOp::T_eq: return "eq";
+    case RelOp::T_ne: return "ne";
+    case RelOp::T_lt: return "lt";
+    case RelOp::T_ge: return "ge";
+    case RelOp::T_gt: return "gt";
+    case RelOp::T_le: return "le";
+    case RelOp::T_ult: return "ult";
+    case RelOp::T_uge: return "uge";
+    case RelOp::T_ule: return "ule";
+    case RelOp::T_ugt: return "ugt";
+    default: return "unknown";
+    }
+}
 RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
     case RelOp::T_eq: return RelOp::T_eq;
@@ -426,4 +458,56 @@ Exp* Call::quad() {
     for (auto it : args) tm.push_back(it->quad());
     Temp_Temp ntp = Temp_newtemp();
     return new Eseq(new Move(new Temp(ntp), new Call(fun->quad(), tm)), new Temp(ntp));
+}
+
+void Label::printIR() { cout << "LABELSTM:    " << label << endl; }
+void Jump::printIR() {
+    cout << "JUMPSTM:    ";
+    exp->printIR();
+    cout << endl;
+}
+void Cjump::printIR() {
+    cout << "CJUMPSTM:    ";
+    left->printIR();
+    cout << " " + relop2string(op) + " ";
+    right->printIR();
+    cout << endl << "true:    " << trueLabel << endl << "false:    " << falseLabel << endl;
+}
+void Move::printIR() {
+    cout << "MOVESTM:    ";
+    dst->printIR();
+    cout << "    ";
+    src->printIR();
+    cout << endl;
+}
+void ExpStm::printIR() {
+    cout << "EXPSTM:    ";
+    exp->printIR();
+    cout << endl;
+}
+void ConstInt::printIR() { cout << val; }
+void ConstFloat::printIR() { cout << val; }
+void Binop::printIR() {
+    cout << "( ";
+    left->printIR();
+    cout << " " + binop2string(op) + " ";
+    right->printIR();
+    cout << " )";
+}
+void Temp::printIR() { cout << "t" << tempid; }
+void Mem::printIR() {
+    cout << "Mem( ";
+    mem->printIR();
+    cout << " )";
+}
+void Name::printIR() { cout << name; }
+void Call::printIR() {
+    cout << "( call ";
+    fun->printIR();
+    cout << '(';
+    for (auto it : args) {
+        it->printIR();
+        cout << ", ";
+    }
+    cout << ") )";
 }
