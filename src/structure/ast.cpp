@@ -490,6 +490,7 @@ IR::ExpTy AST::InitValList::calArray(IR::Exp* addr, int noff, TY::Type* ty,
             ty->value[doff] = *expty.ty->value;
         } else {
             std::memcpy(&ty->value[doff], expty.ty->value, expty.ty->arraysize * 4);
+            delete expty.ty->value;
         }
         doff += expty.ty->arraysize;
     }

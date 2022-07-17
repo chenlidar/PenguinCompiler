@@ -21,6 +21,12 @@ static std::unordered_map<GRAPH::Node*, InOut*> InOutTable;
 
 static int gi = 0;
 static void init_INOUT(GRAPH::NodeList* l) {
+    for(auto& it:InOutTable){
+        delete it.second->def;
+        delete it.second->out;
+        delete it.second->use;
+        delete it.second->in;
+    }
     InOutTable = std::unordered_map<GRAPH::Node*, InOut*>();
     gi = 0;
     for (auto it : *l) {
@@ -84,34 +90,6 @@ static void LivenessInteration(GRAPH::NodeList* gl) {
         node->out = newOut;
     }
 }
-// static bool LivenessInteration(GRAPH::NodeList* gl) {
-//     bool changed = false;
-//     gi++;
-//     for (auto n = gl->rbegin(); n != gl->rend(); ++n) {
-//         // do in[n] = use[n] union (out[n] - def[n])
-//         std::set<int>* newIn = new std::set<int>();
-//         std::set<int>* newOut = new std::set<int>();
-//         std::set<int> tempset;
-//         InOut* node = InOutTable.at(*n);
-//         std::set_difference(node->out->begin(), node->out->end(), node->def->begin(),
-//                             node->def->end(), std::inserter(tempset, tempset.begin()));
-//         std::set_union(node->use->begin(), node->use->end(), tempset.begin(), tempset.end(),
-//                        std::inserter(*newIn, newIn->begin()));
-//         // Now do out[n]=union_s in succ[n] (in[s])
-//         GRAPH::NodeList* s = (*n)->succ();
-//         for (auto it : *s) {
-//             InOut* succ = InOutTable.at(it);
-//             for (auto ite : *succ->in) { newOut->insert(ite); }
-//         }
-//         // See if any in/out changed
-//         if (*node->in != *newIn || *node->out != *newOut) changed = true;
-//         delete node->in;
-//         delete node->out;
-//         node->in = newIn;
-//         node->out = newOut;
-//     }
-//     return changed;
-// }
 
 GRAPH::NodeList* LIVENESS::Liveness(GRAPH::NodeList* l) {
     init_INOUT(l);  // Initialize InOut table
