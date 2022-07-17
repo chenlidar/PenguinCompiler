@@ -3,7 +3,7 @@ compiler_src_dir=$(realpath $(dirname "$0")/../../src)
 test_src_dir=$(realpath $(dirname "$0")/../src)
 func_testcase_dir=$(realpath $(dirname "$0")/../performance)
 build_dir=$(realpath $(dirname "$0")/../../build)
-libsysy=/home/chenlida/F/term6/compile/HW/compiler/raspi/libsysy.a
+libsysy=$(realpath $(dirname "$0")/../../)/libsysy.a
 
 compile() {
 	cd $build_dir

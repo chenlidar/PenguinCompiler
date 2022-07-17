@@ -13,23 +13,18 @@ using std::unique_ptr;
 using std::vector;
 
 // use Binop::plus
-enum class binop { T_plus, T_minus, T_mul, T_div, T_mod, T_and, T_or };
+enum class binop { T_plus, T_minus, T_mul, T_div, T_mod};
 enum class RelOp {
     T_eq,
     T_ne,
     T_lt,
     T_gt,
     T_le,
-    T_ge,
-    T_ult,
-    T_ule,
-    T_ugt,
-    T_uge
+    T_ge
 };
 
 enum class expType {
-    constint,
-    constfloat,
+    constx,
     binop,
     fbinop,
     temp,
@@ -122,22 +117,12 @@ class ExpStm : public Stm {
     Stm* quad();
 };
 
-class ConstInt : public Exp {
+class Const : public Exp {
    public:
     int val;
-    ConstInt(int x) {
+    Const(int x) {
         val = x;
-        kind = expType::constint;
-    }
-    Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad();
-};
-class ConstFloat : public Exp {
-   public:
-    float val;
-    ConstFloat(float f) {
-        val = f;
-        kind = expType::constfloat;
+        kind = expType::constx;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
