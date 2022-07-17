@@ -84,7 +84,7 @@ asm() {
 			test_name=${x%.sy}
 			echo -n $test_name
 			echo -n ": "
-			$build_dir/test-asm < $func_testcase_dir/$test_name.sy  > $build_dir/$test_name.s
+			$build_dir/test-asm -S $func_testcase_dir/$test_name.sy -o $build_dir/$test_name.s -O1
 			if [ $? != 0 ]; then
 				echo fail; exit
 			fi
@@ -123,7 +123,7 @@ asm() {
 		echo -n ": "
 
 		#cd $build_dir
-		time $build_dir/test-asm < $func_testcase_dir/$test_file  > $build_dir/$test_name.s
+		$build_dir/test-asm -S $func_testcase_dir/$test_name.sy -o $build_dir/$test_name.s -O1
 		if [ $? != 0 ]; then
 			echo fail; exit
 		fi

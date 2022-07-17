@@ -28,7 +28,7 @@ asm() {
 			echo -n $test_name
 			echo -n ": "
 			cp $func_testcase_dir/$test_name.* $build_dir
-			$build_dir/test-asm < $func_testcase_dir/$test_name.sy  > $build_dir/$test_name.s
+			$build_dir/test-asm -S $func_testcase_dir/$test_name.sy -o $build_dir/$test_name.s
 			if [ $? != 0 ]; then
 				echo fail; exit
 			fi
@@ -68,7 +68,7 @@ asm() {
 
 		#cd $build_dir
 		cp $func_testcase_dir/$test_name.* $build_dir/
-		time $build_dir/test-asm < $func_testcase_dir/$test_file  > $build_dir/$test_name.s
+		time $build_dir/test-asm -S $func_testcase_dir/$test_name.sy -o $build_dir/$test_name.s
 		if [ $? != 0 ]; then
 			echo fail; exit
 		fi
