@@ -13,18 +13,14 @@ using std::unique_ptr;
 using std::vector;
 
 // use Binop::plus
-enum class binop { T_plus, T_minus, T_mul, T_div, T_mod, T_and, T_or };
+enum class binop { T_plus, T_minus, T_mul, T_div, T_mod};
 enum class RelOp {
     T_eq,
     T_ne,
     T_lt,
     T_gt,
     T_le,
-    T_ge,
-    T_ult,
-    T_ule,
-    T_ugt,
-    T_uge
+    T_ge
 };
 
 enum class expType {

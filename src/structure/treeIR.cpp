@@ -15,10 +15,6 @@ RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
     case RelOp::T_ge: return RelOp::T_le;
     case RelOp::T_gt: return RelOp::T_lt;
     case RelOp::T_le: return RelOp::T_ge;
-    case RelOp::T_ult: return RelOp::T_ugt;
-    case RelOp::T_uge: return RelOp::T_ule;
-    case RelOp::T_ule: return RelOp::T_uge;
-    case RelOp::T_ugt: return RelOp::T_ult;
     }
 }
 RelOp IR::notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
@@ -29,10 +25,6 @@ RelOp IR::notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
     case RelOp::T_ge: return RelOp::T_lt;
     case RelOp::T_gt: return RelOp::T_le;
     case RelOp::T_le: return RelOp::T_gt;
-    case RelOp::T_ult: return RelOp::T_uge;
-    case RelOp::T_uge: return RelOp::T_ult;
-    case RelOp::T_ule: return RelOp::T_ugt;
-    case RelOp::T_ugt: return RelOp::T_ule;
     }
 }
 Cx IR::Tr_Exp::unCx() {
@@ -357,8 +349,30 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
     Temp_TempList defs = Temp_TempList();
     for (int i = 0; i < 4; i++) { defs.push_back(i); }
     defs.push_back(14);
+#ifndef VFP
+    Temp_Temp ftemp=Temp_newtemp();
+    if (static_cast<IR::Name*>(this->fun)->name == "putfloat") {
+        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1,ftemp), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    }
+    if (static_cast<IR::Name*>(this->fun)->name == "putfarray") {
+        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1,ftemp), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    }
+#endif
     ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name, defs,
                                 defs, ASM::Targets()));
+#ifndef VFP
+    if (static_cast<IR::Name*>(this->fun)->name == "putfloat" || (static_cast<IR::Name*>(this->fun)->name == "putfarray")) {
+        ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), Temp_TempList(), Temp_TempList(1,ftemp), ASM::Targets()));
+    }
+    if (static_cast<IR::Name*>(this->fun)->name == "getfloat") {
+        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
+    }
+#endif
     if (stksize) {
         (new IR::Move(new IR::Temp(13), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
                                                       new IR::Const(stksize))))

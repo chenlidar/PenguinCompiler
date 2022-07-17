@@ -3,7 +3,7 @@ compiler_src_dir=$(realpath $(dirname "$0")/../../src)
 test_src_dir=$(realpath $(dirname "$0")/../src)
 func_testcase_dir=$(realpath $(dirname "$0")/../functional)
 build_dir=$(realpath $(dirname "$0")/../../build)
-libsysy=/home/chenlida/F/term6/compile/HW/compiler/raspi/libsysy.a
+libsysy=$(realpath $(dirname "$0")/../../)/libsysy.a
 
 compile() {
 	cd $build_dir
@@ -32,7 +32,7 @@ asm() {
 			if [ $? != 0 ]; then
 				echo fail; exit
 			fi
-			arm-linux-gnueabihf-gcc -march=armv7 $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
+			arm-linux-gnueabihf-gcc -march=armv7-a $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
 			if [ $? != 0 ]; then
 				echo "fail to link"; exit
 			fi
@@ -72,7 +72,7 @@ asm() {
 		if [ $? != 0 ]; then
 			echo fail; exit
 		fi
-		arm-linux-gnueabihf-gcc -march=armv7 $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
+		arm-linux-gnueabihf-gcc -march=armv7-a $build_dir/$test_name.s $libsysy -static -o $build_dir/$test_name
 		if [ $? != 0 ]; then
 			echo "fail to link"; exit
 		fi
