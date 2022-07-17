@@ -28,8 +28,7 @@ enum class RelOp {
 };
 
 enum class expType {
-    constint,
-    constfloat,
+    constx,
     binop,
     fbinop,
     temp,
@@ -122,22 +121,12 @@ class ExpStm : public Stm {
     Stm* quad();
 };
 
-class ConstInt : public Exp {
+class Const : public Exp {
    public:
     int val;
-    ConstInt(int x) {
+    Const(int x) {
         val = x;
-        kind = expType::constint;
-    }
-    Temp_Temp ir2asm(ASM::InstrList* ls);
-    Exp* quad();
-};
-class ConstFloat : public Exp {
-   public:
-    float val;
-    ConstFloat(float f) {
-        val = f;
-        kind = expType::constfloat;
+        kind = expType::constx;
     }
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();

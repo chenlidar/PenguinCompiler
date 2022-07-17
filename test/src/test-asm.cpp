@@ -22,7 +22,10 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
     for (auto it = venv->begin(); it != venv->end(); ++it) {
         TY::Entry* entry = venv->look(it->first);
         assert(entry && entry->kind == TY::tyEntry::Ty_global);
-        if (entry->ty->isconst && entry->ty->kind != TY::tyType::Ty_array) continue;  // const
+        if (entry->ty->isconst) {
+            assert(entry->ty->kind != TY::tyType::Ty_array);
+            continue;  // const
+        }
         Temp_Label name = static_cast<TY::GloVar*>(entry)->label;
         switch (entry->ty->kind) {
         case TY::tyType::Ty_int: {
@@ -34,13 +37,13 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
         } break;
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";
-            *globalArray << ".space " + std::to_string(entry->ty->arraysize*4) << std::endl;
+            *globalArray << ".space " + std::to_string(entry->ty->arraysize * 4) << std::endl;
             for (int i = 0; i < entry->ty->arraysize; i++) {
-                if(*(entry->ty->value + i)==0)continue;
+                if (*(entry->ty->value + i) == 0) continue;
                 tail = tail->tail = new IR::StmList(
                     new IR::Move(new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Name(name),
-                                                           new IR::ConstInt(4 * i))),
-                                 new IR::ConstInt(*(entry->ty->value + i))),
+                                                           new IR::Const(4 * i))),
+                                 new IR::Const(*(entry->ty->value + i))),
                     nullptr);
             }
         } break;

@@ -23,14 +23,14 @@ struct ExpRefList {
 };
 static bool commute(Stm* x, Exp* y) {
     if (isNop(x)) return true;
-    if (y->kind == expType::name || y->kind == expType::constint || y->kind == expType::constfloat)
+    if (y->kind == expType::name || y->kind == expType::constx)
         return true;
     return false;
 }
 
 static Stm* reorder(ExpRefList* rlist) {
     if (!rlist)
-        return new ExpStm(new ConstInt(0)); /* nop */
+        return new ExpStm(new Const(0)); /* nop */
     else if ((*rlist->head)->kind == expType::call) {
         Temp_Temp t = Temp_newtemp();
         *rlist->head = new Eseq(new Move(new Temp(t), *rlist->head), new Temp(t));
