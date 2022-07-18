@@ -87,43 +87,6 @@ extern int yydebug;
     prec2 = 293
   };
 #endif
-/* Tokens.  */
-#define RETURN 258
-#define IF 259
-#define ELSE 260
-#define WHILE 261
-#define BREAK 262
-#define CONTINUE 263
-#define VOIDT 264
-#define INTT 265
-#define FLOATT 266
-#define CONST 267
-#define INTNUMBER 268
-#define GETINT 269
-#define GETCH 270
-#define GETFLOAT 271
-#define GETARRAY 272
-#define GETFARRAY 273
-#define PUTINT 274
-#define PUTCH 275
-#define PUTARRAY 276
-#define PUTFLOAT 277
-#define PUTFARRAY 278
-#define PUTF 279
-#define STARTTIME 280
-#define STOPTIME 281
-#define FLOATNUMBER 282
-#define ADDOP 283
-#define SUBOP 284
-#define NOTOP 285
-#define LANDOP 286
-#define LOROP 287
-#define MULOP 288
-#define EQUALOP 289
-#define RELOP 290
-#define ID 291
-#define prec1 292
-#define prec2 293
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -165,7 +128,7 @@ union YYSTYPE
 	AST::Lval *lval;
 	AST::unaryop_t unaryop;
 
-#line 169 "parser.hpp"
+#line 132 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

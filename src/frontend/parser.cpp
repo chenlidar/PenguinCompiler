@@ -166,43 +166,6 @@ extern int yydebug;
     prec2 = 293
   };
 #endif
-/* Tokens.  */
-#define RETURN 258
-#define IF 259
-#define ELSE 260
-#define WHILE 261
-#define BREAK 262
-#define CONTINUE 263
-#define VOIDT 264
-#define INTT 265
-#define FLOATT 266
-#define CONST 267
-#define INTNUMBER 268
-#define GETINT 269
-#define GETCH 270
-#define GETFLOAT 271
-#define GETARRAY 272
-#define GETFARRAY 273
-#define PUTINT 274
-#define PUTCH 275
-#define PUTARRAY 276
-#define PUTFLOAT 277
-#define PUTFARRAY 278
-#define PUTF 279
-#define STARTTIME 280
-#define STOPTIME 281
-#define FLOATNUMBER 282
-#define ADDOP 283
-#define SUBOP 284
-#define NOTOP 285
-#define LANDOP 286
-#define LOROP 287
-#define MULOP 288
-#define EQUALOP 289
-#define RELOP 290
-#define ID 291
-#define prec1 292
-#define prec2 293
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -244,7 +207,7 @@ union YYSTYPE
 	AST::Lval *lval;
 	AST::unaryop_t unaryop;
 
-#line 248 "parser.cpp"
+#line 211 "parser.cpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -1612,7 +1575,7 @@ yyreduce:
 	root = (yyval.root);
 
 }
-#line 1616 "parser.cpp"
+#line 1579 "parser.cpp"
     break;
 
   case 3:
@@ -1624,7 +1587,7 @@ yyreduce:
 	
 	root = (yyval.root);
 }
-#line 1628 "parser.cpp"
+#line 1591 "parser.cpp"
     break;
 
   case 4:
@@ -1633,7 +1596,7 @@ yyreduce:
 	/* CompUnit -> Decl */
 	(yyval.compunit) = static_cast<AST::CompUnit *>((yyvsp[0].decl));
 }
-#line 1637 "parser.cpp"
+#line 1600 "parser.cpp"
     break;
 
   case 5:
@@ -1642,7 +1605,7 @@ yyreduce:
 	/* CompUint -> FuncDef */
 	(yyval.compunit) = static_cast<AST::CompUnit *>((yyvsp[0].funcdef));
 }
-#line 1646 "parser.cpp"
+#line 1609 "parser.cpp"
     break;
 
   case 6:
@@ -1651,7 +1614,7 @@ yyreduce:
 	/* Decl -> ConstDecl */
 	(yyval.decl) = static_cast<AST::Decl *>((yyvsp[0].constdecl));
 }
-#line 1655 "parser.cpp"
+#line 1618 "parser.cpp"
     break;
 
   case 7:
@@ -1660,7 +1623,7 @@ yyreduce:
 	/* Decl -> VarDecl */
 	(yyval.decl) = static_cast<AST::Decl *>((yyvsp[0].vardecl));
 }
-#line 1664 "parser.cpp"
+#line 1627 "parser.cpp"
     break;
 
   case 8:
@@ -1669,7 +1632,7 @@ yyreduce:
 	/* ConstDecl -> const Btype ConstDef (, ConstDef)* ; */
 	(yyval.constdecl) = new AST::ConstDecl((yyvsp[-2].btype), (yyvsp[-1].constdeflist), yyget_lineno());
 }
-#line 1673 "parser.cpp"
+#line 1636 "parser.cpp"
     break;
 
   case 9:
@@ -1678,7 +1641,7 @@ yyreduce:
 	(yyval.constdeflist) = new AST::ConstDefList(yyget_lineno());
 	(yyval.constdeflist)->list.push_back((yyvsp[0].constdef));
 }
-#line 1682 "parser.cpp"
+#line 1645 "parser.cpp"
     break;
 
   case 10:
@@ -1687,7 +1650,7 @@ yyreduce:
 	(yyval.constdeflist) = (yyvsp[-2].constdeflist);
 	(yyvsp[-2].constdeflist)->list.push_back((yyvsp[0].constdef));
 }
-#line 1691 "parser.cpp"
+#line 1654 "parser.cpp"
     break;
 
   case 11:
@@ -1695,7 +1658,7 @@ yyreduce:
             {
 	(yyval.btype) = AST::btype_t::INT;
 }
-#line 1699 "parser.cpp"
+#line 1662 "parser.cpp"
     break;
 
   case 12:
@@ -1703,7 +1666,7 @@ yyreduce:
            {
 	(yyval.btype) = AST::btype_t::FLOAT;
 }
-#line 1707 "parser.cpp"
+#line 1670 "parser.cpp"
     break;
 
   case 13:
@@ -1711,7 +1674,7 @@ yyreduce:
           {
 	(yyval.btype) = AST::btype_t::VOID;
 }
-#line 1715 "parser.cpp"
+#line 1678 "parser.cpp"
     break;
 
   case 14:
@@ -1720,7 +1683,7 @@ yyreduce:
 	/* ConstDef -> ID ( [Exp] )* = InitVal */
 	(yyval.constdef) = new AST::ConstDef((yyvsp[-3].idexp), (yyvsp[-2].arrayindex), (yyvsp[0].initval), yyget_lineno());
 }
-#line 1724 "parser.cpp"
+#line 1687 "parser.cpp"
     break;
 
   case 15:
@@ -1728,7 +1691,7 @@ yyreduce:
                               {
 	(yyval.vardecl) = new AST::VarDecl((yyvsp[-2].btype), (yyvsp[-1].vardeflist), yyget_lineno());
 }
-#line 1732 "parser.cpp"
+#line 1695 "parser.cpp"
     break;
 
   case 16:
@@ -1737,7 +1700,7 @@ yyreduce:
 	(yyval.vardeflist) = new AST::VarDefList(yyget_lineno());
 	(yyval.vardeflist)->list.push_back((yyvsp[0].vardef));
 }
-#line 1741 "parser.cpp"
+#line 1704 "parser.cpp"
     break;
 
   case 17:
@@ -1746,7 +1709,7 @@ yyreduce:
 	(yyval.vardeflist) = (yyvsp[-2].vardeflist);
 	(yyval.vardeflist)->list.push_back((yyvsp[0].vardef));
 }
-#line 1750 "parser.cpp"
+#line 1713 "parser.cpp"
     break;
 
   case 18:
@@ -1754,7 +1717,7 @@ yyreduce:
                          {
 	(yyval.vardef) = new AST::VarDef((yyvsp[-1].idexp), (yyvsp[0].arrayindex), nullptr, yyget_lineno());
 }
-#line 1758 "parser.cpp"
+#line 1721 "parser.cpp"
     break;
 
   case 19:
@@ -1762,7 +1725,7 @@ yyreduce:
                                  {
 	(yyval.vardef) = new AST::VarDef((yyvsp[-3].idexp), (yyvsp[-2].arrayindex), (yyvsp[0].initval), yyget_lineno());
 }
-#line 1766 "parser.cpp"
+#line 1729 "parser.cpp"
     break;
 
   case 20:
@@ -1770,7 +1733,7 @@ yyreduce:
              {
 	(yyval.arrayindex) = new AST::ArrayIndex(yyget_lineno());
 }
-#line 1774 "parser.cpp"
+#line 1737 "parser.cpp"
     break;
 
   case 21:
@@ -1779,7 +1742,7 @@ yyreduce:
 	(yyval.arrayindex) = (yyvsp[-3].arrayindex);
 	(yyval.arrayindex)->list.push_back((yyvsp[-1].exp));
 }
-#line 1783 "parser.cpp"
+#line 1746 "parser.cpp"
     break;
 
   case 22:
@@ -1787,7 +1750,7 @@ yyreduce:
              {
 	(yyval.initval) = (yyvsp[0].exp);
 }
-#line 1791 "parser.cpp"
+#line 1754 "parser.cpp"
     break;
 
   case 23:
@@ -1795,7 +1758,7 @@ yyreduce:
               {
 	(yyval.initval) = (yyvsp[0].arrayinit);
 }
-#line 1799 "parser.cpp"
+#line 1762 "parser.cpp"
     break;
 
   case 24:
@@ -1803,7 +1766,7 @@ yyreduce:
                                {
 	(yyval.arrayinit) = (yyvsp[-1].initvallist);
 }
-#line 1807 "parser.cpp"
+#line 1770 "parser.cpp"
     break;
 
   case 25:
@@ -1811,7 +1774,7 @@ yyreduce:
              {
 	(yyval.initvallist) = new AST::InitValList(yyget_lineno());
 }
-#line 1815 "parser.cpp"
+#line 1778 "parser.cpp"
     break;
 
   case 26:
@@ -1819,7 +1782,7 @@ yyreduce:
             {
 	(yyval.initvallist) = new AST::InitValList((yyvsp[0].initval), yyget_lineno());
 }
-#line 1823 "parser.cpp"
+#line 1786 "parser.cpp"
     break;
 
   case 27:
@@ -1828,7 +1791,7 @@ yyreduce:
 	(yyval.initvallist) = (yyvsp[-2].initvallist);
 	(yyval.initvallist)->list.push_back((yyvsp[0].initval));
 }
-#line 1832 "parser.cpp"
+#line 1795 "parser.cpp"
     break;
 
   case 28:
@@ -1836,7 +1799,7 @@ yyreduce:
                                               {
 	(yyval.funcdef) = new AST::FuncDef((yyvsp[-5].btype), (yyvsp[-4].idexp), (yyvsp[-2].parameters), (yyvsp[0].block), yyget_lineno());
 }
-#line 1840 "parser.cpp"
+#line 1803 "parser.cpp"
     break;
 
   case 29:
@@ -1844,7 +1807,7 @@ yyreduce:
              {
 	(yyval.parameters) = new AST::Parameters(yyget_lineno());
 }
-#line 1848 "parser.cpp"
+#line 1811 "parser.cpp"
     break;
 
   case 30:
@@ -1852,7 +1815,7 @@ yyreduce:
               {
 	(yyval.parameters) = new AST::Parameters((yyvsp[0].parameter), yyget_lineno());
 }
-#line 1856 "parser.cpp"
+#line 1819 "parser.cpp"
     break;
 
   case 31:
@@ -1861,7 +1824,7 @@ yyreduce:
 	(yyval.parameters) = (yyvsp[-2].parameters);
 	(yyval.parameters)->list.push_back((yyvsp[0].parameter));
 }
-#line 1865 "parser.cpp"
+#line 1828 "parser.cpp"
     break;
 
   case 32:
@@ -1869,7 +1832,7 @@ yyreduce:
                        {
 	(yyval.parameter) = new AST::Parameter((yyvsp[-1].btype), (yyvsp[0].idexp), new AST::ArrayIndex(yyget_lineno()), yyget_lineno());
 }
-#line 1873 "parser.cpp"
+#line 1836 "parser.cpp"
     break;
 
   case 33:
@@ -1882,7 +1845,7 @@ yyreduce:
 	}
 	(yyval.parameter) = new AST::Parameter((yyvsp[-4].btype), (yyvsp[-3].idexp), x, yyget_lineno());
 }
-#line 1886 "parser.cpp"
+#line 1849 "parser.cpp"
     break;
 
   case 34:
@@ -1890,7 +1853,7 @@ yyreduce:
                              {
 	(yyval.block) = new AST::Block((yyvsp[-1].blockitemlist), yyget_lineno());
 }
-#line 1894 "parser.cpp"
+#line 1857 "parser.cpp"
     break;
 
   case 35:
@@ -1898,7 +1861,7 @@ yyreduce:
                 {
 	(yyval.blockitemlist) = new AST::BlockItemList(yyget_lineno());
 }
-#line 1902 "parser.cpp"
+#line 1865 "parser.cpp"
     break;
 
   case 36:
@@ -1907,7 +1870,7 @@ yyreduce:
 	(yyval.blockitemlist) = (yyvsp[-1].blockitemlist);
 	(yyval.blockitemlist)->list.push_back((yyvsp[0].blockitem));
 }
-#line 1911 "parser.cpp"
+#line 1874 "parser.cpp"
     break;
 
   case 37:
@@ -1915,7 +1878,7 @@ yyreduce:
                 {
 	(yyval.blockitem) = (yyvsp[0].decl);
 }
-#line 1919 "parser.cpp"
+#line 1882 "parser.cpp"
     break;
 
   case 38:
@@ -1923,7 +1886,7 @@ yyreduce:
          {
 	(yyval.blockitem) = (yyvsp[0].stmt);
 }
-#line 1927 "parser.cpp"
+#line 1890 "parser.cpp"
     break;
 
   case 39:
@@ -1931,7 +1894,7 @@ yyreduce:
                      {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 1935 "parser.cpp"
+#line 1898 "parser.cpp"
     break;
 
   case 40:
@@ -1939,7 +1902,7 @@ yyreduce:
         {
 	(yyval.stmt) = new AST::ExpStmt(new AST::IntNumber(0, yyget_lineno()), yyget_lineno());
 }
-#line 1943 "parser.cpp"
+#line 1906 "parser.cpp"
     break;
 
   case 41:
@@ -1947,7 +1910,7 @@ yyreduce:
                 {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 1951 "parser.cpp"
+#line 1914 "parser.cpp"
     break;
 
   case 42:
@@ -1955,7 +1918,7 @@ yyreduce:
           {
 	(yyval.stmt) = (yyvsp[0].block);
 }
-#line 1959 "parser.cpp"
+#line 1922 "parser.cpp"
     break;
 
   case 43:
@@ -1963,7 +1926,7 @@ yyreduce:
            {
 	(yyval.stmt) = (yyvsp[0].stmt);
 }
-#line 1967 "parser.cpp"
+#line 1930 "parser.cpp"
     break;
 
   case 44:
@@ -1971,7 +1934,7 @@ yyreduce:
               {
 	(yyval.stmt) = (yyvsp[0].stmt);
 }
-#line 1975 "parser.cpp"
+#line 1938 "parser.cpp"
     break;
 
   case 45:
@@ -1979,7 +1942,7 @@ yyreduce:
                   {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 1983 "parser.cpp"
+#line 1946 "parser.cpp"
     break;
 
   case 46:
@@ -1987,7 +1950,7 @@ yyreduce:
                      {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 1991 "parser.cpp"
+#line 1954 "parser.cpp"
     break;
 
   case 47:
@@ -1995,7 +1958,7 @@ yyreduce:
                    {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 1999 "parser.cpp"
+#line 1962 "parser.cpp"
     break;
 
   case 48:
@@ -2003,7 +1966,7 @@ yyreduce:
                    {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2007 "parser.cpp"
+#line 1970 "parser.cpp"
     break;
 
   case 49:
@@ -2011,7 +1974,7 @@ yyreduce:
                   {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2015 "parser.cpp"
+#line 1978 "parser.cpp"
     break;
 
   case 50:
@@ -2019,7 +1982,7 @@ yyreduce:
                      {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2023 "parser.cpp"
+#line 1986 "parser.cpp"
     break;
 
   case 51:
@@ -2027,7 +1990,7 @@ yyreduce:
                      {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2031 "parser.cpp"
+#line 1994 "parser.cpp"
     break;
 
   case 52:
@@ -2035,7 +1998,7 @@ yyreduce:
                       {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2039 "parser.cpp"
+#line 2002 "parser.cpp"
     break;
 
   case 53:
@@ -2043,7 +2006,7 @@ yyreduce:
                  {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2047 "parser.cpp"
+#line 2010 "parser.cpp"
     break;
 
   case 54:
@@ -2051,7 +2014,7 @@ yyreduce:
                       {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2055 "parser.cpp"
+#line 2018 "parser.cpp"
     break;
 
   case 55:
@@ -2059,7 +2022,7 @@ yyreduce:
                      {
 	(yyval.stmt) = (yyvsp[-1].stmt);
 }
-#line 2063 "parser.cpp"
+#line 2026 "parser.cpp"
     break;
 
   case 56:
@@ -2067,7 +2030,7 @@ yyreduce:
                          {
 	(yyval.stmt) = new AST::AssignStmt((yyvsp[-2].lval), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2071 "parser.cpp"
+#line 2034 "parser.cpp"
     break;
 
   case 57:
@@ -2075,7 +2038,7 @@ yyreduce:
              {
 	(yyval.stmt) = new AST::ExpStmt((yyvsp[0].exp), yyget_lineno());
 }
-#line 2079 "parser.cpp"
+#line 2042 "parser.cpp"
     break;
 
   case 58:
@@ -2083,7 +2046,7 @@ yyreduce:
                                         {
 	(yyval.stmt) = new AST::IfStmt((yyvsp[-2].exp), (yyvsp[0].stmt), nullptr, yyget_lineno());
 }
-#line 2087 "parser.cpp"
+#line 2050 "parser.cpp"
     break;
 
   case 59:
@@ -2091,7 +2054,7 @@ yyreduce:
                                   {
 	(yyval.stmt) = new AST::IfStmt((yyvsp[-4].exp), (yyvsp[-2].stmt), (yyvsp[0].stmt), yyget_lineno());
 }
-#line 2095 "parser.cpp"
+#line 2058 "parser.cpp"
     break;
 
   case 60:
@@ -2099,7 +2062,7 @@ yyreduce:
                                   {
 	(yyval.stmt) = new AST::WhileStmt((yyvsp[-2].exp), (yyvsp[0].stmt), yyget_lineno());
 }
-#line 2103 "parser.cpp"
+#line 2066 "parser.cpp"
     break;
 
   case 61:
@@ -2107,7 +2070,7 @@ yyreduce:
                  {
 	(yyval.stmt) = new AST::BreakStmt(yyget_lineno());
 }
-#line 2111 "parser.cpp"
+#line 2074 "parser.cpp"
     break;
 
   case 62:
@@ -2115,7 +2078,7 @@ yyreduce:
                        {
 	(yyval.stmt) = new AST::ContinueStmt(yyget_lineno());
 }
-#line 2119 "parser.cpp"
+#line 2082 "parser.cpp"
     break;
 
   case 63:
@@ -2123,7 +2086,7 @@ yyreduce:
                    {
 	(yyval.stmt) = new AST::ReturnStmt(nullptr, yyget_lineno());
 }
-#line 2127 "parser.cpp"
+#line 2090 "parser.cpp"
     break;
 
   case 64:
@@ -2131,7 +2094,7 @@ yyreduce:
                {
 	(yyval.stmt) = new AST::ReturnStmt((yyvsp[0].exp), yyget_lineno());
 }
-#line 2135 "parser.cpp"
+#line 2098 "parser.cpp"
     break;
 
   case 65:
@@ -2139,7 +2102,7 @@ yyreduce:
                                {
 	(yyval.stmt) = new AST::PutintStmt((yyvsp[-1].exp), yyget_lineno());
 }
-#line 2143 "parser.cpp"
+#line 2106 "parser.cpp"
     break;
 
   case 66:
@@ -2147,7 +2110,7 @@ yyreduce:
                              {
 	(yyval.stmt) = new AST::PutchStmt((yyvsp[-1].exp), yyget_lineno());
 }
-#line 2151 "parser.cpp"
+#line 2114 "parser.cpp"
     break;
 
   case 67:
@@ -2155,7 +2118,7 @@ yyreduce:
                                            {
 	(yyval.stmt) = new AST::PutarrayStmt((yyvsp[-3].exp), (yyvsp[-1].exp), yyget_lineno());
 }
-#line 2159 "parser.cpp"
+#line 2122 "parser.cpp"
     break;
 
   case 68:
@@ -2163,7 +2126,7 @@ yyreduce:
                                    {
 	(yyval.stmt) = new AST::PutfloatStmt((yyvsp[-1].exp), yyget_lineno());
 }
-#line 2167 "parser.cpp"
+#line 2130 "parser.cpp"
     break;
 
   case 69:
@@ -2171,7 +2134,7 @@ yyreduce:
                                              {
 	(yyval.stmt) = new AST::PutfarrayStmt((yyvsp[-3].exp), (yyvsp[-1].exp), yyget_lineno());
 }
-#line 2175 "parser.cpp"
+#line 2138 "parser.cpp"
     break;
 
   case 70:
@@ -2179,7 +2142,7 @@ yyreduce:
                                {
 	(yyval.stmt) = new AST::PutfStmt((yyvsp[-1].explist), yyget_lineno());
 }
-#line 2183 "parser.cpp"
+#line 2146 "parser.cpp"
     break;
 
   case 71:
@@ -2187,7 +2150,7 @@ yyreduce:
                                  {
 	(yyval.stmt) = new AST::StarttimeStmt(yyget_lineno());
 }
-#line 2191 "parser.cpp"
+#line 2154 "parser.cpp"
     break;
 
   case 72:
@@ -2195,7 +2158,7 @@ yyreduce:
                                {
 	(yyval.stmt) = new AST::StoptimeStmt(yyget_lineno());
 }
-#line 2199 "parser.cpp"
+#line 2162 "parser.cpp"
     break;
 
   case 73:
@@ -2203,7 +2166,7 @@ yyreduce:
                 {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2207 "parser.cpp"
+#line 2170 "parser.cpp"
     break;
 
   case 74:
@@ -2211,7 +2174,7 @@ yyreduce:
              {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2215 "parser.cpp"
+#line 2178 "parser.cpp"
     break;
 
   case 75:
@@ -2219,7 +2182,7 @@ yyreduce:
            {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2223 "parser.cpp"
+#line 2186 "parser.cpp"
     break;
 
   case 76:
@@ -2227,7 +2190,7 @@ yyreduce:
            {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2231 "parser.cpp"
+#line 2194 "parser.cpp"
     break;
 
   case 77:
@@ -2235,7 +2198,7 @@ yyreduce:
            {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2239 "parser.cpp"
+#line 2202 "parser.cpp"
     break;
 
   case 78:
@@ -2243,7 +2206,7 @@ yyreduce:
           {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2247 "parser.cpp"
+#line 2210 "parser.cpp"
     break;
 
   case 79:
@@ -2251,7 +2214,7 @@ yyreduce:
             {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2255 "parser.cpp"
+#line 2218 "parser.cpp"
     break;
 
   case 80:
@@ -2259,7 +2222,7 @@ yyreduce:
            {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2263 "parser.cpp"
+#line 2226 "parser.cpp"
     break;
 
   case 81:
@@ -2267,7 +2230,7 @@ yyreduce:
             {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2271 "parser.cpp"
+#line 2234 "parser.cpp"
     break;
 
   case 82:
@@ -2275,7 +2238,7 @@ yyreduce:
               {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2279 "parser.cpp"
+#line 2242 "parser.cpp"
     break;
 
   case 83:
@@ -2283,7 +2246,7 @@ yyreduce:
              {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2287 "parser.cpp"
+#line 2250 "parser.cpp"
     break;
 
   case 84:
@@ -2291,7 +2254,7 @@ yyreduce:
                 {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2295 "parser.cpp"
+#line 2258 "parser.cpp"
     break;
 
   case 85:
@@ -2299,7 +2262,7 @@ yyreduce:
                 {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2303 "parser.cpp"
+#line 2266 "parser.cpp"
     break;
 
   case 86:
@@ -2307,7 +2270,7 @@ yyreduce:
                  {
 	(yyval.exp) = (yyvsp[0].exp);
 }
-#line 2311 "parser.cpp"
+#line 2274 "parser.cpp"
     break;
 
   case 87:
@@ -2315,7 +2278,7 @@ yyreduce:
           {
 	(yyval.idexp) = new AST::IdExp((yyvsp[0].id), yyget_lineno());
 }
-#line 2319 "parser.cpp"
+#line 2282 "parser.cpp"
     break;
 
   case 88:
@@ -2323,7 +2286,7 @@ yyreduce:
                        {
 	(yyval.lval) = new AST::Lval((yyvsp[-1].idexp), (yyvsp[0].arrayindex), yyget_lineno());
 }
-#line 2327 "parser.cpp"
+#line 2290 "parser.cpp"
     break;
 
   case 89:
@@ -2331,7 +2294,7 @@ yyreduce:
                         {
 	(yyval.exp) = (yyvsp[-1].exp);
 }
-#line 2335 "parser.cpp"
+#line 2298 "parser.cpp"
     break;
 
   case 90:
@@ -2339,7 +2302,7 @@ yyreduce:
          {
 	(yyval.exp) = (yyvsp[0].lval);
 }
-#line 2343 "parser.cpp"
+#line 2306 "parser.cpp"
     break;
 
   case 91:
@@ -2347,7 +2310,7 @@ yyreduce:
            {
 	(yyval.exp) = (yyvsp[0].number);
 }
-#line 2351 "parser.cpp"
+#line 2314 "parser.cpp"
     break;
 
   case 92:
@@ -2355,7 +2318,7 @@ yyreduce:
                   {
 	(yyval.number) = new AST::IntNumber((yyvsp[0].token), yyget_lineno());
 }
-#line 2359 "parser.cpp"
+#line 2322 "parser.cpp"
     break;
 
   case 93:
@@ -2363,7 +2326,7 @@ yyreduce:
                 {
 	(yyval.number) = new AST::FloatNumber((yyvsp[0].floatnumber), yyget_lineno());
 }
-#line 2367 "parser.cpp"
+#line 2330 "parser.cpp"
     break;
 
   case 94:
@@ -2371,7 +2334,7 @@ yyreduce:
                                   {
 	(yyval.exp) = new AST::UnaryExp((yyvsp[-1].unaryop), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2375 "parser.cpp"
+#line 2338 "parser.cpp"
     break;
 
   case 95:
@@ -2379,7 +2342,7 @@ yyreduce:
                                {
 	(yyval.exp) = new AST::CallExp((yyvsp[-3].idexp), (yyvsp[-1].explist), yyget_lineno());
 }
-#line 2383 "parser.cpp"
+#line 2346 "parser.cpp"
     break;
 
   case 96:
@@ -2387,7 +2350,7 @@ yyreduce:
                {
 	(yyval.unaryop) = AST::unaryop_t::ADD;
 }
-#line 2391 "parser.cpp"
+#line 2354 "parser.cpp"
     break;
 
   case 97:
@@ -2395,7 +2358,7 @@ yyreduce:
           {
 	(yyval.unaryop) = AST::unaryop_t::SUB;
 }
-#line 2399 "parser.cpp"
+#line 2362 "parser.cpp"
     break;
 
   case 98:
@@ -2403,7 +2366,7 @@ yyreduce:
           {
 	(yyval.unaryop) = AST::unaryop_t::NOT;
 }
-#line 2407 "parser.cpp"
+#line 2370 "parser.cpp"
     break;
 
   case 99:
@@ -2411,7 +2374,7 @@ yyreduce:
           {
 	(yyval.explist) = new AST::ExpList(yyget_lineno());
 }
-#line 2415 "parser.cpp"
+#line 2378 "parser.cpp"
     break;
 
   case 100:
@@ -2419,7 +2382,7 @@ yyreduce:
         {
 	(yyval.explist) = new AST::ExpList((yyvsp[0].exp), yyget_lineno());
 }
-#line 2423 "parser.cpp"
+#line 2386 "parser.cpp"
     break;
 
   case 101:
@@ -2428,7 +2391,7 @@ yyreduce:
 	(yyval.explist) = (yyvsp[-2].explist);
 	(yyval.explist)->list.push_back((yyvsp[0].exp));
 }
-#line 2432 "parser.cpp"
+#line 2395 "parser.cpp"
     break;
 
   case 102:
@@ -2436,7 +2399,7 @@ yyreduce:
                       {
 	(yyval.exp) = new AST::MulExp((yyvsp[-2].exp), (yyvsp[-1].mul), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2440 "parser.cpp"
+#line 2403 "parser.cpp"
     break;
 
   case 103:
@@ -2444,7 +2407,7 @@ yyreduce:
                       {
 	(yyval.exp) = new AST::AddExp((yyvsp[-2].exp), AST::addop_t::ADD, (yyvsp[0].exp), yyget_lineno());
 }
-#line 2448 "parser.cpp"
+#line 2411 "parser.cpp"
     break;
 
   case 104:
@@ -2452,7 +2415,7 @@ yyreduce:
                   {
 	(yyval.exp) = new AST::AddExp((yyvsp[-2].exp), AST::addop_t::SUB, (yyvsp[0].exp), yyget_lineno());
 }
-#line 2456 "parser.cpp"
+#line 2419 "parser.cpp"
     break;
 
   case 105:
@@ -2460,7 +2423,7 @@ yyreduce:
                       {
 	(yyval.exp) = new AST::RelExp((yyvsp[-2].exp), (yyvsp[-1].rel), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2464 "parser.cpp"
+#line 2427 "parser.cpp"
     break;
 
   case 106:
@@ -2468,7 +2431,7 @@ yyreduce:
                        {
 	(yyval.exp) = new AST::EqExp((yyvsp[-2].exp), (yyvsp[-1].equal), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2472 "parser.cpp"
+#line 2435 "parser.cpp"
     break;
 
   case 107:
@@ -2476,7 +2439,7 @@ yyreduce:
                         {
 	(yyval.exp) = new AST::LAndExp((yyvsp[-2].exp), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2480 "parser.cpp"
+#line 2443 "parser.cpp"
     break;
 
   case 108:
@@ -2484,7 +2447,7 @@ yyreduce:
                       {
 	(yyval.exp) = new AST::LOrExp((yyvsp[-2].exp), (yyvsp[0].exp), yyget_lineno());
 }
-#line 2488 "parser.cpp"
+#line 2451 "parser.cpp"
     break;
 
   case 109:
@@ -2492,7 +2455,7 @@ yyreduce:
                           {
 	(yyval.exp) = new AST::GetintExp(yyget_lineno());
 }
-#line 2496 "parser.cpp"
+#line 2459 "parser.cpp"
     break;
 
   case 110:
@@ -2500,7 +2463,7 @@ yyreduce:
                         {
 	(yyval.exp) = new AST::GetchExp(yyget_lineno());
 }
-#line 2504 "parser.cpp"
+#line 2467 "parser.cpp"
     break;
 
   case 111:
@@ -2508,7 +2471,7 @@ yyreduce:
                               {
 	(yyval.exp) = new AST::GetfloatExp(yyget_lineno());
 }
-#line 2512 "parser.cpp"
+#line 2475 "parser.cpp"
     break;
 
   case 112:
@@ -2516,7 +2479,7 @@ yyreduce:
                                   {
 	(yyval.exp) = new AST::GetarrayExp((yyvsp[-1].exp), yyget_lineno());
 }
-#line 2520 "parser.cpp"
+#line 2483 "parser.cpp"
     break;
 
   case 113:
@@ -2524,11 +2487,11 @@ yyreduce:
                                     {
 	(yyval.exp) = new AST::GetfarrayExp((yyvsp[-1].exp), yyget_lineno());
 }
-#line 2528 "parser.cpp"
+#line 2491 "parser.cpp"
     break;
 
 
-#line 2532 "parser.cpp"
+#line 2495 "parser.cpp"
 
       default: break;
     }
