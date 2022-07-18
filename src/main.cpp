@@ -53,6 +53,42 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
     }
     return arrayInitstm->tail;
 }
+void initFenv(Table::Stable<TY::EnFunc*>* fenv) {
+    auto inttype = TY::intType(new int(0), false);
+    auto floattype = TY::floatType(new int(0), false);
+    auto voidtype = TY::voidType();
+    fenv->enter("getint",
+                new TY::EnFunc(TY::funcType(inttype, std::vector<TY::Type*>()), "getint"));
+    fenv->enter("getch", new TY::EnFunc(TY::funcType(inttype, std::vector<TY::Type*>()), "getch"));
+    fenv->enter("getfloat",
+                new TY::EnFunc(TY::funcType(floattype, std::vector<TY::Type*>()), "getfloat"));
+    fenv->enter("getarray",
+                new TY::EnFunc(TY::funcType(inttype, std::vector<TY::Type*>(
+                                                         1, TY::arrayType(inttype, 1, false))),
+                               "getarray"));
+    fenv->enter("getfarray",
+                new TY::EnFunc(TY::funcType(inttype, std::vector<TY::Type*>(
+                                                         1, TY::arrayType(floattype, 1, false))),
+                               "getfarray"));
+    fenv->enter(
+        "putint",
+        new TY::EnFunc(TY::funcType(voidtype, std::vector<TY::Type*>(1, inttype)), "putint"));
+    fenv->enter("putch", new TY::EnFunc(TY::funcType(voidtype, std::vector<TY::Type*>(1, inttype)),
+                                        "putch"));
+    fenv->enter(
+        "putfloat",
+        new TY::EnFunc(TY::funcType(voidtype, std::vector<TY::Type*>(1, floattype)), "putfloat"));
+    fenv->enter(
+        "putarray",
+        new TY::EnFunc(TY::funcType(voidtype, std::vector<TY::Type*>(
+                                                  {inttype, TY::arrayType(inttype, 1, false)})),
+                       "putarray"));
+    fenv->enter(
+        "putfarray",
+        new TY::EnFunc(TY::funcType(voidtype, std::vector<TY::Type*>(
+                                                  {inttype, TY::arrayType(floattype, 1, false)})),
+                       "putfarray"));
+}
 int main(int argc, char** argv) {
     // compiler testcase.sysy -S -o testcase.s [-O1]
     char* sy_input = 0;
@@ -79,6 +115,7 @@ int main(int argc, char** argv) {
     freopen(sy_output, "w", stdout);
     auto venv = new Table::Stable<TY::Entry*>();
     auto fenv = new Table::Stable<TY::EnFunc*>();
+    initFenv(fenv);
     std::cout << ".arch armv7ve\n.arm\n.global main\n.text\n";
     std::ostringstream* globalVar = new std::ostringstream();
     std::ostringstream* globalArray = new std::ostringstream();

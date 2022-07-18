@@ -4,11 +4,13 @@
 	#include <string>
 	#include <cstdio>
 	#include <iostream>
+	#include <cstdlib>
 	AST::CompUnitList *root;
+	extern char *yytext;
 
 	extern int yylex();
 	extern int yyget_lineno();
-	void yyerror(const char *s) { std::cerr << s << std::endl;}
+	void yyerror(const char *s) { std::cerr << s << std::endl; exit(yytext[0]);}
 
 %}
 
@@ -340,11 +342,11 @@ PUTFSTMT: PUTF '(' EXPLIST ')' {
 	$$ = new AST::PutfStmt($3, yyget_lineno());
 }
 
-STARTTIMESTMT: STARTTIME '(' ')' {
+STARTTIMESTMT: STARTTIME {
 	$$ = new AST::StarttimeStmt(yyget_lineno());
 }
 
-STOPTIMESTMT: STOPTIME '(' ')' {
+STOPTIMESTMT: STOPTIME {
 	$$ = new AST::StoptimeStmt(yyget_lineno());
 }
 

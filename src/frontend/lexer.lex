@@ -5,6 +5,7 @@
 	#include <string>
 	#include "../structure/ast.h"
 	#include "parser.hpp"
+	#include <cstdlib>
 
 	int get10(char *, int);
 	int get8(char *, int);
@@ -51,19 +52,8 @@ int 		{ return INTT; }
 float		{ return FLOATT; }
 const		{ return CONST; }
 
-getint		{ return GETINT; }
-getch		{ return GETCH; }
-getfloat	{ return GETFLOAT; }
-getarray	{ return GETARRAY; }
-getfarray	{ return GETFARRAY; }
-putint		{ return PUTINT; }
-putch		{ return PUTCH; }
-putarray	{ return PUTARRAY; }
-putfloat	{ return PUTFLOAT; }
-putfarray	{ return PUTFARRAY; }
-putf		{ return PUTF; }
-starttime	{ return STARTTIME; }
-stoptime	{ return STOPTIME; }
+starttime"("")"	{ return STARTTIME; }
+stoptime"("")"	{ return STOPTIME; }
 
 
 [a-z_A-Z][0-9a-z_A-Z]* {
@@ -124,7 +114,6 @@ stoptime	{ return STOPTIME; }
 	return FLOATNUMBER;
 }
 
-
 "+"			{ return ADDOP; }
 "-"			{ return SUBOP; }
 "!"			{ return NOTOP; }
@@ -140,12 +129,21 @@ stoptime	{ return STOPTIME; }
 "&&"		{ return LANDOP; }
 "||"		{ return LOROP; }
 
-
+"{" { return '{';}
+"}" { return '}';}
+"(" { return '(';}
+")" { return ')';}
+"[" { return '[';}
+"]" { return ']';}
+";" { return ';';}
+"=" { return '=';}
+"," { return ',';}
 
 
 . {
 	yylval.token = yytext[0];
-	return yytext[0];
+	std::cerr << yytext << std::endl;
+	exit(yytext[0]);
 }
 
 
