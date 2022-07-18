@@ -587,7 +587,7 @@ IR::ExpTy AST::UnaryExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<T
         TY::Type* lty = TY::intType(new int(0), false);
         TY::Type* rty = body.ty;
         TY::Type* retty = binopResType(lty, rty, IR::binop::T_minus);
-        IR::Exp* exp = TyIRBinop(IR::binop::T_minus, lty->kind, lexp, rty->kind, rexp);
+        IR::Exp* exp = TyIRBinop(IR::binop::T_minus, lty, lexp, rty, rexp);
         return IR::ExpTy(new IR::Tr_Exp(exp), retty);
     }
     case unaryop_t::NOT: {  // int ,float only cmp with 0,so as same
@@ -626,8 +626,8 @@ IR::ExpTy AST::MulExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
     IR::ExpTy rExpTy = this->rhs->ast2ir(venv, fenv, name);
     IR::Exp* lexp = lExpTy.exp->unEx();
     IR::Exp* rexp = rExpTy.exp->unEx();
-    TY::tyType lty = lExpTy.ty->kind;
-    TY::tyType rty = rExpTy.ty->kind;
+    TY::Type* lty = lExpTy.ty;
+    TY::Type* rty = rExpTy.ty;
     IR::binop bop;
     switch (op) {
     case mul_t::MULT: bop = IR::binop::T_mul; break;
@@ -648,8 +648,8 @@ IR::ExpTy AST::AddExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
     IR::ExpTy rExpTy = this->rhs->ast2ir(venv, fenv, name);
     IR::Exp* lexp = lExpTy.exp->unEx();
     IR::Exp* rexp = rExpTy.exp->unEx();
-    TY::tyType lty = lExpTy.ty->kind;
-    TY::tyType rty = rExpTy.ty->kind;
+    TY::Type* lty = lExpTy.ty;
+    TY::Type* rty = rExpTy.ty;
     IR::binop bop;
     switch (this->op) {
     case AST::addop_t::ADD: bop = IR::binop::T_plus; break;
@@ -755,28 +755,7 @@ IR::ExpTy AST::LOrExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
 }
 IR::ExpTy AST::IdExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                              Temp_Label name) {
-    std::string idname = *(this->str);
-    assert(venv->exist(idname));
-    TY::Entry* entry = venv->look(idname);
-    IR::Exp* exp;
-    TY::Type* t = entry->ty;
-    if (t->isconst) {
-        if (t->kind == TY::tyType::Ty_int) {
-            return IR::ExpTy(new IR::Tr_Exp(new IR::Const(*t->value)),
-                             TY::intType(new int(*t->value), false));
-        } else if (t->kind == TY::tyType::Ty_float) {
-            return IR::ExpTy(new IR::Tr_Exp(new IR::Const(*t->value)),
-                             TY::floatType(new int(*t->value), false));
-        } else
-            assert(0);
-    }
-    if (entry->kind == TY::tyEntry::Ty_global) {
-        exp = new IR::Name(static_cast<TY::GloVar*>(entry)->label);
-    } else if (entry->kind == TY::tyEntry::Ty_local) {
-        exp = new IR::Temp(static_cast<TY::LocVar*>(entry)->temp);
-    }
-    // assume that array is not in "IdExp"
-    return IR::ExpTy(new IR::Tr_Exp(exp), t);
+    assert(0);
 }
 IR::Stm* AST::PutintStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                  Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {

@@ -74,12 +74,14 @@ template <typename T> static T cal(IR::binop op, T l, T r) {
     default: assert(0);
     }
 }
-static TY::Type* binopResType(const TY::Type* a, const TY::Type* b, IR::binop op) {
+static TY::Type* binopResType(TY::Type* a, TY::Type* b, IR::binop op) {
     if (a->kind == TY::tyType::Ty_int && b->kind == TY::tyType::Ty_int) {
         int l = *a->value;
         int r = *b->value;
-        if(op==IR::binop::T_mod)return TY::intType(new int(l%(r!=0?r:1)), false);
-        else return TY::intType(new int(cal(op, l, r)), false);
+        if (op == IR::binop::T_mod)
+            return TY::intType(new int(l % (r != 0 ? r : 1)), false);
+        else
+            return TY::intType(new int(cal(op, l, r)), false);
     } else if (a->kind == TY::tyType::Ty_int && b->kind == TY::tyType::Ty_float) {
         float l = (float)*a->value;
         float r = decode(*b->value);
@@ -92,6 +94,10 @@ static TY::Type* binopResType(const TY::Type* a, const TY::Type* b, IR::binop op
         float l = decode(*a->value);
         float r = decode(*b->value);
         return TY::floatType(new int(encode(cal(op, l, r))), false);
+    } else if (a->kind == TY::tyType::Ty_int && b->kind == TY::tyType::Ty_array) {
+        return b;
+    } else if (a->kind == TY::tyType::Ty_array && b->kind == TY::tyType::Ty_int) {
+        return a;
     } else
         assert(0);
     return nullptr;
@@ -113,31 +119,41 @@ static IR::Exp* TyIRAssign(IR::Exp* rexp, TY::tyType lty, TY::tyType rty) {
     } else
         return rexp;
 }
-static IR::Exp* calIRfloat(IR::binop bop,IR::Exp* lexp, IR::Exp* rexp){
+static IR::Exp* calIRfloat(IR::binop bop, IR::Exp* lexp, IR::Exp* rexp) {
     IR::ExpList param;
     param.push_back(lexp);
     param.push_back(rexp);
-    switch(bop){
-        case IR::binop::T_plus:return new IR::Call(new IR::Name("__aeabi_fadd"),param);
-        case IR::binop::T_minus:return new IR::Call(new IR::Name("__aeabi_fsub"),param);
-        case IR::binop::T_mul:return new IR::Call(new IR::Name("__aeabi_fmul"),param);
-        case IR::binop::T_div:return new IR::Call(new IR::Name("__aeabi_fdiv"),param);
-        default:assert(0);
+    switch (bop) {
+    case IR::binop::T_plus: return new IR::Call(new IR::Name("__aeabi_fadd"), param);
+    case IR::binop::T_minus: return new IR::Call(new IR::Name("__aeabi_fsub"), param);
+    case IR::binop::T_mul: return new IR::Call(new IR::Name("__aeabi_fmul"), param);
+    case IR::binop::T_div: return new IR::Call(new IR::Name("__aeabi_fdiv"), param);
+    default: assert(0);
     }
     return nullptr;
 }
-static IR::Exp* TyIRBinop(IR::binop bop, TY::tyType lty, IR::Exp* lexp, TY::tyType rty,
+static IR::Exp* TyIRBinop(IR::binop bop, TY::Type* lty, IR::Exp* lexp, TY::Type* rty,
                           IR::Exp* rexp) {
-    if (lty == TY::tyType::Ty_int && rty == TY::tyType::Ty_int) {
+    if (lty->kind == TY::tyType::Ty_int && rty->kind == TY::tyType::Ty_int) {
         return new IR::Binop(bop, lexp, rexp);
-    } else if (lty == TY::tyType::Ty_int && rty == TY::tyType::Ty_float) {
-        lexp=ir_i2f(lexp);
-        return calIRfloat(bop,lexp,rexp);
-    } else if (lty == TY::tyType::Ty_float && rty == TY::tyType::Ty_int) {
-        rexp=ir_i2f(rexp);
-        return calIRfloat(bop,lexp,rexp);
-    } else if (lty == TY::tyType::Ty_float && rty == TY::tyType::Ty_float) {
-        return calIRfloat(bop,lexp,rexp);
+    } else if (lty->kind == TY::tyType::Ty_int && rty->kind == TY::tyType::Ty_float) {
+        lexp = ir_i2f(lexp);
+        return calIRfloat(bop, lexp, rexp);
+    } else if (lty->kind == TY::tyType::Ty_float && rty->kind == TY::tyType::Ty_int) {
+        rexp = ir_i2f(rexp);
+        return calIRfloat(bop, lexp, rexp);
+    } else if (lty->kind == TY::tyType::Ty_float && rty->kind == TY::tyType::Ty_float) {
+        return calIRfloat(bop, lexp, rexp);
+    } else if (lty->kind == TY::tyType::Ty_int && rty->kind == TY::tyType::Ty_array) {
+        assert(bop == IR::binop::T_plus);
+        return new IR::Binop(
+            IR::binop::T_plus, rexp,
+            new IR::Binop(IR::binop::T_mul, lexp, new IR::Const(rty->tp->arraysize * 4)));
+    } else if (lty->kind == TY::tyType::Ty_array && rty->kind == TY::tyType::Ty_int) {
+        assert(bop == IR::binop::T_plus || bop == IR::binop::T_minus);
+        return new IR::Binop(
+            bop, lexp,
+            new IR::Binop(IR::binop::T_mul, rexp, new IR::Const(lty->tp->arraysize * 4)));
     } else
         assert(0);
 }
