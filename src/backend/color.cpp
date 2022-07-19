@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stack>
 using namespace COLOR;
-#define REGNUM 12
+#define REGNUM 13
 COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
                              std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
     COL_result* cr = new COL_result();
@@ -55,20 +55,20 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
     // precolor
     for (auto node : *ig) {
         Temp_Temp n = (Temp_Temp)(uint64_t)node->nodeInfo();
-        if(n>=100){
-            for(auto it:*node->succ())std::cerr<<(uint64_t)it->nodeInfo()<<std::endl;
+        if (n >= 100) {
+            for (auto it : *node->succ()) std::cerr << (uint64_t)it->nodeInfo() << std::endl;
         }
         assert(n < 100);
     }
     for (int i = 0; i < 16; i++) { cr->coloring->insert(std::make_pair(i, i)); }
     // color
-    int vis[12];
+    int vis[REGNUM];
 
     while (!stk.empty()) {
         GRAPH::Node* node = stk.top();
         stk.pop();
         Temp_Temp n = (Temp_Temp)(uint64_t)node->nodeInfo();
-        for (int i = 0; i < 12; i++) vis[i] = 0;
+        for (int i = 0; i < REGNUM; i++) vis[i] = 0;
         for (auto& node1 : *node->succ()) {
             Temp_Temp n1 = (Temp_Temp)(uint64_t)node1->nodeInfo();
             int num = cr->coloring->at(n1);
@@ -76,11 +76,15 @@ COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
                 vis[num] = 1;
             else if (num == 14)
                 vis[11] = 1;
+            else if (num == 12)
+                vis[12] = 1;
         }
         node->mygraph->reverseNode(node);
         int col = -1;
         if (vis[11] == 0)
             col = 14;
+        else if (vis[12] == 0)
+            col = 12;
         else
             for (int i = 0; i <= 10; i++) {
                 if (vis[i] == 0) {

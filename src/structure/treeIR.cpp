@@ -371,9 +371,8 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
             ->ir2asm(ls, "");
     }
     for (; head; head = head->tail) head->stm->ir2asm(ls, "");
-    Temp_TempList defs = Temp_TempList();
-    for (int i = 0; i < 4; i++) { defs.push_back(i); }
-    defs.push_back(14);
+    Temp_TempList uses = Temp_TempList();
+    for (int i = 0; i < cnt; i++) { uses.push_back(i); }
 #ifndef VFP
     Temp_Temp ftemp=Temp_newtemp();
     if (static_cast<IR::Name*>(this->fun)->name == "putfloat") {
@@ -388,8 +387,8 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(), Temp_TempList(), ASM::Targets()));
     }
 #endif
-    ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name, defs,
-                                defs, ASM::Targets()));
+    ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name, Temp_TempList({0,1,2,3,14,12}),
+                                uses, ASM::Targets()));
 #ifndef VFP
     if (static_cast<IR::Name*>(this->fun)->name == "putfloat" || (static_cast<IR::Name*>(this->fun)->name == "putfarray")) {
         ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), Temp_TempList(), Temp_TempList(1,ftemp), ASM::Targets()));
