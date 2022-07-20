@@ -10,7 +10,7 @@ static void emit(ASM::Instr* inst) {
 // If return NULL, then it's a Spill
 using TempMap = std::unordered_map<Temp_Temp, Temp_Temp>;
 
-static ASM::InstrList* RA_Spill(ASM::InstrList* il, COLOR::COL_result* cr, TempMap* stkmap,
+static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr, TempMap* stkmap,
                                 TempMap* stkuse) {
     iList = new ASM::InstrList();
     assert(il);
@@ -30,8 +30,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, COLOR::COL_result* cr, TempM
         }
         if (src)
             for (auto& temp : *src) {
-                int n = cr->coloring->at(temp);
-                if (n == -1) {
+                if (cr->spills->count(temp)) {
                     int offset;
                     if (stkmap->count(temp) == 0) {
                         stk_size += 4;
@@ -66,8 +65,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, COLOR::COL_result* cr, TempM
         emit(inst);
         if (dst)
             for (auto& temp : *dst) {
-                int n = cr->coloring->at(temp);
-                if (n == -1) {
+                if (cr->spills->count(temp)) {
                     int offset;
                     if (stkmap->count(temp) == 0) {
                         stk_size += 4;
@@ -106,7 +104,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, COLOR::COL_result* cr, TempM
     return iList;
 }
 
-static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap) {
+static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,std::set<ASM::Move*>* clearMove) {
     assert(il);
     ASM::InstrList* out = new ASM::InstrList();
     out->push_back(il->at(0));  // label
@@ -134,9 +132,7 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap) {
         auto instrr = il->at(i);
         if (instrr->kind == ASM::InstrType::move) {
             ASM::Move* instr = static_cast<ASM::Move*>(instrr);
-            int dst = colormap->at(instr->dst[0]);
-            int src = colormap->at(instr->src[0]);
-            if (dst == src) continue;
+            if (clearMove->count(instr)) continue;
         }
         out->push_back(instrr);
     }
@@ -161,13 +157,13 @@ ASM::InstrList* RA::RA_RegAlloc(ASM::InstrList* il, int stksize) {
     TempMap* stkuse = new TempMap();
     while (1) {
         GRAPH::Graph* G = FLOW::FG_AssemFlowGraph(il);
-        GRAPH::NodeList* lg = LIVENESS::Liveness(G->nodes());
-        GRAPH::NodeList* ig = IG::Create_ig(lg);
-        COLOR::COL_result* cr = COLOR::COL_Color(ig, stkuse);
+        LIVENESS::Liveness(G->nodes());
+        GRAPH::NodeList* ig = IG::Create_ig(G->nodes());
+        const COLOR::COL_result* cr = COLOR::COL_Color(ig, stkuse);
         if (!cr->spills->empty())
             il = RA_Spill(il, cr, stkmap, stkuse);
         else {
-            il = funcEntryExit3(il, cr->coloring);  // add stack instr
+            il = funcEntryExit3(il, cr->coloring,cr->UnionMove);  // add stack instr
             for (auto it : *il) { it->print(cr->coloring); }
             break;
         }

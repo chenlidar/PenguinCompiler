@@ -55,7 +55,11 @@ public:
     ~Graph() {
         for (auto& i : mynodes) delete i;
     }
-
+    void clear() {
+        for (auto& i : mynodes) delete i;
+        mynodes.clear();
+        nodecount=0;
+    }
     /* Make a new node in graph "g", with associated "info" */
     Node* addNode(void* info);
 
@@ -71,7 +75,7 @@ public:
 
     /* Tell if there is an edge from "from" to "to" */
     bool goesTo(Node* from, Node* n);
-    void rmNode(GRAPH::Node* node);
+    void rmNode(GRAPH::Node* node,GRAPH::Node* adjnode);
     void reverseNode(GRAPH::Node* node);
 };
 }  // namespace GRAPH

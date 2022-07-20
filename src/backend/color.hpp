@@ -17,12 +17,15 @@
 namespace COLOR {
 struct COL_result {
     std::unordered_map<Temp_Temp, Temp_Temp>* coloring;
-    Temp_TempList* spills;
+    std::set<Temp_Temp>* spills;
+    std::set<ASM::Move*>* UnionMove;
 
-    COL_result()
-        : coloring(new std::unordered_map<Temp_Temp, Temp_Temp>())
-        , spills(new Temp_TempList()) {}
+    COL_result(std::unordered_map<Temp_Temp, Temp_Temp>* _coloring,
+               std::set<Temp_Temp>* _spills, std::set<ASM::Move*>* _UnionMove)
+        : coloring(_coloring)
+        , spills(_spills)
+        , UnionMove(_UnionMove) {}
 };
-COL_result* COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, Temp_Temp>* stkuse);
+const COL_result* COL_Color(GRAPH::NodeList* ig, std::unordered_map<Temp_Temp, Temp_Temp>* stkuse);
 }  // namespace COLOR
 #endif

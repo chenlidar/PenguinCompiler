@@ -1,9 +1,6 @@
 #include "flowgraph.hpp"
 #include <unordered_map>
 #include <assert.h>
-/* Interfaces */
-using LabelNodeMap = std::unordered_map<Temp_Label, GRAPH::Node*>;
-
 struct UDinfo {
     Temp_TempList uses;
     Temp_TempList defs;
@@ -13,44 +10,37 @@ struct UDinfo {
         , defs(_defs)
         , isMove(_isMove) {}
 };
+using LabelNodeMap = std::unordered_map<Temp_Label, GRAPH::Node*>;
 using NodeInfoMap = std::unordered_map<GRAPH::Node*, UDinfo*>;
-static void UD_enter(GRAPH::Node* n, UDinfo* info);
-static UDinfo* UD_lookup(GRAPH::Node* n);
-static LabelNodeMap* LNTable();
-static void LT_enter(GRAPH::Node* l, UDinfo* n);
-static GRAPH::Node* LT_lookup(Temp_Label l);
 
 /* Implementation */
-static NodeInfoMap* UDTable = nullptr;
-static LabelNodeMap* _lntable = nullptr;
-
-static void UD_init() {
-    UDTable = new NodeInfoMap();
-    _lntable = new LabelNodeMap();
+static NodeInfoMap UDTable;
+static LabelNodeMap LNTable;
+static GRAPH::Graph flow_graph;
+static void init() {
+    for (auto it : UDTable) delete it.second;
+    UDTable.clear();
+    LNTable.clear();
+    flow_graph.clear();
 }
 
-static void UD_enter(GRAPH::Node* n, UDinfo* info) { UDTable->insert(std::make_pair(n, info)); }
+static void UD_enter(GRAPH::Node* n, UDinfo* info) { UDTable.insert(std::make_pair(n, info)); }
 
 static UDinfo* UD_lookup(GRAPH::Node* n) {
-    if (UDTable->find(n) != UDTable->end()) {
-        return UDTable->at(n);
+    if (UDTable.find(n) != UDTable.end()) {
+        return UDTable.at(n);
     } else
         return nullptr;
-}
-
-static LabelNodeMap* LNTable() {
-    if (_lntable == nullptr) { _lntable = new LabelNodeMap(); }
-    return _lntable;
 }
 
 static GRAPH::Node* LT_lookup(Temp_Label l) {
-    if (LNTable()->find(l) != LNTable()->end()) {
-        return LNTable()->at(l);
+    if (LNTable.find(l) != LNTable.end()) {
+        return LNTable.at(l);
     } else
         return nullptr;
 }
 
-static void LT_enter(Temp_Label l, GRAPH::Node* n) { LNTable()->insert(std::make_pair(l, n)); }
+static void LT_enter(Temp_Label l, GRAPH::Node* n) { LNTable.insert(std::make_pair(l, n)); }
 
 Temp_TempList* FLOW::FG_def(GRAPH::Node* n) { return &UD_lookup(n)->defs; }
 
@@ -62,18 +52,18 @@ static constexpr int IT_COMMON = 0;
 static constexpr int IT_JUMP = 1;
 static constexpr int IT_MOVE = 2;
 GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
-    UD_init();
+    init();
 
     //(I) Iterate over the entire instruction list
     GRAPH::Node* prev = nullptr;
     GRAPH::Node* curr = nullptr;
-    GRAPH::Graph* graph = new GRAPH::Graph();
+    flow_graph.clear();
     GRAPH::NodeList* jumpList = new GRAPH::NodeList();
     for (auto instr : *il) {
         if (instr != nullptr) {
             // 1) create a node (and put it into the graph), using the
             //    instruction as the associated info.
-            curr = graph->addNode(instr);
+            curr = flow_graph.addNode(instr);
 
             // 2) special handling
             int type = IT_COMMON;
@@ -131,5 +121,5 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
         }
     }
 
-    return graph;
+    return &flow_graph;
 }

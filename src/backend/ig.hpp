@@ -6,10 +6,9 @@
 #include "flowgraph.hpp"
 #include "liveness.hpp"
 namespace IG {
-void Enter_ig(Temp_Temp, Temp_Temp);
 GRAPH::NodeList* Create_ig(GRAPH::NodeList*);
-void Show_ig(FILE*, GRAPH::NodeList*);
-GRAPH::Graph* Ig_graph();
-void Ig_empty();
+std::set<ASM::Move*>* worklistMove();
+std::unordered_map<GRAPH::Node*, std::set<ASM::Move*>>* movelist();
+std::unordered_map<int, GRAPH::Node*>* tempNodeMap();
 }  // namespace IG
 #endif

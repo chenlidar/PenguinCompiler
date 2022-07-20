@@ -44,20 +44,16 @@ void Graph::rmEdge(Node* from, Node* to) {
     to->preds.erase(to->preds.find(from));
     from->succs.erase(from->succs.find(to));
 }
-static GRAPH::NodeList* del(GRAPH::Node* a, GRAPH::NodeList* l) {
-    assert(a && l);
-    l->erase(l->find(a));
-    return l;
-}
-void GRAPH::Graph::rmNode(GRAPH::Node* node) {
-    assert(node);
-    for (auto prev : node->preds) { del(node, &prev->succs); }
-    for (auto succ : node->succs) { del(node, &succ->preds); }
+
+void GRAPH::Graph::rmNode(GRAPH::Node* node, GRAPH::Node* adjnode) {
+    assert(node && adjnode);
+    assert(adjnode->succs.count(node) && adjnode->preds.count(node));
+    adjnode->succs.erase(node);
+    adjnode->preds.erase(node);
 }
 void GRAPH::Graph::reverseNode(GRAPH::Node* node) {
     assert(node);
-    for (auto prev : node->succs) { prev->succs.insert(node); }
-    for (auto succ : node->preds) { succ->preds.insert(node); }
+    for (auto adjnode : node->succs) { adjnode->succs.insert(node);adjnode->preds.insert(node); }
 }
 
 bool Graph::goesTo(Node* from, Node* n) { return from->succs.count(n); }
