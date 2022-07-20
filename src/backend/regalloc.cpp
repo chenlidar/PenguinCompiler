@@ -109,15 +109,7 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,std:
     ASM::InstrList* out = new ASM::InstrList();
     out->push_back(il->at(0));  // label
     // entry
-    out->push_back(
-        new ASM::Oper("str lr,[sp,#-4]", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    out->push_back(
-        new ASM::Oper("str fp,[sp,#-8]", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    for (int i = 4; i <= 10; i++) {
-        out->push_back(
-            new ASM::Oper("str r" + std::to_string(i) + ",[sp,#-" + std::to_string(i * 4) + "]",
-                          Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    }
+    out->push_back(new ASM::Oper("stmdb sp, {r4, r5, r6, r7, r8, r9, r10, fp, lr}", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
     out->push_back(new ASM::Oper("mov fp,sp", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
     std::string s1 = "sub sp,sp,#" + std::to_string(stk_size & 0xff);
     out->push_back(new ASM::Oper(s1, Temp_TempList(), Temp_TempList(), Temp_LabelList()));
@@ -138,15 +130,7 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,std:
     }
     // exit
     out->push_back(new ASM::Oper("mov sp,fp", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    out->push_back(
-        new ASM::Oper("ldr lr,[sp,#-4]", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    out->push_back(
-        new ASM::Oper("ldr fp,[sp,#-8]", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    for (int i = 4; i <= 10; i++) {
-        out->push_back(
-            new ASM::Oper("ldr r" + std::to_string(i) + ",[sp,#-" + std::to_string(i * 4) + "]",
-                          Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    }
+    out->push_back(new ASM::Oper("ldmdb sp, {r4, r5, r6, r7, r8, r9, r10, fp, lr}", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
     out->push_back(new ASM::Oper("bx lr", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
 
     return out;

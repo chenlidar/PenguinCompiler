@@ -18,7 +18,7 @@ static NodeInfoMap UDTable;
 static LabelNodeMap LNTable;
 static GRAPH::Graph flow_graph;
 static void init() {
-    for (auto it : UDTable) delete it.second;
+    for (const auto &it : UDTable) delete it.second;
     UDTable.clear();
     LNTable.clear();
     flow_graph.clear();
