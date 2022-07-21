@@ -5,7 +5,7 @@
 #include <set>
 #include "../structure/assem.h"
 namespace LIVENESS {
-GRAPH::NodeList* Liveness(GRAPH::NodeList*);
+std::vector<GRAPH::Node*>* Liveness(std::vector<GRAPH::Node*>*);
 std::set<int>* FG_Out(GRAPH::Node*);
 std::set<int>* FG_In(GRAPH::Node*);
 }  // namespace LIVENESS

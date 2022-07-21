@@ -25,10 +25,10 @@ int Node::outDegree() {
     int deg = 0;
     return this->succs.size();
 }
-NodeList* Graph::nodes() { return &this->mynodes; }
+std::vector<Node*>* Graph::nodes() { return &this->mynodes; }
 Node* Graph::addNode(void* info) {
     Node* node = new GRAPH::Node(this->nodecount++, this, info);
-    this->mynodes.insert(node);
+    this->mynodes.push_back(node);
     return node;
 }
 void Graph::addEdge(Node* from, Node* to) {
@@ -53,7 +53,10 @@ void GRAPH::Graph::rmNode(GRAPH::Node* node, GRAPH::Node* adjnode) {
 }
 void GRAPH::Graph::reverseNode(GRAPH::Node* node) {
     assert(node);
-    for (auto adjnode : node->succs) { adjnode->succs.insert(node);adjnode->preds.insert(node); }
+    for (auto adjnode : node->succs) {
+        adjnode->succs.insert(node);
+        adjnode->preds.insert(node);
+    }
 }
 
 bool Graph::goesTo(Node* from, Node* n) { return from->succs.count(n); }

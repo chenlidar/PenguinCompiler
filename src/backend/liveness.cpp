@@ -3,7 +3,7 @@
 #include "flowgraph.hpp"
 #include <assert.h>
 #include <algorithm>
-#include <queue>
+#include <stack>
 using namespace LIVENESS;
 struct InOut {
     std::set<int>* in;
@@ -18,16 +18,17 @@ struct InOut {
 };
 
 static std::unordered_map<GRAPH::Node*, InOut*> InOutTable;
-
+static std::stack<GRAPH::Node*> workset;
 static int gi = 0;
-static void init_INOUT(GRAPH::NodeList* l) {
-    for(auto& it:InOutTable){
+static void init_INOUT(std::vector<GRAPH::Node*>* l) {
+    for (auto& it : InOutTable) {
         delete it.second->def;
         delete it.second->out;
         delete it.second->use;
         delete it.second->in;
     }
-    InOutTable = std::unordered_map<GRAPH::Node*, InOut*>();
+    InOutTable.clear();
+    while (!workset.empty()) workset.pop();
     gi = 0;
     for (auto it : *l) {
         if (InOutTable.count(it) == 0) {
@@ -36,30 +37,27 @@ static void init_INOUT(GRAPH::NodeList* l) {
             in = new std::set<int>();
             out = new std::set<int>();
             def = new std::set<int>();
-            for (auto it : *FLOW::FG_use(it)) {
-                use->insert(it);
-                in->insert(it);
-            }
+            for (auto it : *FLOW::FG_use(it)) { use->insert(it); }
             for (auto it : *FLOW::FG_def(it)) def->insert(it);
             InOutTable.insert(std::make_pair(it, new InOut(use, def, in, out)));
         }
     }
 }
-
-static void LivenessInteration(GRAPH::NodeList* gl) {
-    std::queue<GRAPH::Node*> workset;
-    std::set<GRAPH::Node*> vis;
-    for (auto n = gl->rbegin(); n != gl->rend(); ++n) {
-        workset.push(*n);
-        vis.insert(*n);
+static void LivenessInteration(std::vector<GRAPH::Node*>* gl) {
+    // assert(InOutTable.empty());
+    assert(workset.empty());
+    for (auto n : *gl) {
+        workset.push(n);
+        assert(InOutTable.at(n)->in->size() == 0);
+        assert(InOutTable.at(n)->out->size() == 0);
     }
     while (!workset.empty()) {
-        GRAPH::Node* n = workset.front();
+        GRAPH::Node* n = workset.top();
         workset.pop();
-        vis.erase(vis.find(n));
         std::set<int>* newIn = new std::set<int>();
         std::set<int>* newOut = new std::set<int>();
         std::set<int> tempset;
+        assert(tempset.empty());
         InOut* node = InOutTable.at(n);
         // Now do out[n]=union_s in succ[n] (in[s])
         GRAPH::NodeList* s = n->succ();
@@ -72,18 +70,15 @@ static void LivenessInteration(GRAPH::NodeList* gl) {
         std::set_union(node->use->begin(), node->use->end(), tempset.begin(), tempset.end(),
                        std::inserter(*newIn, newIn->begin()));
 
-        if (*node->out != *newOut) {
+        if (*node->in != *newIn) {
+            assert(newIn->size() > node->in->size());
+            assert(newIn->size() <= InOutTable.size());
             GRAPH::NodeList* pred = n->pred();
             for (auto it : *pred) {
-                if (vis.count(it))
-                    ;
-                else {
-                    workset.push(it);
-                    vis.insert(it);
-                }
+                assert(it != n);
+                workset.push(it);
             }
-        } else
-            assert(*newIn == *node->in);
+        }
         delete node->in;
         delete node->out;
         node->in = newIn;
@@ -91,7 +86,7 @@ static void LivenessInteration(GRAPH::NodeList* gl) {
     }
 }
 
-GRAPH::NodeList* LIVENESS::Liveness(GRAPH::NodeList* l) {
+std::vector<GRAPH::Node*>* LIVENESS::Liveness(std::vector<GRAPH::Node*>* l) {
     init_INOUT(l);  // Initialize InOut table
     // int cnt=0;
     // for(auto it:*l)cnt++;

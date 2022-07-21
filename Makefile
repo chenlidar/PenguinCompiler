@@ -1,4 +1,4 @@
-VPATH=src/frontend:src/structure:src/util:src/backend
+VPATH=src/frontend:src/structure:src/util:src/backend:src/ssa:src/
 frontend: src/structure/ast.h src/frontend/lexer.lex src/frontend/parser.yacc
 	cd src/frontend && bison -d -o parser.cpp parser.yacc -t -r all && flex -o lexer.cpp lexer.lex
 

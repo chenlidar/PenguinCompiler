@@ -31,7 +31,7 @@ static void Enter_ig(Temp_Temp t1, Temp_Temp t2) {
 
 // input flowgraph after liveness analysis (so FG_In and FG_Out are available)
 
-GRAPH::NodeList* IG::Create_ig(GRAPH::NodeList* flowgraph) {
+std::vector<GRAPH::Node*>* IG::Create_ig(std::vector<GRAPH::Node*>* flowgraph) {
     RA_ig.clear();
     WorklistMove.clear();
     TempNodeMap.clear();

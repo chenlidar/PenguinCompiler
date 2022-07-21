@@ -41,7 +41,7 @@ static bool moveRelated(GRAPH::Node* node) {
     }
     return false;
 }
-static void makeWorklist(GRAPH::NodeList* ig) {
+static void makeWorklist(std::vector<GRAPH::Node*>* ig) {
     for (auto node : *ig) {
         if (Precolored.count(NodeTemp(node))) continue;
         if (node->outDegree() >= REGNUM) {
@@ -82,21 +82,22 @@ static void simplify() {
     }
 }
 static void addWorklist(Temp_Temp temp) {
+    if (Precolored.count(temp)) return;
     GRAPH::Node* node = IG::tempNodeMap()->at(temp);
-    if (!Precolored.count(temp) && !moveRelated(node) && node->outDegree() < REGNUM) {
+    if (!moveRelated(node) && node->outDegree() < REGNUM) {
         assert(FreezeWorklist.count(node));
         FreezeWorklist.erase(node);
         SimplifyWorklist.insert(node);
     }
 }
-static void combine(GRAPH::Node* u, GRAPH::Node* v) {
+static void combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u no,v no
+    assert(!Precolored.count(NodeTemp(v)));
     if (FreezeWorklist.count(v)) {
         FreezeWorklist.erase(v);
     } else {
         assert(SpillWorklist.count(v));
         SpillWorklist.erase(v);
     }
-    assert(!Precolored.count(NodeTemp(v)));
     assert(findAlias(NodeTemp(v)) == NodeTemp(v) && findAlias(NodeTemp(u)) == NodeTemp(u));
     AliasMap[NodeTemp(v)] = NodeTemp(u);
     for (auto instr : IG::movelist()->at(v)) {
@@ -108,14 +109,14 @@ static void combine(GRAPH::Node* u, GRAPH::Node* v) {
         it->mygraph->addEdge(it, u);
         it->mygraph->addEdge(u, it);
         it->mygraph->rmNode(v, it);
-        decrementDegree(it);
+        decrementDegree(it);  // maybe a precolor
     }
-    if (u->outDegree() >= REGNUM && FreezeWorklist.count(u)) {
+    if (u->outDegree() >= REGNUM && FreezeWorklist.count(u)) {  // u may already in SpillWorklist
         FreezeWorklist.erase(u);
         SpillWorklist.insert(u);
     }
 }
-static bool briggs(GRAPH::Node* u, GRAPH::Node* v) {
+static bool george(GRAPH::Node* u, GRAPH::Node* v) {
     assert(!Precolored.count(NodeTemp(v)));
     for (auto adjnode : *v->succ()) {
         if (adjnode->outDegree() < REGNUM || Precolored.count(NodeTemp(adjnode))
@@ -126,13 +127,13 @@ static bool briggs(GRAPH::Node* u, GRAPH::Node* v) {
     }
     return true;
 }
-static bool george(GRAPH::Node* u, GRAPH::Node* v) {
+static bool briggs(GRAPH::Node* u, GRAPH::Node* v) {
     std::set<GRAPH::Node*> cnt;
     for (auto node : *u->succ()) {
-        if (node->outDegree() >= REGNUM) cnt.insert(node);
+        if (node->outDegree() >= REGNUM || Precolored.count(NodeTemp(node))) cnt.insert(node);
     }
     for (auto node : *v->succ()) {
-        if (node->outDegree() >= REGNUM) cnt.insert(node);
+        if (node->outDegree() >= REGNUM || Precolored.count(NodeTemp(node))) cnt.insert(node);
     }
     return cnt.size() < REGNUM;
 }
@@ -146,20 +147,26 @@ static void unionNode() {
     if (Precolored.count(y)) std::swap(x, y);
     GRAPH::Node* u = IG::tempNodeMap()->at(x);
     GRAPH::Node* v = IG::tempNodeMap()->at(y);
-    if (x == y) {
+    /* 1. x pre,y pre
+     * 2. x pre,y no
+     * 3. x no,y pre (not exist)
+     * 4. x no,y no
+     */
+    if (x == y) {  // 1,4, x may become not moverelate
         UnionMove.insert(instr);
         addWorklist(x);
-    } else if (Precolored.count(y) || v->succ()->count(u)) {
+    } else if (Precolored.count(y) || v->succ()->count(u)) {  // 1 || 2
         addWorklist(x);
         addWorklist(y);
-    } else if ((Precolored.count(x) && briggs(u, v)) || (!Precolored.count(x) && george(u, v))) {
+    } else if ((Precolored.count(x) && george(u, v))
+               || (!Precolored.count(x) && briggs(u, v))) {  // 2 || 4
         UnionMove.insert(instr);
         combine(u, v);
         addWorklist(x);
     } else
         ActiveMove.insert(instr);
 }
-static void freezeMove(GRAPH::Node* node) {
+static void freezeMove(GRAPH::Node* node) {  // must be a no-precolored node
     for (auto instr : IG::movelist()->at(node)) {
         if (!ActiveMove.count(instr) && !IG::worklistMove()->count(instr)) continue;
         Temp_Temp x = instr->dst.at(0);
@@ -171,11 +178,14 @@ static void freezeMove(GRAPH::Node* node) {
             assert(findAlias(x) == findAlias(NodeTemp(node)));
             v = IG::tempNodeMap()->at(findAlias(y));
         }
+        // u(node)-----v(adjnode)
         assert(ActiveMove.count(instr));
         assert(!IG::worklistMove()->count(instr));
         ActiveMove.erase(instr);
-        // IG::worklistMove()->erase(instr);
-        if (!moveRelated(v) && v->outDegree() < REGNUM&& !Precolored.count(NodeTemp(v))) {
+        // precolored node do nothing
+        if (Precolored.count(NodeTemp(v)))
+            continue;
+        else if (!moveRelated(v) && v->outDegree() < REGNUM) {  // remove nomove node to simplify
             assert(FreezeWorklist.count(v));
             FreezeWorklist.erase(v);
             SimplifyWorklist.insert(v);
@@ -184,7 +194,7 @@ static void freezeMove(GRAPH::Node* node) {
 }
 static void freeze() {
     GRAPH::Node* node = *FreezeWorklist.begin();
-    assert(FreezeWorklist.count(node));
+    assert(!Precolored.count(NodeTemp(node)));
     FreezeWorklist.erase(node);
     SimplifyWorklist.insert(node);
     freezeMove(node);
@@ -192,6 +202,7 @@ static void freeze() {
 static void selectSpill(std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
     for (auto it : SpillWorklist) {
         if (stkuse->count(NodeTemp(it))) continue;
+        assert(!Precolored.count(NodeTemp(it)));
         SpillWorklist.erase(it);
         SimplifyWorklist.insert(it);
         freezeMove(it);
@@ -216,13 +227,16 @@ static void assignColor() {
             ColorMap[NodeTemp(node)] = *okcolor.begin();
         }
     }
-    for (auto node : AliasMap) { ColorMap[node.first] = ColorMap[findAlias(node.first)]; }
+    for (auto node : AliasMap) {
+        assert(node.first != findAlias(node.first));
+        ColorMap[node.first] = ColorMap[findAlias(node.first)];
+    }
 }
-const COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
+const COL_result* COLOR::COL_Color(std::vector<GRAPH::Node*>* ig,
                                    std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
     init();
     makeWorklist(ig);
-    int cnt=0;
+    int cnt = 0;
     while (!SimplifyWorklist.empty() || !SpillWorklist.empty() || !FreezeWorklist.empty()
            || !IG::worklistMove()->empty()) {
         if (!SimplifyWorklist.empty())

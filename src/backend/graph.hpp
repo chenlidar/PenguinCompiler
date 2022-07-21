@@ -45,12 +45,12 @@ struct Node {
 class Graph {
 private:
     int nodecount;
-    NodeList mynodes;
+    std::vector<Node*> mynodes;
 
 public:
     Graph() {
         nodecount = 0;
-        mynodes = NodeList();
+        mynodes = std::vector<Node*>();
     }
     ~Graph() {
         for (auto& i : mynodes) delete i;
@@ -58,13 +58,13 @@ public:
     void clear() {
         for (auto& i : mynodes) delete i;
         mynodes.clear();
-        nodecount=0;
+        nodecount = 0;
     }
     /* Make a new node in graph "g", with associated "info" */
     Node* addNode(void* info);
 
     /* Get the list of nodes belonging to "g" */
-    NodeList* nodes();
+    std::vector<Node*>* nodes();
 
     /* Make a new edge joining nodes "from" and "to", which must belong
         to the same graph */
@@ -75,7 +75,7 @@ public:
 
     /* Tell if there is an edge from "from" to "to" */
     bool goesTo(Node* from, Node* n);
-    void rmNode(GRAPH::Node* node,GRAPH::Node* adjnode);
+    void rmNode(GRAPH::Node* node, GRAPH::Node* adjnode);
     void reverseNode(GRAPH::Node* node);
 };
 }  // namespace GRAPH
