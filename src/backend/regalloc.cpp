@@ -30,7 +30,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
         }
         if (src)
             for (auto& temp : *src) {
-                if (cr->spills->count(temp)) {
+                if (cr->SpilledNode.count(temp)) {
                     int offset;
                     if (stkmap->count(temp) == 0) {
                         stk_size += 4;
@@ -65,7 +65,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
         emit(inst);
         if (dst)
             for (auto& temp : *dst) {
-                if (cr->spills->count(temp)) {
+                if (cr->SpilledNode.count(temp)) {
                     int offset;
                     if (stkmap->count(temp) == 0) {
                         stk_size += 4;
@@ -143,17 +143,25 @@ ASM::InstrList* RA::RA_RegAlloc(ASM::InstrList* il, int stksize) {
     TempMap* stkmap = new TempMap();
     TempMap* stkuse = new TempMap();
     while (1) {
-        GRAPH::Graph* G = FLOW::FG_AssemFlowGraph(il);
-        LIVENESS::Liveness(G->nodes());
-        std::vector<GRAPH::Node*>* ig = IG::Create_ig(G->nodes());
-        const COLOR::COL_result* cr = COLOR::COL_Color(ig, stkuse);
-        if (!cr->spills->empty())
+        FLOW::FlowGraph* flowgraph = new FLOW::FlowGraph(il);
+        LIVENESS::Liveness* live = new LIVENESS::Liveness(flowgraph);
+        IG::ConfGraph* ig = new IG::ConfGraph(live);
+        COLOR::COL_result* cr = new COLOR::COL_result(ig, stkuse);
+        if (!cr->SpilledNode.empty())
             il = RA_Spill(il, cr, stkmap, stkuse);
         else {
-            il = funcEntryExit3(il, cr->coloring, cr->UnionMove);  // add stack instr
-            for (auto it : *il) { it->print(cr->coloring); }
+            il = funcEntryExit3(il, &cr->ColorMap, &cr->UnionMove);  // add stack instr
+            for (auto it : *il) { it->print(&cr->ColorMap); }
+            delete flowgraph;
+            delete live;
+            delete ig;
+            delete cr;
             break;
         }
+        delete flowgraph;
+        delete live;
+        delete ig;
+        delete cr;
     }
     return iList;
 }

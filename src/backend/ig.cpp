@@ -2,26 +2,19 @@
 #include "flowgraph.hpp"
 #include <assert.h>
 #include <map>
-static GRAPH::Graph RA_ig;
-static std::set<ASM::Move*> WorklistMove;
-static std::unordered_map<GRAPH::Node*, std::set<ASM::Move*>> Movelist;
-static std::unordered_map<int, GRAPH::Node*> TempNodeMap;
-std::set<ASM::Move*>* IG::worklistMove() { return &WorklistMove; }
-std::unordered_map<GRAPH::Node*, std::set<ASM::Move*>>* IG::movelist() { return &Movelist; }
-std::unordered_map<int, GRAPH::Node*>* IG::tempNodeMap() { return &TempNodeMap; }
-static GRAPH::Node* Look_ig(Temp_Temp t) {
+using namespace IG;
+GRAPH::Node* ConfGraph::Look_ig(Temp_Temp t) {
     if (t == 11 || t == 13) return nullptr;
     if (TempNodeMap.count(t)) {
         return TempNodeMap[t];
     } else {
-        GRAPH::Node* n = RA_ig.addNode((void*)(uint64_t)t);
+        GRAPH::Node* n = this->addNode((void*)(uint64_t)t);
         TempNodeMap.insert(std::make_pair(t, n));
         Movelist.insert(std::make_pair(n, std::set<ASM::Move*>()));
         return n;
     }
 }
-
-static void Enter_ig(Temp_Temp t1, Temp_Temp t2) {
+void ConfGraph::Enter_ig(Temp_Temp t1, Temp_Temp t2) {
     if (t1 == 11 || t1 == 13 || t2 == 11 || t2 == 13) return;
     GRAPH::Node* n1 = Look_ig(t1);
     GRAPH::Node* n2 = Look_ig(t2);
@@ -31,19 +24,15 @@ static void Enter_ig(Temp_Temp t1, Temp_Temp t2) {
 
 // input flowgraph after liveness analysis (so FG_In and FG_Out are available)
 
-std::vector<GRAPH::Node*>* IG::Create_ig(std::vector<GRAPH::Node*>* flowgraph) {
-    RA_ig.clear();
-    WorklistMove.clear();
-    TempNodeMap.clear();
-    Movelist.clear();
-    for (auto it : *flowgraph) {
-        std::set<int>* outList = LIVENESS::FG_Out(it);
-        Temp_TempList* defList = FLOW::FG_def(it);
-        Temp_TempList* useList = FLOW::FG_use(it);
+void ConfGraph::Create_ig(LIVENESS::Liveness* live) {
+    for (auto it : *live->flowgraph->nodes()) {
+        std::set<int>* outList = live->FG_Out(it);
+        Temp_TempList* defList = live->flowgraph->FG_def(it);
+        Temp_TempList* useList = live->flowgraph->FG_use(it);
         for (auto ite2 : *defList) Look_ig(ite2);
         for (auto ite2 : *useList) Look_ig(ite2);
         for (auto ite2 : *outList) Look_ig(ite2);
-        if (FLOW::FG_isMove(it)) {
+        if (live->flowgraph->FG_isMove(it)) {
             assert(useList->size() == 1);
             ASM::Instr* instr = (ASM::Instr*)it->nodeInfo();
             ASM::Move* insmove = static_cast<ASM::Move*>(instr);
@@ -74,5 +63,5 @@ std::vector<GRAPH::Node*>* IG::Create_ig(std::vector<GRAPH::Node*>* flowgraph) {
             }
         }
     }
-    return RA_ig.nodes();
+    return;
 }

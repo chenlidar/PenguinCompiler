@@ -1,69 +1,25 @@
 #include "flowgraph.hpp"
 #include <unordered_map>
 #include <assert.h>
-struct UDinfo {
-    Temp_TempList uses;
-    Temp_TempList defs;
-    bool isMove;
-    UDinfo(Temp_TempList _uses, Temp_TempList _defs, bool _isMove)
-        : uses(_uses)
-        , defs(_defs)
-        , isMove(_isMove) {}
-};
-using LabelNodeMap = std::unordered_map<Temp_Label, GRAPH::Node*>;
-using NodeInfoMap = std::unordered_map<GRAPH::Node*, UDinfo*>;
+using namespace FLOW;
 
-/* Implementation */
-static NodeInfoMap UDTable;
-static LabelNodeMap LNTable;
-static GRAPH::Graph flow_graph;
-static void init() {
-    for (const auto &it : UDTable) delete it.second;
-    UDTable.clear();
-    LNTable.clear();
-    flow_graph.clear();
-}
-
-static void UD_enter(GRAPH::Node* n, UDinfo* info) { UDTable.insert(std::make_pair(n, info)); }
-
-static UDinfo* UD_lookup(GRAPH::Node* n) {
-    if (UDTable.find(n) != UDTable.end()) {
-        return UDTable.at(n);
-    } else
-        return nullptr;
-}
-
-static GRAPH::Node* LT_lookup(Temp_Label l) {
-    if (LNTable.find(l) != LNTable.end()) {
-        return LNTable.at(l);
-    } else
-        return nullptr;
-}
-
-static void LT_enter(Temp_Label l, GRAPH::Node* n) { LNTable.insert(std::make_pair(l, n)); }
-
-Temp_TempList* FLOW::FG_def(GRAPH::Node* n) { return &UD_lookup(n)->defs; }
-
-Temp_TempList* FLOW::FG_use(GRAPH::Node* n) { return &UD_lookup(n)->uses; }
-
-bool FLOW::FG_isMove(GRAPH::Node* n) { return UD_lookup(n)->isMove; }
+Temp_TempList* FlowGraph::FG_def(GRAPH::Node* n) { return &UDTable.at(n)->defs; }
+Temp_TempList* FlowGraph::FG_use(GRAPH::Node* n) { return &UDTable.at(n)->uses; }
+bool FlowGraph::FG_isMove(GRAPH::Node* n) { return UDTable.at(n)->isMove; }
 
 static constexpr int IT_COMMON = 0;
 static constexpr int IT_JUMP = 1;
 static constexpr int IT_MOVE = 2;
-GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
-    init();
-
+void FlowGraph::FG_AssemFlowGraph(ASM::InstrList* il) {
     //(I) Iterate over the entire instruction list
     GRAPH::Node* prev = nullptr;
     GRAPH::Node* curr = nullptr;
-    flow_graph.clear();
     GRAPH::NodeList* jumpList = new GRAPH::NodeList();
     for (auto instr : *il) {
         if (instr != nullptr) {
             // 1) create a node (and put it into the graph), using the
             //    instruction as the associated info.
-            curr = flow_graph.addNode(instr);
+            curr = this->addNode(instr);
 
             // 2) special handling
             int type = IT_COMMON;
@@ -81,7 +37,7 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
                 break;
             case ASM::InstrType::label:
                 // 2.2) label should be also saved in the label-node list for (II)
-                LT_enter(static_cast<ASM::Label*>(instr)->label, curr);
+                LNTable.insert(std::make_pair(static_cast<ASM::Label*>(instr)->label, curr));
                 break;
             case ASM::InstrType::move:
                 type = IT_MOVE;
@@ -92,7 +48,7 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
             }
 
             // 3) put information into table
-            UD_enter(curr, new UDinfo(uses, defs, type == IT_MOVE));
+            UDTable.insert(std::make_pair(curr, new UDinfo(uses, defs, type == IT_MOVE)));
 
             // 4) link with the previous node for falling through, if possible.
             //    Note that prev is NULL if the previous instruction is a JUMP.
@@ -114,12 +70,12 @@ GRAPH::Graph* FLOW::FG_AssemFlowGraph(ASM::InstrList* il) {
             // label = labels->head;
             if (label.size()) {
                 // quickly retieve the target node using the label-node table
-                dest = LT_lookup(label);
+                dest = LNTable.at(label);
                 // establish edge between this node and its jump target
                 curr->mygraph->addEdge(curr, dest);
             }
         }
     }
 
-    return &flow_graph;
+    return;
 }
