@@ -1,52 +1,13 @@
-#include "liveness.hpp"
-#include <unordered_map>
-#include "flowgraph.hpp"
 #include <assert.h>
 #include <algorithm>
-#include <stack>
+#include "liveness.hpp"
 using namespace LIVENESS;
-struct InOut {
-    std::set<int>* in;
-    std::set<int>* out;
-    std::set<int>* use;
-    std::set<int>* def;
-    InOut(std::set<int>* _use, std::set<int>* _def, std::set<int>* _in, std::set<int>* _out)
-        : use(_use)
-        , def(_def)
-        , in(_in)
-        , out(_out) {}
-};
 
-static std::unordered_map<GRAPH::Node*, InOut*> InOutTable;
-static std::stack<GRAPH::Node*> workset;
-static int gi = 0;
-static void init_INOUT(std::vector<GRAPH::Node*>* l) {
-    for (auto& it : InOutTable) {
-        delete it.second->def;
-        delete it.second->out;
-        delete it.second->use;
-        delete it.second->in;
-    }
-    InOutTable.clear();
-    while (!workset.empty()) workset.pop();
-    gi = 0;
-    for (auto it : *l) {
-        if (InOutTable.count(it) == 0) {
-            std::set<int>*use, *def, *in, *out;
-            use = new std::set<int>();
-            in = new std::set<int>();
-            out = new std::set<int>();
-            def = new std::set<int>();
-            for (auto it : *FLOW::FG_use(it)) { use->insert(it); }
-            for (auto it : *FLOW::FG_def(it)) def->insert(it);
-            InOutTable.insert(std::make_pair(it, new InOut(use, def, in, out)));
-        }
-    }
-}
-static void LivenessInteration(std::vector<GRAPH::Node*>* gl) {
-    // assert(InOutTable.empty());
+std::set<int>* Liveness::FG_Out(GRAPH::Node* node) { return InOutTable.at(node)->out; }
+std::set<int>* Liveness::FG_In(GRAPH::Node* node) { return InOutTable.at(node)->in; }
+void Liveness::analysis() {
     assert(workset.empty());
-    for (auto n : *gl) {
+    for (auto n : *flowgraph->nodes()) {
         workset.push(n);
         assert(InOutTable.at(n)->in->size() == 0);
         assert(InOutTable.at(n)->out->size() == 0);
@@ -85,14 +46,3 @@ static void LivenessInteration(std::vector<GRAPH::Node*>* gl) {
         node->out = newOut;
     }
 }
-
-std::vector<GRAPH::Node*>* LIVENESS::Liveness(std::vector<GRAPH::Node*>* l) {
-    init_INOUT(l);  // Initialize InOut table
-    // int cnt=0;
-    // for(auto it:*l)cnt++;
-    // std::cerr<<"node number"<<cnt<<std::endl;
-    LivenessInteration(l);
-    return l;
-}
-std::set<int>* LIVENESS::FG_Out(GRAPH::Node* node) { return InOutTable.at(node)->out; }
-std::set<int>* LIVENESS::FG_In(GRAPH::Node* node) { return InOutTable.at(node)->in; }

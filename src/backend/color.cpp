@@ -1,48 +1,20 @@
 #include "color.hpp"
 #include <assert.h>
-#include <stack>
 using namespace COLOR;
-#define REGNUM 13
-
-// Data structure
-static const std::set<Temp_Temp> Precolored
-    = std::set<Temp_Temp>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14});
-static std::set<GRAPH::Node*> SpillWorklist;
-static std::set<GRAPH::Node*> FreezeWorklist;
-static std::set<GRAPH::Node*> SimplifyWorklist;
-static std::unordered_map<Temp_Temp, Temp_Temp> AliasMap;
-static std::unordered_map<Temp_Temp, Temp_Temp> ColorMap;
-static std::set<Temp_Temp> SpilledNode;
-static std::set<ASM::Move*> UnionMove;
-static std::set<ASM::Move*> ActiveMove;
-static std::stack<GRAPH::Node*> SelectStack;
-static const COL_result COLresult = COL_result(&ColorMap, &SpilledNode, &UnionMove);
-static Temp_Temp findAlias(Temp_Temp k) {
+Temp_Temp COL_result::findAlias(Temp_Temp k) {
     if (!AliasMap.count(k)) return k;
     assert(AliasMap[k] != k);
     return AliasMap[k] = findAlias(AliasMap[k]);
 }
-static int NodeTemp(GRAPH::Node* node) { return (int)(u_int64_t)node->info; }
-static void init() {
-    SpillWorklist.clear();
-    FreezeWorklist.clear();
-    SimplifyWorklist.clear();
-    AliasMap.clear();
-    ColorMap.clear();
-    SpilledNode.clear();
-    UnionMove.clear();
-    ActiveMove.clear();
-    while (!SelectStack.empty()) SelectStack.pop();
-    for (int i = 0; i < 15; i++) ColorMap[i] = i;
-}
-static bool moveRelated(GRAPH::Node* node) {
-    for (auto instr : IG::movelist()->at(node)) {
-        if (ActiveMove.count(instr) || IG::worklistMove()->count(instr)) return true;
+int COL_result::NodeTemp(GRAPH::Node* node) { return (int)(u_int64_t)node->info; }
+bool COL_result::moveRelated(GRAPH::Node* node) {
+    for (auto instr : ig->Movelist.at(node)) {
+        if (ActiveMove.count(instr) || ig->WorklistMove.count(instr)) return true;
     }
     return false;
 }
-static void makeWorklist(std::vector<GRAPH::Node*>* ig) {
-    for (auto node : *ig) {
+void COL_result::makeWorklist() {
+    for (auto node : *ig->nodes()) {
         if (Precolored.count(NodeTemp(node))) continue;
         if (node->outDegree() >= REGNUM) {
             SpillWorklist.insert(node);
@@ -53,15 +25,15 @@ static void makeWorklist(std::vector<GRAPH::Node*>* ig) {
         }
     }
 }
-static void enableMove(GRAPH::Node* node) {
-    for (auto instr : IG::movelist()->at(node)) {
+void COL_result::enableMove(GRAPH::Node* node) {
+    for (auto instr : ig->Movelist.at(node)) {
         if (ActiveMove.count(instr)) {
             ActiveMove.erase(instr);
-            IG::worklistMove()->insert(instr);
+            ig->WorklistMove.insert(instr);
         }
     }
 }
-static void decrementDegree(GRAPH::Node* node) {
+void COL_result::decrementDegree(GRAPH::Node* node) {
     if (Precolored.count(NodeTemp(node))) return;
     if (node->outDegree() == REGNUM - 1) {
         enableMove(node);
@@ -72,7 +44,7 @@ static void decrementDegree(GRAPH::Node* node) {
         else { SimplifyWorklist.insert(node); }
     }
 }
-static void simplify() {
+void COL_result::simplify() {
     GRAPH::Node* node = *SimplifyWorklist.begin();
     SimplifyWorklist.erase(node);
     SelectStack.push(node);
@@ -81,16 +53,16 @@ static void simplify() {
         decrementDegree(adjnode);
     }
 }
-static void addWorklist(Temp_Temp temp) {
+void COL_result::addWorklist(Temp_Temp temp) {
     if (Precolored.count(temp)) return;
-    GRAPH::Node* node = IG::tempNodeMap()->at(temp);
+    GRAPH::Node* node = ig->TempNodeMap.at(temp);
     if (!moveRelated(node) && node->outDegree() < REGNUM) {
         assert(FreezeWorklist.count(node));
         FreezeWorklist.erase(node);
         SimplifyWorklist.insert(node);
     }
 }
-static void combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u no,v no
+void COL_result::combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u no,v no
     assert(!Precolored.count(NodeTemp(v)));
     if (FreezeWorklist.count(v)) {
         FreezeWorklist.erase(v);
@@ -100,9 +72,9 @@ static void combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u no,v n
     }
     assert(findAlias(NodeTemp(v)) == NodeTemp(v) && findAlias(NodeTemp(u)) == NodeTemp(u));
     AliasMap[NodeTemp(v)] = NodeTemp(u);
-    for (auto instr : IG::movelist()->at(v)) {
-        if (!ActiveMove.count(instr) && !IG::worklistMove()->count(instr)) continue;
-        IG::movelist()->at(u).insert(instr);
+    for (auto instr : ig->Movelist.at(v)) {
+        if (!ActiveMove.count(instr) && !ig->WorklistMove.count(instr)) continue;
+        ig->Movelist.at(u).insert(instr);
     }
     // enableMove(v);
     for (auto it : *v->succ()) {
@@ -116,7 +88,7 @@ static void combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u no,v n
         SpillWorklist.insert(u);
     }
 }
-static bool george(GRAPH::Node* u, GRAPH::Node* v) {
+bool COL_result::george(GRAPH::Node* u, GRAPH::Node* v) {
     assert(!Precolored.count(NodeTemp(v)));
     for (auto adjnode : *v->succ()) {
         if (adjnode->outDegree() < REGNUM || Precolored.count(NodeTemp(adjnode))
@@ -127,7 +99,7 @@ static bool george(GRAPH::Node* u, GRAPH::Node* v) {
     }
     return true;
 }
-static bool briggs(GRAPH::Node* u, GRAPH::Node* v) {
+bool COL_result::briggs(GRAPH::Node* u, GRAPH::Node* v) {
     std::set<GRAPH::Node*> cnt;
     for (auto node : *u->succ()) {
         if (node->outDegree() >= REGNUM || Precolored.count(NodeTemp(node))) cnt.insert(node);
@@ -137,16 +109,16 @@ static bool briggs(GRAPH::Node* u, GRAPH::Node* v) {
     }
     return cnt.size() < REGNUM;
 }
-static void unionNode() {
-    ASM::Move* instr = *IG::worklistMove()->begin();
-    IG::worklistMove()->erase(instr);
+void COL_result::unionNode() {
+    ASM::Move* instr = *ig->WorklistMove.begin();
+    ig->WorklistMove.erase(instr);
     Temp_Temp x = instr->dst.at(0);
     Temp_Temp y = instr->src.at(0);
     x = findAlias(x);
     y = findAlias(y);
     if (Precolored.count(y)) std::swap(x, y);
-    GRAPH::Node* u = IG::tempNodeMap()->at(x);
-    GRAPH::Node* v = IG::tempNodeMap()->at(y);
+    GRAPH::Node* u = ig->TempNodeMap.at(x);
+    GRAPH::Node* v = ig->TempNodeMap.at(y);
     /* 1. x pre,y pre
      * 2. x pre,y no
      * 3. x no,y pre (not exist)
@@ -166,21 +138,21 @@ static void unionNode() {
     } else
         ActiveMove.insert(instr);
 }
-static void freezeMove(GRAPH::Node* node) {  // must be a no-precolored node
-    for (auto instr : IG::movelist()->at(node)) {
-        if (!ActiveMove.count(instr) && !IG::worklistMove()->count(instr)) continue;
+void COL_result::freezeMove(GRAPH::Node* node) {  // must be a no-precolored node
+    for (auto instr : ig->Movelist.at(node)) {
+        if (!ActiveMove.count(instr) && !ig->WorklistMove.count(instr)) continue;
         Temp_Temp x = instr->dst.at(0);
         Temp_Temp y = instr->src.at(0);
         GRAPH::Node *u = node, *v;
         if (findAlias(y) == findAlias(NodeTemp(node))) {
-            v = IG::tempNodeMap()->at(findAlias(x));
+            v = ig->TempNodeMap.at(findAlias(x));
         } else {
             assert(findAlias(x) == findAlias(NodeTemp(node)));
-            v = IG::tempNodeMap()->at(findAlias(y));
+            v = ig->TempNodeMap.at(findAlias(y));
         }
         // u(node)-----v(adjnode)
         assert(ActiveMove.count(instr));
-        assert(!IG::worklistMove()->count(instr));
+        assert(!ig->WorklistMove.count(instr));
         ActiveMove.erase(instr);
         // precolored node do nothing
         if (Precolored.count(NodeTemp(v)))
@@ -192,14 +164,14 @@ static void freezeMove(GRAPH::Node* node) {  // must be a no-precolored node
         }
     }
 }
-static void freeze() {
+void COL_result::freeze() {
     GRAPH::Node* node = *FreezeWorklist.begin();
     assert(!Precolored.count(NodeTemp(node)));
     FreezeWorklist.erase(node);
     SimplifyWorklist.insert(node);
     freezeMove(node);
 }
-static void selectSpill(std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
+void COL_result::selectSpill() {
     for (auto it : SpillWorklist) {
         if (stkuse->count(NodeTemp(it))) continue;
         assert(!Precolored.count(NodeTemp(it)));
@@ -209,7 +181,7 @@ static void selectSpill(std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
         break;
     }
 }
-static void assignColor() {
+void COL_result::assignColor() {
     while (!SelectStack.empty()) {
         GRAPH::Node* node = SelectStack.top();
         SelectStack.pop();
@@ -232,22 +204,20 @@ static void assignColor() {
         ColorMap[node.first] = ColorMap[findAlias(node.first)];
     }
 }
-const COL_result* COLOR::COL_Color(std::vector<GRAPH::Node*>* ig,
-                                   std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
-    init();
-    makeWorklist(ig);
+void COL_result::COL_Color() {
+    makeWorklist();
     int cnt = 0;
     while (!SimplifyWorklist.empty() || !SpillWorklist.empty() || !FreezeWorklist.empty()
-           || !IG::worklistMove()->empty()) {
+           || !ig->WorklistMove.empty()) {
         if (!SimplifyWorklist.empty())
             simplify();
-        else if (!IG::worklistMove()->empty())
+        else if (!ig->WorklistMove.empty())
             unionNode();
         else if (!FreezeWorklist.empty())
             freeze();
         else if (!SpillWorklist.empty())
-            selectSpill(stkuse);
+            selectSpill();
     }
     assignColor();
-    return &COLresult;
+    return;
 }

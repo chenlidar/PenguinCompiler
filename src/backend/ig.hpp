@@ -6,9 +6,22 @@
 #include "flowgraph.hpp"
 #include "liveness.hpp"
 namespace IG {
-std::vector<GRAPH::Node*>* Create_ig(std::vector<GRAPH::Node*>*);
-std::set<ASM::Move*>* worklistMove();
-std::unordered_map<GRAPH::Node*, std::set<ASM::Move*>>* movelist();
-std::unordered_map<int, GRAPH::Node*>* tempNodeMap();
+class ConfGraph : public GRAPH::Graph {
+public:
+    std::set<ASM::Move*> WorklistMove;
+    std::unordered_map<GRAPH::Node*, std::set<ASM::Move*>> Movelist;
+    std::unordered_map<int, GRAPH::Node*> TempNodeMap;
+    ConfGraph(LIVENESS::Liveness* live) {
+        WorklistMove = std::set<ASM::Move*>();
+        Movelist = std::unordered_map<GRAPH::Node*, std::set<ASM::Move*>>();
+        TempNodeMap = std::unordered_map<int, GRAPH::Node*>();
+        Create_ig(live);
+    }
+
+private:
+    void Create_ig(LIVENESS::Liveness* live);
+    GRAPH::Node* Look_ig(Temp_Temp t);
+    void Enter_ig(Temp_Temp t1, Temp_Temp t2);
+};
 }  // namespace IG
 #endif
