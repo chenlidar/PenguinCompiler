@@ -41,7 +41,7 @@ static bool moveRelated(GRAPH::Node* node) {
     }
     return false;
 }
-static void makeWorklist(GRAPH::NodeList* ig) {
+static void makeWorklist(std::vector<GRAPH::Node*>* ig) {
     for (auto node : *ig) {
         if (Precolored.count(NodeTemp(node))) continue;
         if (node->outDegree() >= REGNUM) {
@@ -111,7 +111,7 @@ static void combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u no,v n
         it->mygraph->rmNode(v, it);
         decrementDegree(it);  // maybe a precolor
     }
-    if (u->outDegree() >= REGNUM && FreezeWorklist.count(u)) {//u may already in SpillWorklist
+    if (u->outDegree() >= REGNUM && FreezeWorklist.count(u)) {  // u may already in SpillWorklist
         FreezeWorklist.erase(u);
         SpillWorklist.insert(u);
     }
@@ -232,7 +232,7 @@ static void assignColor() {
         ColorMap[node.first] = ColorMap[findAlias(node.first)];
     }
 }
-const COL_result* COLOR::COL_Color(GRAPH::NodeList* ig,
+const COL_result* COLOR::COL_Color(std::vector<GRAPH::Node*>* ig,
                                    std::unordered_map<Temp_Temp, Temp_Temp>* stkuse) {
     init();
     makeWorklist(ig);

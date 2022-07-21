@@ -104,12 +104,14 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
     return iList;
 }
 
-static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,std::set<ASM::Move*>* clearMove) {
+static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,
+                                      std::set<ASM::Move*>* clearMove) {
     assert(il);
     ASM::InstrList* out = new ASM::InstrList();
     out->push_back(il->at(0));  // label
     // entry
-    out->push_back(new ASM::Oper("stmdb sp, {r4, r5, r6, r7, r8, r9, r10, fp, lr}", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
+    out->push_back(new ASM::Oper("stmdb sp, {r4, r5, r6, r7, r8, r9, r10, fp, lr}",
+                                 Temp_TempList(), Temp_TempList(), Temp_LabelList()));
     out->push_back(new ASM::Oper("mov fp,sp", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
     std::string s1 = "sub sp,sp,#" + std::to_string(stk_size & 0xff);
     out->push_back(new ASM::Oper(s1, Temp_TempList(), Temp_TempList(), Temp_LabelList()));
@@ -130,7 +132,8 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,std:
     }
     // exit
     out->push_back(new ASM::Oper("mov sp,fp", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
-    out->push_back(new ASM::Oper("ldmdb sp, {r4, r5, r6, r7, r8, r9, r10, fp, lr}", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
+    out->push_back(new ASM::Oper("ldmdb sp, {r4, r5, r6, r7, r8, r9, r10, fp, lr}",
+                                 Temp_TempList(), Temp_TempList(), Temp_LabelList()));
     out->push_back(new ASM::Oper("bx lr", Temp_TempList(), Temp_TempList(), Temp_LabelList()));
 
     return out;
@@ -142,12 +145,12 @@ ASM::InstrList* RA::RA_RegAlloc(ASM::InstrList* il, int stksize) {
     while (1) {
         GRAPH::Graph* G = FLOW::FG_AssemFlowGraph(il);
         LIVENESS::Liveness(G->nodes());
-        GRAPH::NodeList* ig = IG::Create_ig(G->nodes());
+        std::vector<GRAPH::Node*>* ig = IG::Create_ig(G->nodes());
         const COLOR::COL_result* cr = COLOR::COL_Color(ig, stkuse);
         if (!cr->spills->empty())
             il = RA_Spill(il, cr, stkmap, stkuse);
         else {
-            il = funcEntryExit3(il, cr->coloring,cr->UnionMove);  // add stack instr
+            il = funcEntryExit3(il, cr->coloring, cr->UnionMove);  // add stack instr
             for (auto it : *il) { it->print(cr->coloring); }
             break;
         }

@@ -1,5 +1,5 @@
 project(PenguinCompiler)
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_COMPILER "clang++-10")
 file(GLOB_RECURSE SRC "src/*.cpp")
