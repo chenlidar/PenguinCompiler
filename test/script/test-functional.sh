@@ -116,9 +116,9 @@ test_single() {
 		echo "fail to link"; exit -1
 	fi
 	if [ -f $func_testcase_dir/$test_name.in ]; then
-		qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
+		qemu-arm -B 0x100000000 $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out
 	else
-		qemu-arm $build_dir/$test_name > $build_dir/$test_name.out
+		qemu-arm -B 0x100000000 $build_dir/$test_name > $build_dir/$test_name.out
 	fi
 	echo -e \\n$? >> $build_dir/$test_name.out
 	diff -Bb $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null

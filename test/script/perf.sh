@@ -169,9 +169,9 @@ test_single() {
 	fi
 	
 	if [ -f $func_testcase_dir/$test_name.in ]; then
-		qemu-arm $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out 2>>$build_dir/perf-log/$test_name.log
+		qemu-arm -B 0x100000000 $build_dir/$test_name < $func_testcase_dir/$test_name.in > $build_dir/$test_name.out 2>>$build_dir/perf-log/$test_name.log
 	else
-		qemu-arm $build_dir/$test_name > $build_dir/$test_name.out 2>>$build_dir/perf-log/$test_name.log
+		qemu-arm -B 0x100000000 $build_dir/$test_name > $build_dir/$test_name.out 2>>$build_dir/perf-log/$test_name.log
 	fi
 	echo -e \\n$? >> $build_dir/$test_name.out
 	diff -Bb $build_dir/$test_name.out $func_testcase_dir/$test_name.out > /dev/null 2>/dev/null

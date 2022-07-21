@@ -1,7 +1,7 @@
 project(PenguinCompiler)
 cmake_minimum_required(VERSION 3.18)
 
-set(CMAKE_CXX_COMPILER "clang++-10")
+set(CMAKE_CXX_COMPILER "clang++")
 file(GLOB_RECURSE SRC "src/*.cpp")
 add_compile_options(-O2 -g -std=c++11)
 include_directories(src)
