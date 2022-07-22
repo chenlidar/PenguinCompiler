@@ -34,7 +34,8 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
             *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
         } break;
         case TY::tyType::Ty_float: {
-            assert(0);
+            assert(entry->ty->value);
+            *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
         } break;
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";

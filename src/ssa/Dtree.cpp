@@ -1,29 +1,30 @@
 #include "Dtree.hpp"
 #include "assert.h"
 namespace DTREE {
-Dtree::Dtree(GRAPH::Graph* g)
-    : cnt()
-    , dfnum()
-    , vertex()
-    , parent()
-    , samedom()
-    , semi()
-    , idom()
-    , bucket()
-    , best()
-    , ancestor() {
-    dfs(g->nodes()->at(0), nullptr);  // must be a function label
-    assert(cnt == g->nodes()->size());
-    for (int i = cnt - 1; i >= 1; i--) {
+Dtree::Dtree(GRAPH::Graph* _g)
+    : cnt(0)
+    , dfnum(_g->nodecount, -1)
+    , vertex(_g->nodecount, -1)
+    , parent(_g->nodecount, -1)
+    , samedom(_g->nodecount, -1)
+    , semi(_g->nodecount, -1)
+    , idom(_g->nodecount, -1)
+    , bucket(_g->nodecount, std::vector<int>())
+    , best(_g->nodecount, -1)
+    , ancestor(_g->nodecount, -1)
+    , children(_g->nodecount, std::vector<int>()) {
+    g = _g;
+    dfs(0, -1);  // must be a function label
+    for (int i = g->nodecount - 1; i >= 1; i--) {
         auto node = vertex[i];
         auto p = parent[node];
         auto s = p;
-        for (auto pred : *node->pred()) {
-            GRAPH::Node* nxts = nullptr;
-            if (dfnum[pred] <= dfnum[node])
-                nxts = pred;
+        for (auto pred : *g->nodes()->at(node)->pred()) {
+            int nxts = -1;
+            if (dfnum[pred->mykey] <= dfnum[node])
+                nxts = pred->mykey;
             else
-                nxts = semi[findLowestSemiAncestor(pred)];
+                nxts = semi[findLowestSemiAncestor(pred->mykey)];
             if (dfnum[s] > dfnum[nxts]) s = nxts;
         }
         semi[node] = s;
@@ -39,40 +40,32 @@ Dtree::Dtree(GRAPH::Graph* g)
         bucket[p].clear();
     }
     for (int i = 1; i < cnt; i++) {
-        auto node = vertex[i];
-        if (samedom.count(node)) { idom[node] = idom[samedom[node]]; }
+        int node = vertex[i];
+        if (samedom[node] != -1) { idom[node] = idom[samedom[node]]; }
     }
-    for(int i=0;i<cnt;i++){
-        auto node = g->nodes()->at(i);
-        this->addNode(node);
-    }
-    for(int i=0;i<cnt;i++){
-        auto node = g->nodes()->at(i);
-        this->addNode(node);
-        if(idom.count(node)){
-            this->addEdge(this->nodes()->at(idom[node]->mykey),this->nodes()->at(node->mykey));
-        }
+    for (int i = 1; i < cnt; i++) {
+        assert(idom[i] != -1);
+        this->children[idom[i]].push_back(i);
     }
 }
-void Dtree::dfs(GRAPH::Node* node, GRAPH::Node* fa) {
-    assert(!dfnum.count(node));
+void Dtree::dfs(int node, int fa) {
     dfnum[node] = cnt;
     vertex[cnt] = node;
     parent[node] = fa;
     cnt++;
-    for (auto succ : *node->succ()) {
-        if (dfnum.count(succ)) continue;
-        dfs(succ, node);
+    for (auto succ : *g->nodes()->at(node)->succ()) {
+        if (dfnum[succ->mykey] != -1) continue;
+        dfs(succ->mykey, node);
     }
 }
-void Dtree::link(GRAPH::Node* fa, GRAPH::Node* node) {
+void Dtree::link(int fa, int node) {
     ancestor[node] = fa;
     best[node] = node;
 }
-GRAPH::Node* Dtree::findLowestSemiAncestor(GRAPH::Node* node) {
-    auto a = ancestor[node];
-    if (ancestor.count(a)) {
-        auto b = findLowestSemiAncestor(a);
+int Dtree::findLowestSemiAncestor(int node) {
+    int a = ancestor[node];
+    if (ancestor[a] != -1) {
+        int b = findLowestSemiAncestor(a);
         ancestor[node] = ancestor[a];
         if (dfnum[semi[b]] < dfnum[semi[best[node]]]) { best[node] = b; }
     }

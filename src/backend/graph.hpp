@@ -44,10 +44,10 @@ struct Node {
 
 class Graph {
 private:
-    int nodecount;
     std::vector<Node*> mynodes;
 
 public:
+    int nodecount;
     Graph() {
         nodecount = 0;
         mynodes = std::vector<Node*>();
