@@ -14,5 +14,6 @@ private:
     std::unordered_map<Temp_Temp,std::vector<int>> defsites;
     std::unordered_map<Temp_Temp,std::unordered_set<int>> Aphi;
     void placePhi();
+    // Optimizer opt;
 };
 }  // namespace SSA
