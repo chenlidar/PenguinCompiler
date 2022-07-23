@@ -156,13 +156,16 @@ static IR::Exp* TyIRBinop(IR::binop bop, TY::Type* lty, IR::Exp* lexp, TY::Type*
     } else
         assert(0);
 }
-
+bool isRealregister(Temp_Temp temp) {
+    return temp < 1000;  // according to temptemp.hpp
+}
 static Temp_Temp* getDef(IR::Stm* stm) {  // return 0 means no def,else return the def temp_temp
     switch (stm->kind) {
     case IR::stmType::move: {
         auto movstm = static_cast<IR::Move*>(stm);
         if (movstm->dst->kind == IR::expType::temp) {
             auto tempexp = static_cast<IR::Temp*>(movstm->dst);
+            if (isRealregister(tempexp->tempid)) return 0;
             return &tempexp->tempid;
         } else
             return 0;
@@ -182,6 +185,7 @@ static std::vector<Temp_Temp*> getUses(IR::Stm* stm) {
     auto processTempExp = [&](IR::Exp* exp) {
         if (exp->kind != IR::expType::temp) return;
         auto tempexp = static_cast<IR::Temp*>(exp);
+        if (isRealregister(tempexp->tempid)) return;
         uses.push_back(&tempexp->tempid);
     };
     auto processExpInMove = [&](IR::Exp* exp) {
