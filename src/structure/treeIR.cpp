@@ -120,23 +120,14 @@ void Label::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     ls->push_back(new ASM::Label(label));
 }
 void Jump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
-    if (exp->kind == IR::expType::name)  // Jump(Name(Label(L)),LabelList(Lable(L)))
-    {
-        assert(this->jumps.size() == 1);  // must have jumps in our language
-        auto tname = static_cast<IR::Name*>(exp);
-        if (tname->name == "RETURN") {
-            jumps[0] = exitlabel;
-            ls->push_back(
-                new ASM::Oper(string("b ") + exitlabel, Temp_TempList(), Temp_TempList(), jumps));
-        } else
-            ls->push_back(new ASM::Oper(string("b ") + tname->name, Temp_TempList(),
-                                        Temp_TempList(), jumps));
-    } else if (exp->kind == IR::expType::temp) {
-        auto ttmp = static_cast<IR::Temp*>(exp);
-        ls->push_back(new ASM::Oper(string("bx `s0"), Temp_TempList(),
-                                    Temp_TempList(1, ttmp->tempid), jumps));
+    if (target == "RETURN") {
+        target = exitlabel;
+        ls->push_back(
+            new ASM::Oper(string("b ") + exitlabel, Temp_TempList(), Temp_TempList(), ASM::Targets({target})));
     } else
-        assert(0);
+        ls->push_back(new ASM::Oper(string("b ") + target, Temp_TempList(),
+                                    Temp_TempList(), ASM::Targets({target})));
+
     // Jump( temp ,LabelList( NamedLabel("END") ))
 }
 void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
@@ -381,7 +372,6 @@ Temp_Temp Name::ir2asm(ASM::InstrList* ls) {
     return dst[0];
 }
 Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
-    assert(this->fun->kind == expType::name);
     int cnt = 0, stksize = 0;
     IR::StmList *head = nullptr, *tail = nullptr;
     for (auto it : this->args) {
@@ -411,7 +401,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
     for (int i = 0; i < cnt; i++) { uses.push_back(i); }
 #ifndef VFP
     Temp_Temp ftemp = Temp_newtemp();
-    if (static_cast<IR::Name*>(this->fun)->name == "putfloat") {
+    if (fun == "putfloat") {
         ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1, ftemp),
@@ -421,7 +411,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(),
                                     Temp_TempList(), ASM::Targets()));
     }
-    if (static_cast<IR::Name*>(this->fun)->name == "putfarray") {
+    if (fun == "putfarray") {
         ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1, ftemp),
                                     Temp_TempList(), ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(),
@@ -432,7 +422,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
 #endif
 
 #ifndef VFP
-    if (static_cast<IR::Name*>(this->fun)->name == "__aeabi_fadd") {
+    if (fun == "__aeabi_fadd") {
         ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
@@ -441,7 +431,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
                                     Temp_TempList(), ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
-    } else if (static_cast<IR::Name*>(this->fun)->name == "__aeabi_fsub") {
+    } else if (fun == "__aeabi_fsub") {
         ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
@@ -450,7 +440,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
                                     Temp_TempList(), ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
-    } else if (static_cast<IR::Name*>(this->fun)->name == "__aeabi_fmul") {
+    } else if (fun == "__aeabi_fmul") {
         ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
@@ -459,7 +449,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
                                     Temp_TempList(), ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
-    } else if (static_cast<IR::Name*>(this->fun)->name == "__aeabi_fdiv") {
+    } else if (fun == "__aeabi_fdiv") {
         ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
         ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
@@ -469,20 +459,20 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
     } else {
-        ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name,
+        ls->push_back(new ASM::Oper(std::string("bl ") + fun,
                                     Temp_TempList({0, 1, 2, 3, 14, 12}), uses, ASM::Targets()));
     }
 #else
-    ls->push_back(new ASM::Oper(std::string("bl ") + static_cast<IR::Name*>(this->fun)->name,
+    ls->push_back(new ASM::Oper(std::string("bl ") + fun,
                                 Temp_TempList({0, 1, 2, 3, 14, 12}), uses, ASM::Targets()));
 #endif
 #ifndef VFP
-    if (static_cast<IR::Name*>(this->fun)->name == "putfloat"
-        || (static_cast<IR::Name*>(this->fun)->name == "putfarray")) {
+    if (fun == "putfloat"
+        || (fun == "putfarray")) {
         ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), Temp_TempList(),
                                     Temp_TempList(1, ftemp), ASM::Targets()));
     }
-    if (static_cast<IR::Name*>(this->fun)->name == "getfloat") {
+    if (fun == "getfloat") {
         ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
     }
@@ -506,7 +496,7 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
 
 // quad
 Stm* Label::quad() { return new Label(label); }
-Stm* Jump::quad() { return new Jump(exp->quad(), jumps); }
+Stm* Jump::quad() { return new Jump(target); }
 Stm* Cjump::quad() { return new Cjump(op, left->quad(), right->quad(), trueLabel, falseLabel); }
 Stm* Move::quad() {
     if (src->kind == expType::mem && dst->kind == expType::mem) {
@@ -539,13 +529,12 @@ Exp* Call::quad() {
     vector<Exp*> tm;
     for (auto it : args) tm.push_back(it->quad());
     Temp_Temp ntp = Temp_newtemp();
-    return new Eseq(new Move(new Temp(ntp), new Call(fun->quad(), tm)), new Temp(ntp));
+    return new Eseq(new Move(new Temp(ntp), new Call(fun, tm)), new Temp(ntp));
 }
 
 void Label::printIR() { std::cerr << "LABELSTM:    " << label << endl; }
 void Jump::printIR() {
-    std::cerr << "JUMPSTM:    ";
-    exp->printIR();
+    std::cerr << "JUMPSTM:    "+target;
     std::cerr << endl;
 }
 void Cjump::printIR() {
@@ -583,8 +572,7 @@ void Mem::printIR() {
 }
 void Name::printIR() { std::cerr << name; }
 void Call::printIR() {
-    std::cerr << "( call ";
-    fun->printIR();
+    std::cerr << "( call "+fun;
     std::cerr << '(';
     for (auto it : args) {
         it->printIR();

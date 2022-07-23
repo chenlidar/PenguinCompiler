@@ -60,10 +60,10 @@ static TY::tyType getArrayType(TY::Type* ty) {
     return ty->kind;
 }
 static IR::Exp* ir_i2f(IR::Exp* exp) {
-    return new IR::Call(new IR::Name("__aeabi_i2f"), IR::ExpList(1, exp));
+    return new IR::Call("__aeabi_i2f", IR::ExpList(1, exp));
 }
 static IR::Exp* ir_f2i(IR::Exp* exp) {
-    return new IR::Call(new IR::Name("__aeabi_f2iz"), IR::ExpList(1, exp));
+    return new IR::Call("__aeabi_f2iz", IR::ExpList(1, exp));
 }
 template <typename T> static T cal(IR::binop op, T l, T r) {
     switch (op) {
@@ -124,10 +124,10 @@ static IR::Exp* calIRfloat(IR::binop bop, IR::Exp* lexp, IR::Exp* rexp) {
     param.push_back(lexp);
     param.push_back(rexp);
     switch (bop) {
-    case IR::binop::T_plus: return new IR::Call(new IR::Name("__aeabi_fadd"), param);
-    case IR::binop::T_minus: return new IR::Call(new IR::Name("__aeabi_fsub"), param);
-    case IR::binop::T_mul: return new IR::Call(new IR::Name("__aeabi_fmul"), param);
-    case IR::binop::T_div: return new IR::Call(new IR::Name("__aeabi_fdiv"), param);
+    case IR::binop::T_plus: return new IR::Call("__aeabi_fadd", param);
+    case IR::binop::T_minus: return new IR::Call("__aeabi_fsub", param);
+    case IR::binop::T_mul: return new IR::Call("__aeabi_fmul", param);
+    case IR::binop::T_div: return new IR::Call("__aeabi_fdiv", param);
     default: assert(0);
     }
     return nullptr;

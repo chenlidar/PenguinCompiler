@@ -135,7 +135,10 @@ int main(int argc, char** argv) {
                 out->tail = initarray;
             }
             IR::Stm* stmq = QUADRUPLE::handle(out);
-            out = CANON::handle(stmq);
+            out=CANON::linearize(stmq);
+            CANON::Block blocks=CANON::basicBlocks(out);
+            //TODO:do ssa in this place
+            out = CANON::traceSchedule(blocks);
             //
             // showir(out);
             int stksize = fenv->look(funcname)->stksize;
@@ -146,7 +149,10 @@ int main(int argc, char** argv) {
         } else {
             IR::StmList* out = CANON::linearize(stm);
             IR::Stm* stmq = QUADRUPLE::handle(out);
-            out = CANON::handle(stmq);
+            out=CANON::linearize(stmq);
+            CANON::Block blocks=CANON::basicBlocks(out);
+            //TODO:do ssa in this place
+            out = CANON::traceSchedule(blocks);
             //
             // showir(out);
             bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;

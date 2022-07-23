@@ -17,14 +17,11 @@ struct ExpRefList {
     ExpRefList* tail;
     ExpRefList(Exp** _head, ExpRefList* _tail)
         : head(_head)
-        , tail(_tail) {
-        if (!*head) { assert(0); }
-    }
+        , tail(_tail) {}
 };
 static bool commute(Stm* x, Exp* y) {
     if (isNop(x)) return true;
-    if (y->kind == expType::name || y->kind == expType::constx)
-        return true;
+    if (y->kind == expType::name || y->kind == expType::constx) return true;
     return false;
 }
 
@@ -51,9 +48,9 @@ static Stm* reorder(ExpRefList* rlist) {
 static ExpRefList* get_call_rlist(Exp* exp) {
     ExpRefList *rlist, *curr;
     ExpList& args = static_cast<Call*>(exp)->args;
-    curr = rlist = new ExpRefList(&static_cast<Call*>(exp)->fun, NULL);
+    curr = rlist = new ExpRefList(NULL, NULL);
     for (auto& arg : args) { curr = curr->tail = new ExpRefList(&arg, NULL); }
-    return rlist;
+    return rlist->tail;
 }
 static StmExp do_exp(Exp* exp) {
     if (exp->kind == expType::binop) {
@@ -76,8 +73,7 @@ static Stm* do_stm(Stm* stm) {
         Seq* s = static_cast<Seq*>(stm);
         return seq(do_stm(s->left), do_stm(s->right));
     } else if (stm->kind == stmType::jump) {
-        Jump* s = static_cast<Jump*>(stm);
-        return seq(reorder(new ExpRefList(&s->exp, NULL)), stm);
+        return stm;
     } else if (stm->kind == stmType::cjump) {
         Cjump* s = static_cast<Cjump*>(stm);
         return seq(reorder(new ExpRefList(&s->left, new ExpRefList(&s->right, NULL))), stm);
@@ -148,8 +144,7 @@ static StmListList* mkBlocks(StmList* stms, Temp_Label done) {
             if (stm->kind == IR::stmType::label) {  // only add jump,dont add stm;
                 state = OUT;
                 std::string lab = static_cast<Label*>(stm)->label;
-                tail = tail->tail
-                    = new StmList(new Jump(new Name(lab), Temp_LabelList(1, lab)), nullptr);
+                tail = tail->tail = new StmList(new Jump(lab), nullptr);
                 ltail = ltail->tail = new StmListList(head->tail, nullptr);
             } else {
                 // state=IN, continue
@@ -180,8 +175,7 @@ static StmListList* mkBlocks(StmList* stms, Temp_Label done) {
     }
     if (state == IN) {
         state = OUT;
-        tail = tail->tail
-            = new StmList(new Jump(new Name(done), Temp_LabelList(1, done)), nullptr);
+        tail = tail->tail = new StmList(new Jump(done), nullptr);
         ltail = ltail->tail = new StmListList(head->tail, nullptr);
     }
     return lhead->tail;
@@ -220,8 +214,7 @@ StmList* CANON::traceSchedule(Block b) {
         IR::Stm* jump = tail->stm;
         while (1) {
             if (jump->kind == IR::stmType::jump) {
-                std::string nextlabel = static_cast<IR::Jump*>(jump)->jumps[0];
-                assert(static_cast<Jump*>(jump)->jumps.size() == 1);
+                std::string nextlabel = static_cast<IR::Jump*>(jump)->target;
                 if (block_env.count(nextlabel) == 0) break;
                 block = block_env.at(nextlabel);
                 block_env.erase(nextlabel);
@@ -257,8 +250,7 @@ StmList* CANON::traceSchedule(Block b) {
                     tail->tail = new StmList(new IR::Label(falselabel), nullptr);
                     last = tail;
                     tail = last->tail;
-                    tail->tail = new StmList(new IR::Jump(new IR::Name(fl), Temp_LabelList(1, fl)),
-                                             nullptr);
+                    tail->tail = new StmList(new IR::Jump(fl), nullptr);
                     last = tail;
                     tail = last->tail;
                     break;
@@ -308,12 +300,10 @@ ASM::InstrList* CANON::funcEntryExit2(ASM::InstrList* list, bool isvoid, bool is
     }
     if (ismain) {
 
-        /* list->push_back(new ASM::Oper(std::string("mov r8, #0xff"), Temp_TempList(), Temp_TempList(),
-                                      Temp_LabelList()));
-        list->push_back(new ASM::Oper(std::string("and r0, r0, r8"), Temp_TempList(), Temp_TempList(),
-                                      Temp_LabelList()));
-        list->push_back(new ASM::Oper(std::string("mov r7, r0"), Temp_TempList(), Temp_TempList(),
-                                      Temp_LabelList()));
+        /* list->push_back(new ASM::Oper(std::string("mov r8, #0xff"), Temp_TempList(),
+        Temp_TempList(), Temp_LabelList())); list->push_back(new ASM::Oper(std::string("and r0, r0,
+        r8"), Temp_TempList(), Temp_TempList(), Temp_LabelList())); list->push_back(new
+        ASM::Oper(std::string("mov r7, r0"), Temp_TempList(), Temp_TempList(), Temp_LabelList()));
         list->push_back(new ASM::Oper(std::string("mov r0, #10"), Temp_TempList(), Temp_TempList(),
                                       Temp_LabelList()));
         list->push_back(

@@ -79,10 +79,9 @@ public:
 };
 class Jump : public Stm {
 public:
-    Exp* exp;
-    vector<string> jumps;
-    Jump(Exp* ep, vector<string> s) {
-        exp = ep, jumps = s;
+    string target;
+    Jump(string _target) {
+        target=_target;
         kind = stmType::jump;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
@@ -194,9 +193,9 @@ public:
 };
 class Call : public Exp {
 public:
-    Exp* fun;
+    string fun;
     vector<Exp*> args;
-    Call(Exp* fu, vector<Exp*> ar) {
+    Call(string fu, vector<Exp*> ar) {
         args = ar, fun = fu;
         kind = expType::call;
     }

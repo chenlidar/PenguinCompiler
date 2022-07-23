@@ -43,7 +43,7 @@ struct Node {
 };
 
 class Graph {
-private:
+protected:
     std::vector<Node*> mynodes;
 
 public:

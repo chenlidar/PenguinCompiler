@@ -1,9 +1,12 @@
 #include "../backend/graph.hpp"
+#include <unordered_set>
 namespace DTREE {
 class Dtree {
 public:
+    std::vector<std::vector<int>> DF;
     std::vector<std::vector<int>> children;
     Dtree(GRAPH::Graph* _g);
+    void computeDF();
 
 private:
     int cnt;
@@ -20,5 +23,7 @@ private:
     void dfs(int root, int fa);
     void link(int fa, int node);
     int findLowestSemiAncestor(int node);
+    void computeDF(int node);
+    int find(int node);
 };
 }  // namespace DTREE
