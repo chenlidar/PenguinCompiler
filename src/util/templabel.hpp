@@ -5,7 +5,7 @@
 using std::string;
 using std::to_string;
 class labelManager {
-   public:
+public:
     labelManager() { labelno = 1; }
     string newlabel() {
         int ret = labelno;
@@ -13,10 +13,10 @@ class labelManager {
         return "AaBbcCL" + to_string(ret);
     }
 
-   private:
+private:
     int labelno;
 };
 std::string Temp_newlabel();
 typedef std::string Temp_Label;
-typedef std::vector<Temp_Label> Temp_LabelList; 
+typedef std::vector<Temp_Label> Temp_LabelList;
 #endif

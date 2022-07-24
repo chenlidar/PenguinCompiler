@@ -72,30 +72,28 @@ int Dtree::findLowestSemiAncestor(int node) {
     }
     return best[node];
 }
-int Dtree::find(int node){
-    if(ancestor[node]==node)return node;
-    return ancestor[node]=find(ancestor[node]);
+int Dtree::find(int node) {
+    if (ancestor[node] == node) return node;
+    return ancestor[node] = find(ancestor[node]);
 }
 void Dtree::computeDF(int node) {
     DF = std::vector<std::vector<int>>(g->nodecount, std::vector<int>());
-    for(auto succ:*g->nodes()->at(node)->succ()){
-        if(idom[succ->mykey]!=node)DF[node].push_back(succ->mykey);
+    for (auto succ : *g->nodes()->at(node)->succ()) {
+        if (idom[succ->mykey] != node) DF[node].push_back(succ->mykey);
     }
-    for(int succ:children[node]){
-        assert(ancestor[succ]==succ);
+    for (int succ : children[node]) {
+        assert(ancestor[succ] == succ);
         computeDF(succ);
-        ancestor[succ]=node;
+        ancestor[succ] = node;
     }
-    for(int succ:children[node]){
-        for(int w:DF[succ]){
-            if(node==w||find(w)!=node){
-                DF[node].push_back(w);
-            }
+    for (int succ : children[node]) {
+        for (int w : DF[succ]) {
+            if (node == w || find(w) != node) { DF[node].push_back(w); }
         }
     }
 }
-void Dtree::computeDF(){
-    for(int i=0;i<ancestor.size();i++)ancestor[i]=i;
+void Dtree::computeDF() {
+    for (int i = 0; i < ancestor.size(); i++) ancestor[i] = i;
     computeDF(0);
 }
 }  // namespace DTREE

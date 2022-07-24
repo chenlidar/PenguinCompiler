@@ -135,9 +135,9 @@ int main(int argc, char** argv) {
                 out->tail = initarray;
             }
             IR::Stm* stmq = QUADRUPLE::handle(out);
-            out=CANON::linearize(stmq);
-            CANON::Block blocks=CANON::basicBlocks(out);
-            //TODO:do ssa in this place
+            out = CANON::linearize(stmq);
+            CANON::Block blocks = CANON::basicBlocks(out);
+            // TODO:do ssa in this place
             out = CANON::traceSchedule(blocks);
             //
             // showir(out);
@@ -149,9 +149,9 @@ int main(int argc, char** argv) {
         } else {
             IR::StmList* out = CANON::linearize(stm);
             IR::Stm* stmq = QUADRUPLE::handle(out);
-            out=CANON::linearize(stmq);
-            CANON::Block blocks=CANON::basicBlocks(out);
-            //TODO:do ssa in this place
+            out = CANON::linearize(stmq);
+            CANON::Block blocks = CANON::basicBlocks(out);
+            // TODO:do ssa in this place
             out = CANON::traceSchedule(blocks);
             //
             // showir(out);

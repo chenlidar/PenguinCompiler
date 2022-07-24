@@ -9,6 +9,9 @@ class CFGraph : public GRAPH::Graph {  // Node->info:IR::Stmlist*--a block begin
                                        // with jump/cjump
 public:
     CFGraph(CANON::Block blocks);
+    int exitnum;
+
+protected:
     std::vector<std::unordered_set<Temp_Temp>> orig;
 
 private:
