@@ -12,7 +12,8 @@ public:
 private:
     DTREE::Dtree* dtree;
     std::unordered_map<Temp_Temp, std::vector<int>> defsites;
-    std::unordered_map<Temp_Temp, std::unordered_map<int, IR::Stm*>> Aphi;
+    std::unordered_map<int, std::unordered_map<Temp_Temp, std::pair<IR::Stm*, std::vector<int>>>>
+        Aphi;
     std::unordered_map<Temp_Temp, std::stack<Temp_Temp>> stk;
     void placePhi();
     void rename();

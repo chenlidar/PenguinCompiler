@@ -32,7 +32,8 @@ void SSAIR::placePhi() {
                                    new IR::Call("$", IR::ExpList({})));  // push_back in rename
                 IR::StmList* stmlist = (IR::StmList*)this->mynodes[y]->nodeInfo();
                 stmlist->tail = new IR::StmList(phifunc, stmlist->tail);
-                Aphi[y].insert(std::make_pair(dst.first, phifunc));
+                Aphi[y].insert(
+                    std::make_pair(dst.first, std::make_pair(phifunc, std::vector<int>())));
                 if (!orig[y].count(dst.first)) {
                     worklist.insert(y);
                     orig[y].insert(dst.first);
@@ -74,9 +75,10 @@ void SSAIR::rename(int node) {
     for (auto succn : *mynodes[node]->succ()) {
         int succ = succn->mykey;
         for (auto it : Aphi[succ]) {
-            IR::Move* phimove = static_cast<IR::Move*>(it.second);
+            IR::Move* phimove = static_cast<IR::Move*>(it.second.first);
             IR::Call* phicall = static_cast<IR::Call*>(phimove->src);
             phicall->args.push_back(new IR::Temp(stk[it.first].top()));
+            it.second.second.push_back(node);
         }
     }
     for (auto succ : dtree->children[node]) rename(succ);
