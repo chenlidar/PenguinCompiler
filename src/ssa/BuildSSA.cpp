@@ -59,7 +59,8 @@ void SSAIR::rename(int node) {
                 if (stk[static_cast<IR::Temp*>(*usev)->tempid].empty()) {
                     *usev = new IR::Const(0);  // var not decl replace with const 0
                 } else {
-                    *usev = new IR::Temp(stk[static_cast<IR::Temp*>(*usev)->tempid].top());
+                    static_cast<IR::Temp*>(*usev)->tempid
+                        = stk[static_cast<IR::Temp*>(*usev)->tempid].top();
                 }
             }
         }
@@ -69,7 +70,7 @@ void SSAIR::rename(int node) {
             Temp_Temp temp = Temp_newtemp();
             stk[static_cast<IR::Temp*>(*dst)->tempid].push(temp);
             rev.push_back(static_cast<IR::Temp*>(*dst)->tempid);
-            *dst = new IR::Temp(temp);
+            static_cast<IR::Temp*>(*dst)->tempid = temp;
         }
     }
     for (auto succn : *mynodes[node]->succ()) {

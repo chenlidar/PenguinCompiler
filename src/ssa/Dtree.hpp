@@ -1,3 +1,4 @@
+#pragma once
 #include "../backend/graph.hpp"
 #include <unordered_set>
 namespace DTREE {
