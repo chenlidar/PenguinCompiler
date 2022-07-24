@@ -7,7 +7,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>
+#include <functional>
 #include "../util/utils.hpp"
+using std::function;
 using std::move;
 using std::queue;
 using std::unordered_map;
@@ -45,12 +47,18 @@ bool isNecessaryStm(IR::Stm* stm) {
     }
     return false;
 }
+Temp_Label getNodeLabel(GRAPH::Node* node) {
+    return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm)->label;
+}
 SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     unordered_map<Temp_Temp, TempInfo> tempTable;
     unordered_map<IR::Stm*, int> stmBlockmap;
     unordered_set<IR::Stm*> ActivatedStm;
-    queue<IR::Stm*> Curstm;
+    unordered_set<int> ActivatedBlock;
     unordered_map<int, IR::Stm*> blockJumpStm;
+    queue<IR::Stm*> Curstm;
+    auto nodesz = ir->nodes()->size();
+    vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
     auto setup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -59,14 +67,17 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
                 auto stm = stml->stm;
                 // set up stm-block mapping
                 stmBlockmap[stm] = it->mykey;
+
                 // set up def-stm mapping
                 auto df = getDef(stm);
-                if (df) tempTable[*df].def = stm;
+                if (df) tempTable[static_cast<IR::Temp*>(*df)->tempid].def = stm;
                 // set up seed stm
                 bool necessary = isNecessaryStm(stm);
                 if (necessary) {
                     ActivatedStm.insert(stm);
                     Curstm.push(stm);
+                    // set up activated block
+                    ActivatedBlock.insert(it->mykey);
                 }
                 // auto us = getUses(stm);
                 // for(auto it:us){
@@ -91,29 +102,131 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
             // upload to the def of uses
             auto uses = getUses(stm);
             for (auto it : uses) {
-                auto def = tempTable[*it].def;
+                auto def = tempTable[static_cast<IR::Temp*>(*it)->tempid].def;
                 if (!ActivatedStm.count(def)) {
+                    // set up activated block
+                    ActivatedBlock.insert(stmBlockmap[def]);
                     ActivatedStm.insert(def);
                     Curstm.push(def);
                 }
             }
             // upload to branch stm
-            auto block = ir->nodes()->at(stmBlockmap[stm]);
-            auto labelstm = ((IR::StmList*)(block->info))->stm;
-            if (!ActivatedStm.count(labelstm)) {
-                ActivatedStm.insert(labelstm);
-                for (auto it : *(block->pred())) {
-                    auto jmp = blockJumpStm[it->mykey];
-                    if (!ActivatedStm.count(jmp)) {
-                        ActivatedStm.insert(jmp);
-                        Curstm.push(jmp);
-                    }
+            // auto block = ir->nodes()->at(stmBlockmap[stm]);
+            // auto labelstm = ((IR::StmList*)(block->info))->stm;
+            // if (!ActivatedStm.count(labelstm)) {
+            //     ActivatedStm.insert(labelstm);
+            //     for (auto it : *(block->pred())) {
+            //         auto jmp = blockJumpStm[it->mykey];
+            //         if (!ActivatedStm.count(jmp)) {
+            //             ActivatedStm.insert(jmp);
+            //             Curstm.push(jmp);
+            //         }
+            //     }
+            // }
+        }
+    };
+    auto FindNextAcitveNode = [&](GRAPH::Node* node) {
+        if (ActivatedBlock.count(node->mykey)) return node;
+        unordered_set<GRAPH::Node*> vis;
+        vis.insert(node);
+        GRAPH::Node* ans = 0;
+        function<void(GRAPH::Node*)> dfs = [&](GRAPH::Node* cur) {
+            if (ans) return;
+            if (ActivatedBlock.count(cur->mykey)) {
+                ans = cur;
+                return;
+            }
+            GRAPH::NodeList* succs = cur->succ();
+            for (GRAPH::NodeList::const_iterator it = succs->begin(); it != succs->end(); ++it) {
+                if (!vis.count(*it)) {
+                    vis.insert(*it);
+                    dfs(*it);
                 }
             }
+        };
+        dfs(node);
+        return ans;
+    };
+    auto elimilation = [&]() {
+        queue<GRAPH::Node*> CurNode;
+        auto nodes = ir->nodes();
+        CurNode.push((nodes->at(0)));  // push the first node
+        while (!CurNode.empty()) {
+            auto cur = CurNode.front();
+            CurNode.pop();
+            auto stml = (IR::StmList*)(cur->info);
+            auto head = stml, tail = stml->tail;
+            while (tail) {
+                if (!tail->tail) {  // the last stm
+                    if (tail->stm->kind == IR::stmType::cjump) {
+                        auto cjumpstm = static_cast<IR::Cjump*>(tail->stm);
+                        if (ActivatedStm.count(tail->stm)) {
+                            GRAPH::Node *trueNode = 0, *falseNode = 0;
+                            for (auto& it : (*cur->succ())) {
+                                auto nodelabel = getNodeLabel(it);
+                                if (nodelabel == cjumpstm->trueLabel) {
+                                    trueNode = FindNextAcitveNode(it);
+                                    cjumpstm->trueLabel = getNodeLabel(trueNode);
+                                } else if (nodelabel == cjumpstm->falseLabel) {
+                                    falseNode = FindNextAcitveNode(it);
+                                    cjumpstm->falseLabel = getNodeLabel(falseNode);
+                                }
+                            }
+                            newsucc[cur->mykey].insert(trueNode);
+                            newsucc[cur->mykey].insert(falseNode);
+                            newpred[trueNode->mykey].insert(cur);
+                            newpred[falseNode->mykey].insert(cur);
+                            CurNode.push(trueNode);
+                            CurNode.push(falseNode);
+                        } else {
+                            GRAPH::Node* nextNode = 0;
+                            for (auto& it : (*cur->succ())) {
+                                nextNode = FindNextAcitveNode(it);
+                                if (nextNode) break;
+                            }
+                            newsucc[cur->mykey].insert(nextNode);
+                            newpred[nextNode->mykey].insert(cur);
+                            CurNode.push(nextNode);
+                            // fixme :delete ,memory leak
+                            *(blockJumpStm[cur->mykey]) = *(new IR::Jump(getNodeLabel(nextNode)));
+                        }
+                    } else if (tail->stm->kind == IR::stmType::jump) {
+                        GRAPH::Node* nextNode = 0;
+                        for (auto& it : (*cur->succ())) {
+                            nextNode = FindNextAcitveNode(it);
+                            if (nextNode) break;
+                        }
+                        newsucc[cur->mykey].insert(nextNode);
+                        newpred[nextNode->mykey].insert(cur);
+                        CurNode.push(nextNode);
+                        // fixme :delete ,memory leak
+                        *(blockJumpStm[cur->mykey]) = *(new IR::Jump(getNodeLabel(nextNode)));
+                    } else {
+                        // return no jump TODO
+                    }
+                    break;
+                }
+                if (!ActivatedStm.count(tail->stm)) {
+                    // auto todelete=tail;
+                    auto newtail = tail->tail;
+                    tail->tail = 0;
+                    tail = newtail;
+                    head->tail = newtail;
+                    // delete todelete
+                } else {
+                    head = head->tail;
+                    tail = tail->tail;
+                }
+            }
+        }
+        for (int i = 0; i < nodesz; i++) {
+            ir->nodes()->at(i)->preds = move(newpred[i]);
+            ir->nodes()->at(i)->succs = move(newsucc[i]);
         }
     };
     setup();
     bfsMark();
+    elimilation();
 }
 SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {}
 }  // namespace SSAOPT
