@@ -1,3 +1,4 @@
+#pragma once
 #include "../backend/graph.hpp"
 #include "../structure/treeIR.hpp"
 #include "../backend/flowgraph.hpp"

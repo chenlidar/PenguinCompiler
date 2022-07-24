@@ -156,7 +156,7 @@ static IR::Exp* TyIRBinop(IR::binop bop, TY::Type* lty, IR::Exp* lexp, TY::Type*
     } else
         assert(0);
 }
-bool isRealregister(Temp_Temp temp) {
+static inline bool isRealregister(Temp_Temp temp) {
     return temp < 1000;  // according to temptemp.hpp
 }
 static IR::Exp** getDef(IR::Stm* stm) {  // return 0 means no def,else return the def temp_temp
