@@ -156,14 +156,17 @@ static IR::Exp* TyIRBinop(IR::binop bop, TY::Type* lty, IR::Exp* lexp, TY::Type*
     } else
         assert(0);
 }
-
-static Temp_Temp* getDef(IR::Stm* stm) {  // return 0 means no def,else return the def temp_temp
+bool isRealregister(Temp_Temp temp) {
+    return temp < 1000;  // according to temptemp.hpp
+}
+static IR::Exp** getDef(IR::Stm* stm) {  // return 0 means no def,else return the def temp_temp
     switch (stm->kind) {
     case IR::stmType::move: {
         auto movstm = static_cast<IR::Move*>(stm);
         if (movstm->dst->kind == IR::expType::temp) {
             auto tempexp = static_cast<IR::Temp*>(movstm->dst);
-            return &tempexp->tempid;
+            if (isRealregister(tempexp->tempid)) return 0;
+            return &(movstm->dst);
         } else
             return 0;
     }
@@ -177,36 +180,37 @@ static Temp_Temp* getDef(IR::Stm* stm) {  // return 0 means no def,else return t
     assert(0);
     return 0;
 }
-static std::vector<Temp_Temp*> getUses(IR::Stm* stm) {
-    std::vector<Temp_Temp*> uses;
-    auto processTempExp = [&](IR::Exp* exp) {
-        if (exp->kind != IR::expType::temp) return;
-        auto tempexp = static_cast<IR::Temp*>(exp);
-        uses.push_back(&tempexp->tempid);
+static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
+    std::vector<IR::Exp**> uses;
+    auto processTempExp = [&](IR::Exp** exp) {
+        if ((*exp)->kind != IR::expType::temp) return;
+        auto tempexp = static_cast<IR::Temp*>(*exp);
+        if (isRealregister(tempexp->tempid)) return;
+        uses.push_back(exp);
     };
     auto processExpInMove = [&](IR::Exp* exp) {
         switch (exp->kind) {
         case IR::expType::binop: {
             auto binopexp = static_cast<IR::Binop*>(exp);
-            processTempExp(binopexp->left);
-            processTempExp(binopexp->right);
+            processTempExp(&binopexp->left);
+            processTempExp(&binopexp->right);
             break;
         }
         case IR::expType::call: {
             auto callexp = static_cast<IR::Call*>(exp);
-            for (const auto& it : (callexp->args)) processTempExp(it);
+            for (auto& it : (callexp->args)) processTempExp(&it);
             break;
         }
         case IR::expType::constx: break;
         case IR::expType::eseq: assert(0);
         case IR::expType::mem: {
             auto memexp = static_cast<IR::Mem*>(exp);
-            processTempExp(memexp->mem);
+            processTempExp(&memexp->mem);
             break;
         }
         case IR::expType::name: break;
         case IR::expType::temp: {
-            processTempExp(exp);
+            processTempExp(&exp);
             break;
         }
         }
@@ -221,14 +225,14 @@ static std::vector<Temp_Temp*> getUses(IR::Stm* stm) {
         auto expstm = static_cast<IR::ExpStm*>(stm);
         if (expstm->exp->kind == IR::expType::call) {
             auto callexp = static_cast<IR::Call*>(expstm->exp);
-            for (const auto& it : (callexp->args)) { processTempExp(it); }
+            for (auto& it : (callexp->args)) { processTempExp(&it); }
         }
         break;
     }
     case IR::stmType::cjump: {
         auto cjumpstm = static_cast<IR::Cjump*>(stm);
-        processTempExp(cjumpstm->left);
-        processTempExp(cjumpstm->right);
+        processTempExp(&cjumpstm->left);
+        processTempExp(&cjumpstm->right);
         break;
     }
     case IR::stmType::label: break;
