@@ -56,7 +56,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     unordered_map<IR::Stm*, int> stmBlockmap;
     unordered_set<IR::Stm*> ActivatedStm;
     unordered_set<int> ActivatedBlock;
-    unordered_map<int, IR::Stm*> blockJumpStm;
+    unordered_map<int, IR::StmList*> blockJumpStm;
     queue<IR::Stm*> Curstm;
     auto nodesz = ir->nodes()->size();
     vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
@@ -92,7 +92,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
                 // set up jump
                 if (!stml->tail) {
                     if (stm->kind == IR::stmType::cjump || stm->kind == IR::stmType::jump) {
-                        blockJumpStm[it->mykey] = stm;
+                        blockJumpStm[it->mykey] = stml;
                     }
                 }
                 stml = stml->tail;
@@ -120,7 +120,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
             if (!ActivatedStm.count(labelstm)) {
                 ActivatedStm.insert(labelstm);
                 for (auto it : gp.CDnode[block->mykey]) {
-                    auto jmp = blockJumpStm[it];
+                    auto jmp = blockJumpStm[it]->stm;
                     if (jmp->kind == IR::stmType::cjump) {
                         if (!ActivatedStm.count(jmp)) {
                             ActivatedBlock.insert(it);
@@ -195,7 +195,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
                             newpred[nextNode->mykey].insert(cur);
                             CurNode.push(nextNode);
                             // fixme :delete ,memory leak
-                            *(blockJumpStm[cur->mykey]) = *(new IR::Jump(getNodeLabel(nextNode)));
+                            blockJumpStm[cur->mykey]->stm = new IR::Jump(getNodeLabel(nextNode));
                         }
                     } else if (tail->stm->kind == IR::stmType::jump) {
                         GRAPH::Node* nextNode = 0;
@@ -207,7 +207,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
                         newpred[nextNode->mykey].insert(cur);
                         CurNode.push(nextNode);
                         // fixme :delete ,memory leak
-                        *(blockJumpStm[cur->mykey]) = *(new IR::Jump(getNodeLabel(nextNode)));
+                        blockJumpStm[cur->mykey]->stm = new IR::Jump(getNodeLabel(nextNode));
                     } else {
                         // return no jump TODO
                     }
@@ -235,5 +235,39 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     bfsMark();
     elimilation();
 }
-SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {}
+enum class COND { undefined, constant, indefinite };
+struct TEMP_COND {
+    COND cond;
+    int val;
+};
+TEMP_COND udf() {
+    TEMP_COND x;
+    x.cond = COND::undefined;
+    return x;
+}
+TEMP_COND cst(int y) {
+    TEMP_COND x;
+    x.cond = COND::constant;
+    x.val = y;
+    return x;
+}
+TEMP_COND idf() {
+    TEMP_COND x;
+    x.cond = COND::indefinite;
+    return x;
+}
+SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
+    unordered_map<Temp_Temp, TEMP_COND> tempCondition;
+    unordered_set<int> blockCondition;
+    queue<int> curBlock;
+    queue<Temp_Temp> curTemp;
+
+    auto nodes = ir->nodes();
+    auto setup = [&]() {
+        auto root = nodes->at(0)->mykey;
+        blockCondition.insert(root);
+        curBlock.push(root);
+    };
+    setup();
+}
 }  // namespace SSAOPT
