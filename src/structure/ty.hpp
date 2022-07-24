@@ -83,7 +83,7 @@ struct EnFunc : public Entry {
         kind = tyEntry::Ty_func;
         ty = _ty;
         label = _label;
-        stksize=16*4;
+        stksize = 16 * 4;
     }
 };
 };  // namespace TY
