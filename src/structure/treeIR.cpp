@@ -122,11 +122,11 @@ void Label::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
 void Jump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     if (target == "RETURN") {
         target = exitlabel;
-        ls->push_back(
-            new ASM::Oper(string("b ") + exitlabel, Temp_TempList(), Temp_TempList(), ASM::Targets({target})));
+        ls->push_back(new ASM::Oper(string("b ") + exitlabel, Temp_TempList(), Temp_TempList(),
+                                    ASM::Targets({target})));
     } else
-        ls->push_back(new ASM::Oper(string("b ") + target, Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets({target})));
+        ls->push_back(new ASM::Oper(string("b ") + target, Temp_TempList(), Temp_TempList(),
+                                    ASM::Targets({target})));
 
     // Jump( temp ,LabelList( NamedLabel("END") ))
 }
@@ -220,10 +220,9 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
             Temp_Temp temp = Temp_newtemp();
             ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), Temp_TempList({temp}),
                                         Temp_TempList({ltemp, rtemp}), ASM::Targets()));
-            ls->push_back(new ASM::Oper(std::string("mul `d0, `s0, `s1"), Temp_TempList(1, temp),
-                                        Temp_TempList({temp, rtemp}), ASM::Targets()));
-            ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"), Temp_TempList({lexp}),
-                                        Temp_TempList({ltemp, temp}), ASM::Targets()));
+            ls->push_back(new ASM::Oper(std::string("mls `d0, `s0, `s1, `s2"),
+                                        Temp_TempList({lexp}), Temp_TempList({temp, rtemp, ltemp}),
+                                        ASM::Targets()));
             break;
         }
         default: assert(0); break;
@@ -339,12 +338,10 @@ Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
         Temp_Temp temp = Temp_newtemp();
         ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), Temp_TempList(1, temp), src,
                                     ASM::Targets()));
+        src.push_back(src[0]);
         src[0] = temp;
-        ls->push_back(new ASM::Oper(std::string("mul `d0, `s0, `s1"), Temp_TempList(1, temp), src,
-                                    ASM::Targets()));
-        src[0] = exp_l;
-        src[1] = temp;
-        ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"), dst, src, ASM::Targets()));
+        ls->push_back(
+            new ASM::Oper(std::string("mls `d0, `s0, `s1, `s2"), dst, src, ASM::Targets()));
         return dst[0];
     }
     default: assert(0); break;
@@ -459,16 +456,15 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
         ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
                                     ASM::Targets()));
     } else {
-        ls->push_back(new ASM::Oper(std::string("bl ") + fun,
-                                    Temp_TempList({0, 1, 2, 3, 14, 12}), uses, ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("bl ") + fun, Temp_TempList({0, 1, 2, 3, 14, 12}),
+                                    uses, ASM::Targets()));
     }
 #else
-    ls->push_back(new ASM::Oper(std::string("bl ") + fun,
-                                Temp_TempList({0, 1, 2, 3, 14, 12}), uses, ASM::Targets()));
+    ls->push_back(new ASM::Oper(std::string("bl ") + fun, Temp_TempList({0, 1, 2, 3, 14, 12}),
+                                uses, ASM::Targets()));
 #endif
 #ifndef VFP
-    if (fun == "putfloat"
-        || (fun == "putfarray")) {
+    if (fun == "putfloat" || (fun == "putfarray")) {
         ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), Temp_TempList(),
                                     Temp_TempList(1, ftemp), ASM::Targets()));
     }
@@ -534,7 +530,7 @@ Exp* Call::quad() {
 
 void Label::printIR() { std::cerr << "LABELSTM:    " << label << endl; }
 void Jump::printIR() {
-    std::cerr << "JUMPSTM:    "+target;
+    std::cerr << "JUMPSTM:    " + target;
     std::cerr << endl;
 }
 void Cjump::printIR() {
@@ -572,7 +568,7 @@ void Mem::printIR() {
 }
 void Name::printIR() { std::cerr << name; }
 void Call::printIR() {
-    std::cerr << "( call "+fun;
+    std::cerr << "( call " + fun;
     std::cerr << '(';
     for (auto it : args) {
         it->printIR();

@@ -1,5 +1,4 @@
-#ifndef __BUILDSSA
-#define __BUILDSSA
+#pragma once
 #include "../backend/graph.hpp"
 #include "../structure/treeIR.hpp"
 #include "../backend/flowgraph.hpp"
@@ -24,4 +23,3 @@ private:
 };
 }  // namespace SSA
 
-#endif

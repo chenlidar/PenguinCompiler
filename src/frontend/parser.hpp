@@ -35,10 +35,10 @@
    are private implementation details.  Do not rely on them.  */
 
 #ifndef YY_YY_PARSER_HPP_INCLUDED
-# define YY_YY_PARSER_HPP_INCLUDED
+#define YY_YY_PARSER_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 1
+#define YYDEBUG 1
 #endif
 #if YYDEBUG
 extern int yydebug;
@@ -46,9 +46,8 @@ extern int yydebug;
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
-  {
+#define YYTOKENTYPE
+enum yytokentype {
     RETURN = 258,
     IF = 259,
     ELSE = 260,
@@ -85,60 +84,57 @@ extern int yydebug;
     ID = 291,
     prec1 = 292,
     prec2 = 293
-  };
+};
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-union YYSTYPE
-{
+#if !defined YYSTYPE && !defined YYSTYPE_IS_DECLARED
+union YYSTYPE {
 #line 17 "parser.yacc"
 
-	int token;
-	std::string *id;
-	std::string *floatnumber;
-	AST::mul_t mul;
-	AST::rel_t rel;
-	AST::equal_t equal;
-	AST::CompUnitList *root;
-	AST::CompUnit *compunit;
-	AST::Decl *decl;
-	AST::ConstDecl *constdecl;
-	AST::btype_t btype;
-	AST::ConstDef *constdef;
-	AST::ConstDefList *constdeflist;
-	AST::VarDecl *vardecl;
-	AST::VarDefList *vardeflist;
-	AST::VarDef *vardef;
-	AST::ArrayIndex *arrayindex;
-	AST::InitVal *initval;
-	AST::ArrayInit *arrayinit;
-	AST::InitValList *initvallist;
-	AST::FuncDef *funcdef;
-	AST::Parameters *parameters;
-	AST::Parameter *parameter;
-	AST::Block *block;
-	AST::BlockItemList *blockitemlist;
-	AST::BlockItem *blockitem;
-	AST::Stmt *stmt;
-	AST::Exp *exp;
-	AST::IdExp *idexp;
-	AST::ExpList *explist;
-	AST::Number *number;
-	AST::Lval *lval;
-	AST::unaryop_t unaryop;
+    int token;
+    std::string* id;
+    std::string* floatnumber;
+    AST::mul_t mul;
+    AST::rel_t rel;
+    AST::equal_t equal;
+    AST::CompUnitList* root;
+    AST::CompUnit* compunit;
+    AST::Decl* decl;
+    AST::ConstDecl* constdecl;
+    AST::btype_t btype;
+    AST::ConstDef* constdef;
+    AST::ConstDefList* constdeflist;
+    AST::VarDecl* vardecl;
+    AST::VarDefList* vardeflist;
+    AST::VarDef* vardef;
+    AST::ArrayIndex* arrayindex;
+    AST::InitVal* initval;
+    AST::ArrayInit* arrayinit;
+    AST::InitValList* initvallist;
+    AST::FuncDef* funcdef;
+    AST::Parameters* parameters;
+    AST::Parameter* parameter;
+    AST::Block* block;
+    AST::BlockItemList* blockitemlist;
+    AST::BlockItem* blockitem;
+    AST::Stmt* stmt;
+    AST::Exp* exp;
+    AST::IdExp* idexp;
+    AST::ExpList* explist;
+    AST::Number* number;
+    AST::Lval* lval;
+    AST::unaryop_t unaryop;
 
 #line 132 "parser.hpp"
-
 };
 typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+#define YYSTYPE_IS_TRIVIAL 1
+#define YYSTYPE_IS_DECLARED 1
 #endif
-
 
 extern YYSTYPE yylval;
 
-int yyparse (void);
+int yyparse(void);
 
 #endif /* !YY_YY_PARSER_HPP_INCLUDED  */

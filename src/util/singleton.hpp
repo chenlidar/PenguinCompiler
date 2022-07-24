@@ -3,7 +3,7 @@
 #include "templabel.hpp"
 #include "temptemp.hpp"
 class Singleton {
-   public:
+public:
     // get any instance item by Singleton::instance().xxx
     // xxx is a public variable or method
     static Singleton& instance() {
@@ -11,10 +11,10 @@ class Singleton {
         return *ins;
     }
 
-   private:
+private:
     Singleton() {}
 
-   public:
+public:
     tempManager TempManager;
     labelManager LabelManager;
 };

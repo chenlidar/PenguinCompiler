@@ -33,7 +33,8 @@ void SSAIR::placePhi() {
                                    new IR::Call("$", IR::ExpList({})));  // push_back in rename
                 IR::StmList* stmlist = (IR::StmList*)this->mynodes[y]->nodeInfo();
                 stmlist->tail = new IR::StmList(phifunc, stmlist->tail);
-                Aphi[y].insert(std::make_pair(dst.first, phifunc));
+                Aphi[y].insert(
+                    std::make_pair(dst.first, std::make_pair(phifunc, std::vector<int>())));
                 if (!orig[y].count(dst.first)) {
                     worklist.insert(y);
                     orig[y].insert(dst.first);
@@ -54,30 +55,32 @@ void SSAIR::rename(int node) {
             ;  // is phi,do nothing
         else {
             // change use
-            std::vector<Temp_Temp*> v = getUses(stm);
-            for (Temp_Temp* usev : v) {
-                if (stk[*usev].empty()) {
-                    *usev = -1;  // mark this var not decl, is a const 0
+            std::vector<IR::Exp**> v = getUses(stm);
+            for (IR::Exp** usev : v) {
+                if (stk[static_cast<IR::Temp*>(*usev)->tempid].empty()) {
+                    *usev = new IR::Const(0);  // var not decl replace with const 0
                 } else {
-                    *usev = stk[*usev].top();
+                    static_cast<IR::Temp*>(*usev)->tempid
+                        = stk[static_cast<IR::Temp*>(*usev)->tempid].top();
                 }
             }
         }
         // change dst
-        Temp_Temp* dst = getDef(stm);
+        IR::Exp** dst = getDef(stm);
         if (dst != nullptr) {
             Temp_Temp temp = Temp_newtemp();
-            stk[*dst].push(temp);
-            rev.push_back(*dst);
-            *dst = temp;
+            stk[static_cast<IR::Temp*>(*dst)->tempid].push(temp);
+            rev.push_back(static_cast<IR::Temp*>(*dst)->tempid);
+            static_cast<IR::Temp*>(*dst)->tempid = temp;
         }
     }
     for (auto succn : *mynodes[node]->succ()) {
         int succ = succn->mykey;
         for (auto it : Aphi[succ]) {
-            IR::Move* phimove = static_cast<IR::Move*>(it.second);
+            IR::Move* phimove = static_cast<IR::Move*>(it.second.first);
             IR::Call* phicall = static_cast<IR::Call*>(phimove->src);
             phicall->args.push_back(new IR::Temp(stk[it.first].top()));
+            it.second.second.push_back(node);
         }
     }
     for (auto succ : dtree->children[node]) rename(succ);

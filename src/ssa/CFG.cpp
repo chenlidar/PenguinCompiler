@@ -12,6 +12,7 @@ CFGraph::CFGraph(CANON::Block blocks) {
         LNTable.insert(std::make_pair(label, node));
     }
     GRAPH::Node* endnode = this->addNode(new IR::StmList(new IR::Label(blocks.label), nullptr));
+    exitnum = endnode->mykey;
     orig.push_back(std::unordered_set<Temp_Temp>());
     Temp_Label label = "RETURN";
     LNTable.insert(std::make_pair(label, endnode));
