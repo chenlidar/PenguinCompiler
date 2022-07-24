@@ -54,22 +54,22 @@ void SSAIR::rename(int node) {
             ;  // is phi,do nothing
         else {
             // change use
-            std::vector<Temp_Temp*> v = getUses(stm);
-            for (Temp_Temp* usev : v) {
-                if (stk[*usev].empty()) {
-                    *usev = -1;  // mark this var not decl, is a const 0
+            std::vector<IR::Exp**> v = getUses(stm);
+            for (IR::Exp** usev : v) {
+                if (stk[static_cast<IR::Temp*>(*usev)->tempid].empty()) {
+                    *usev = new IR::Const(0);  // var not decl replace with const 0
                 } else {
-                    *usev = stk[*usev].top();
+                    *usev = new IR::Temp(stk[static_cast<IR::Temp*>(*usev)->tempid].top());
                 }
             }
         }
         // change dst
-        Temp_Temp* dst = getDef(stm);
+        IR::Exp** dst = getDef(stm);
         if (dst != nullptr) {
             Temp_Temp temp = Temp_newtemp();
-            stk[*dst].push(temp);
-            rev.push_back(*dst);
-            *dst = temp;
+            stk[static_cast<IR::Temp*>(*dst)->tempid].push(temp);
+            rev.push_back(static_cast<IR::Temp*>(*dst)->tempid);
+            *dst = new IR::Temp(temp);
         }
     }
     for (auto succn : *mynodes[node]->succ()) {
