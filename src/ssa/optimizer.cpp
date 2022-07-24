@@ -9,6 +9,7 @@
 #include <queue>
 #include <functional>
 #include "../util/utils.hpp"
+#include "CDG.hpp"
 using std::function;
 using std::move;
 using std::queue;
@@ -59,6 +60,9 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     queue<IR::Stm*> Curstm;
     auto nodesz = ir->nodes()->size();
     vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
+
+    CDG::CDgraph gp(ir);
+
     auto setup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -111,18 +115,21 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
                 }
             }
             // upload to branch stm
-            // auto block = ir->nodes()->at(stmBlockmap[stm]);
-            // auto labelstm = ((IR::StmList*)(block->info))->stm;
-            // if (!ActivatedStm.count(labelstm)) {
-            //     ActivatedStm.insert(labelstm);
-            //     for (auto it : *(block->pred())) {
-            //         auto jmp = blockJumpStm[it->mykey];
-            //         if (!ActivatedStm.count(jmp)) {
-            //             ActivatedStm.insert(jmp);
-            //             Curstm.push(jmp);
-            //         }
-            //     }
-            // }
+            auto block = ir->nodes()->at(stmBlockmap[stm]);
+            auto labelstm = ((IR::StmList*)(block->info))->stm;
+            if (!ActivatedStm.count(labelstm)) {
+                ActivatedStm.insert(labelstm);
+                for (auto it : gp.CDnode[block->mykey]) {
+                    auto jmp = blockJumpStm[it];
+                    if (jmp->kind == IR::stmType::cjump) {
+                        if (!ActivatedStm.count(jmp)) {
+                            ActivatedBlock.insert(it);
+                            ActivatedStm.insert(jmp);
+                            Curstm.push(jmp);
+                        }
+                    }
+                }
+            }
         }
     };
     auto FindNextAcitveNode = [&](GRAPH::Node* node) {
