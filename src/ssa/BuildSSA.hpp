@@ -1,3 +1,5 @@
+#ifndef __BUILDSSA
+#define __BUILDSSA
 #include "../backend/graph.hpp"
 #include "../structure/treeIR.hpp"
 #include "../backend/flowgraph.hpp"
@@ -11,12 +13,15 @@ public:
 
 private:
     DTREE::Dtree* dtree;
-    std::unordered_map<Temp_Temp, std::vector<int>> defsites;
-    std::unordered_map<Temp_Temp, std::unordered_map<int, IR::Stm*>> Aphi;
-    std::unordered_map<Temp_Temp, std::stack<Temp_Temp>> stk;
+    std::unordered_map<Temp_Temp, std::vector<int> > defsites;
+    std::unordered_map<Temp_Temp, std::unordered_map<int, IR::Stm*> > Aphi;
+    std::unordered_map<Temp_Temp, std::stack<Temp_Temp> > stk;
     void placePhi();
     void rename();
     void rename(int node);
+    void edge_split();
     // Optimizer opt;
 };
 }  // namespace SSA
+
+#endif

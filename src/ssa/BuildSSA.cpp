@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "BuildSSA.hpp"
 #include "../util/utils.hpp"
 using namespace SSA;
@@ -81,4 +82,55 @@ void SSAIR::rename(int node) {
     }
     for (auto succ : dtree->children[node]) rename(succ);
     for (auto var : rev) stk[var].pop();
+}
+
+IR::Stm* listTail(IR::StmList* sl){
+    assert(sl);
+    while(sl->tail!=NULL){
+        sl = sl->tail;
+    }
+    return sl->stm;
+}
+IR::Stm* listHead(IR::StmList* sl){
+    assert(sl);
+    return sl->stm;
+}
+
+void SSAIR::edge_split(){
+    auto Nodes = this->nodes();
+    GRAPH::NodeList nl;
+    for(auto &u: *Nodes)
+        if(u->outDegree() > 1)
+            nl.insert(u);
+
+    for(auto &u: nl){
+        auto succ = u->succ();
+        IR::Stm* laststm = listTail((IR::StmList*)(u->nodeInfo()));
+        if(laststm->kind == IR::stmType::jump){
+            assert(0);//George think, if end with jump, outdegree cannot be greater than 1
+        }
+        else if(laststm->kind == IR::stmType::cjump){
+            for(auto &v: *succ){
+                if(v->inDegree()<=1)continue;
+                IR::Stm* firststm = listHead((IR::StmList*)(v->nodeInfo()));
+                GRAPH::Node* newnode;
+                if(static_cast<IR::Cjump*>(laststm) -> trueLabel ==  static_cast<IR::Label*>(firststm)->label){//truelabel
+                    Temp_Label tl = Temp_newlabel(), truelabel = static_cast<IR::Cjump*>(laststm) -> trueLabel;
+                    static_cast<IR::Cjump*>(laststm) -> trueLabel = tl;
+                    newnode = this->addNode(new IR::StmList(new IR::Label(tl),
+                                            new IR::StmList(new IR::Jump(truelabel),NULL)));
+                }
+                else{//falselabel
+                    Temp_Label tl = Temp_newlabel(), falselabel = static_cast<IR::Cjump*>(laststm) -> falseLabel;
+                    static_cast<IR::Cjump*>(laststm) -> falseLabel = tl;
+                    newnode = this->addNode(new IR::StmList(new IR::Label(tl),
+                                            new IR::StmList(new IR::Jump(falselabel),NULL)));
+                }
+                this->rmEdge(u,v);
+                this->addEdge(u,newnode);
+                this->addEdge(newnode,v);
+            }
+        }
+        else assert(0);
+    }
 }
