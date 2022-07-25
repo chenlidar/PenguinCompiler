@@ -5,14 +5,11 @@
 #include "../backend/canon.hpp"
 #include <unordered_set>
 namespace CFG {
-class CFGraph : public GRAPH::Graph {  // Node->info:IR::Stmlist*--a block begin eith labnel,end
+class CFGraph : public GRAPH::Graph {  // Node->info:IR::Stmlist*--a block begin with label,end
                                        // with jump/cjump
 public:
     CFGraph(CANON::Block blocks);
-    int exitnum;
-
-protected:
-    std::vector<std::unordered_set<Temp_Temp>> orig;
+    std::vector<std::unordered_set<Temp_Temp> > orig;
 
 private:
     std::unordered_map<Temp_Label, GRAPH::Node*> LNTable;
