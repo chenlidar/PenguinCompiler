@@ -30,11 +30,11 @@ void SSAIR::placePhi() {
                 if (Aphi[y].count(dst.first)) continue;
                 IR::Stm* phifunc
                     = new IR::Move(new IR::Temp(dst.first),
-                                   new IR::Call("$", IR::ExpList({})));  // push_back in rename
+                                   new IR::Call("$", IR::ExpList(mynodes[y]->pred()->size(),
+                                                                 new IR::Temp(dst.first))));
                 IR::StmList* stmlist = (IR::StmList*)this->mynodes[y]->nodeInfo();
                 stmlist->tail = new IR::StmList(phifunc, stmlist->tail);
-                Aphi[y].insert(
-                    std::make_pair(dst.first, std::make_pair(phifunc, std::vector<int>())));
+                Aphi[y].insert(std::make_pair(dst.first, phifunc));
                 if (!orig[y].count(dst.first)) {
                     worklist.insert(y);
                     orig[y].insert(dst.first);
@@ -77,63 +77,68 @@ void SSAIR::rename(int node) {
     for (auto succn : *mynodes[node]->succ()) {
         int succ = succn->mykey;
         for (auto it : Aphi[succ]) {
-            IR::Move* phimove = static_cast<IR::Move*>(it.second.first);
+            IR::Move* phimove = static_cast<IR::Move*>(it.second);
             IR::Call* phicall = static_cast<IR::Call*>(phimove->src);
-            phicall->args.push_back(new IR::Temp(stk[it.first].top()));
-            it.second.second.push_back(node);
+            int cnt = 0;
+            for (auto pred : *succn->pred()) {
+                if (pred->mykey == node) {
+                    static_cast<IR::Temp*>(phicall->args[cnt])->tempid = stk[it.first].top();
+                    break;
+                }
+                cnt++;
+            }
         }
     }
     for (auto succ : dtree->children[node]) rename(succ);
     for (auto var : rev) stk[var].pop();
 }
 
-IR::Stm* listTail(IR::StmList* sl){
+IR::Stm* listTail(IR::StmList* sl) {
     assert(sl);
-    while(sl->tail!=NULL){
-        sl = sl->tail;
-    }
+    while (sl->tail != NULL) { sl = sl->tail; }
     return sl->stm;
 }
-IR::Stm* listHead(IR::StmList* sl){
+IR::Stm* listHead(IR::StmList* sl) {
     assert(sl);
     return sl->stm;
 }
 
-void SSAIR::edge_split(){
+void SSAIR::edge_split() {
     auto Nodes = this->nodes();
     GRAPH::NodeList nl;
-    for(auto &u: *Nodes)
-        if(u->outDegree() > 1)
-            nl.insert(u);
+    for (auto& u : *Nodes)
+        if (u->outDegree() > 1) nl.insert(u);
 
-    for(auto &u: nl){
+    for (auto& u : nl) {
         auto succ = u->succ();
         IR::Stm* laststm = listTail((IR::StmList*)(u->nodeInfo()));
-        if(laststm->kind == IR::stmType::jump){
-            assert(0);//George think, if end with jump, outdegree cannot be greater than 1
-        }
-        else if(laststm->kind == IR::stmType::cjump){
-            for(auto &v: *succ){
-                if(v->inDegree()<=1)continue;
+        if (laststm->kind == IR::stmType::jump) {
+            assert(0);  // George think, if end with jump, outdegree cannot be greater than 1
+        } else if (laststm->kind == IR::stmType::cjump) {
+            for (auto& v : *succ) {
+                if (v->inDegree() <= 1) continue;
                 IR::Stm* firststm = listHead((IR::StmList*)(v->nodeInfo()));
                 GRAPH::Node* newnode;
-                if(static_cast<IR::Cjump*>(laststm) -> trueLabel ==  static_cast<IR::Label*>(firststm)->label){//truelabel
-                    Temp_Label tl = Temp_newlabel(), truelabel = static_cast<IR::Cjump*>(laststm) -> trueLabel;
-                    static_cast<IR::Cjump*>(laststm) -> trueLabel = tl;
-                    newnode = this->addNode(new IR::StmList(new IR::Label(tl),
-                                            new IR::StmList(new IR::Jump(truelabel),NULL)));
+                if (static_cast<IR::Cjump*>(laststm)->trueLabel
+                    == static_cast<IR::Label*>(firststm)->label) {  // truelabel
+                    Temp_Label tl = Temp_newlabel(),
+                               truelabel = static_cast<IR::Cjump*>(laststm)->trueLabel;
+                    static_cast<IR::Cjump*>(laststm)->trueLabel = tl;
+                    newnode = this->addNode(new IR::StmList(
+                        new IR::Label(tl), new IR::StmList(new IR::Jump(truelabel), NULL)));
+                } else {  // falselabel
+                    Temp_Label tl = Temp_newlabel(),
+                               falselabel = static_cast<IR::Cjump*>(laststm)->falseLabel;
+                    static_cast<IR::Cjump*>(laststm)->falseLabel = tl;
+                    newnode = this->addNode(new IR::StmList(
+                        new IR::Label(tl), new IR::StmList(new IR::Jump(falselabel), NULL)));
                 }
-                else{//falselabel
-                    Temp_Label tl = Temp_newlabel(), falselabel = static_cast<IR::Cjump*>(laststm) -> falseLabel;
-                    static_cast<IR::Cjump*>(laststm) -> falseLabel = tl;
-                    newnode = this->addNode(new IR::StmList(new IR::Label(tl),
-                                            new IR::StmList(new IR::Jump(falselabel),NULL)));
-                }
-                this->rmEdge(u,v);
-                this->addEdge(u,newnode);
-                this->addEdge(newnode,v);
+                this->rmEdge(u, v);
+                this->addEdge(u, newnode);
+                this->addEdge(newnode, v);
             }
-        }
-        else assert(0);
+        } else
+            assert(0);
     }
 }
+CANON::Block SSAIR::ssa2ir() {}
