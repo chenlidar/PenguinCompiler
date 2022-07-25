@@ -318,98 +318,37 @@ bool isConstDef(IR::Stm* stm) {
     }
     return false;
 }
-void constReplace(Temp_Temp tempid, IR::Stm* stm, int val) {
-    switch (stm->kind) {
-    case IR::stmType::cjump: {
-        auto cjumpexp = static_cast<IR::Cjump*>(stm);
-        auto lexp = cjumpexp->left;
-        if (lexp->kind == IR::expType::temp && (static_cast<IR::Temp*>(lexp))->tempid == tempid) {
-            // fixme free the temp!!
-            cjumpexp->left = new IR::Const(val);
-        }
-        auto rexp = cjumpexp->right;
-        if (rexp->kind == IR::expType::temp && (static_cast<IR::Temp*>(rexp))->tempid == tempid) {
-            // fixme free the temp!!
-            cjumpexp->right = new IR::Const(val);
-        }
-        break;
-    }
-    case IR::stmType::exp: {
-        auto expstm = static_cast<IR::ExpStm*>(stm);
-        assert(expstm->exp->kind == IR::expType::call);
-        auto callexp = static_cast<IR::Call*>(expstm->exp);
-        int len = callexp->args.size();
-        for (int i = 0; i < len; i++) {
-            auto exp = callexp->args[i];
-            if (exp->kind == IR::expType::temp
-                && (static_cast<IR::Temp*>(exp))->tempid == tempid) {
-                // fixme free the temp!!
-                callexp->args[i] = new IR::Const(val);
-            }
-        }
-        break;
-    }
-    case IR::stmType::jump: assert(0);
-    case IR::stmType::label: assert(0);
-    case IR::stmType::move: {
+bool isCopyDef(IR::Stm* stm) {
+    if (stm->kind == IR::stmType::move) {
         auto movestm = static_cast<IR::Move*>(stm);
-        switch (movestm->src->kind) {
-        case IR::expType::binop: {
-            auto binopexp = static_cast<IR::Binop*>(movestm->src);
-            auto lexp = binopexp->left;
-            if (lexp->kind == IR::expType::temp
-                && (static_cast<IR::Temp*>(lexp))->tempid == tempid) {
-                // fixme free the temp!!
-                binopexp->left = new IR::Const(val);
-            }
-            auto rexp = binopexp->right;
-            if (rexp->kind == IR::expType::temp
-                && (static_cast<IR::Temp*>(rexp))->tempid == tempid) {
-                // fixme free the temp!!
-                binopexp->right = new IR::Const(val);
-            }
-            break;
+        if (movestm->dst->kind != IR::expType::temp) return false;
+        if (isRealregister(static_cast<IR::Temp*>(movestm->dst)->tempid)) return false;
+        auto src = movestm->src;
+        if (src->kind == IR::expType::temp) {
+            if (!isRealregister(static_cast<IR::Temp*>(movestm->src)->tempid)) return true;
+            return false;
         }
-        case IR::expType::call: {
-            auto callexp = static_cast<IR::Call*>(movestm->src);
-            int len = callexp->args.size();
-            for (int i = 0; i < len; i++) {
-                auto exp = callexp->args[i];
-                if (exp->kind == IR::expType::temp
-                    && (static_cast<IR::Temp*>(exp))->tempid == tempid) {
-                    // fixme free the temp!!
-                    callexp->args[i] = new IR::Const(val);
+        if (src->kind == IR::expType::call) {
+            auto callexp = static_cast<IR::Call*>(src);
+            if (callexp->fun[0] == '$') {
+                int len = callexp->args.size();
+                if (!len) return false;
+                if (callexp->args[0]->kind == IR::expType::temp
+                    && !isRealregister(static_cast<IR::Temp*>(callexp->args[0])->tempid)) {
+                    auto guess = static_cast<IR::Temp*>(callexp->args[0])->tempid;
+                    for (int i = 1; i < len; i++) {
+                        if (callexp->args[i]->kind != IR::expType::temp
+                            || static_cast<IR::Temp*>(callexp->args[i])->tempid != guess) {
+                            return false;
+                        }
+                    }
+                    return true;
                 }
+                return true;
             }
-            break;
         }
-        case IR::expType::constx: assert(0);
-        case IR::expType::eseq: assert(0);
-        case IR::expType::mem: {
-            auto memexp = static_cast<IR::Mem*>(movestm->src);
-            auto exp = memexp->mem;
-            if (exp->kind == IR::expType::temp
-                && (static_cast<IR::Temp*>(exp))->tempid == tempid) {
-                // fixme free the temp!!
-                memexp->mem = new IR::Const(val);
-            }
-            break;
-        }
-        case IR::expType::name: assert(0);
-        case IR::expType::temp: {
-            if ((static_cast<IR::Temp*>(movestm->src))->tempid == tempid) {
-                // fixme free the temp!!
-                movestm->src = new IR::Const(val);
-            }
-            break;
-        }
-        default: assert(0);
-        }
-        break;
     }
-    case IR::stmType::seq: assert(0);
-    default: assert(0);
-    }
+    return false;
 }
 bool evalRel(IR::RelOp op, int lv, int rv) {
     switch (op) {
@@ -423,15 +362,23 @@ bool evalRel(IR::RelOp op, int lv, int rv) {
     }
     assert(0);
 }
-
+Temp_Temp evalCopy(IR::Exp* exp) {
+    // MUST MAKE SURE EXP IS COPYABLE
+    if (exp->kind == IR::expType::temp) { return static_cast<IR::Temp*>(exp)->tempid; }
+    if (exp->kind == IR::expType::call) {
+        auto callexp = static_cast<IR::Call*>(exp);
+        return static_cast<IR::Temp*>(callexp->args[0])->tempid;
+    }
+}
 SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
     // unordered_map<Temp_Temp, TEMP_COND> tempCondition;
     unordered_map<IR::StmList*, int> stmlBlockmap;
     unordered_map<Temp_Temp, IR::StmList*> tempDef;
     unordered_map<Temp_Temp, vector<IR::StmList*>> tempUse;
-    unordered_map<int, int> blockCondition;
-    // queue<int> curBlock;
+    // unordered_map<int, int> blockCondition;
+    //  queue<int> curBlock;
     queue<Temp_Temp> curTemp;
+    queue<Temp_Temp> copyTemp;
 
     auto nodes = ir->nodes();
     auto setup = [&]() {
@@ -446,10 +393,16 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                 // set up def-stm mapping
                 auto df = getDef(stm);
                 if (df) {
+                    stmlBlockmap[stml] = it->mykey;
                     tempDef[static_cast<IR::Temp*>(*df)->tempid] = stml;
                     // set up seed temp
-                    bool necessary = isConstDef(stm);
-                    if (necessary) { curTemp.push(static_cast<IR::Temp*>(*df)->tempid); }
+                    bool cnst = isConstDef(stm);
+                    if (cnst) {
+                        curTemp.push(static_cast<IR::Temp*>(*df)->tempid);
+                    } else {
+                        bool cpy = isCopyDef(stm);
+                        if (cpy) { copyTemp.push(static_cast<IR::Temp*>(*df)->tempid); }
+                    }
                 }
                 auto us = getUses(stm);
                 for (auto it : us) {
@@ -473,14 +426,25 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                 // fixme without free stm
                 if (b) {
                     stml->stm = new IR::Jump(cjumpstm->trueLabel);
-
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->falseLabel) {
                             for (auto jt : (*(it->pred()))) {
                                 if (jt->mykey == jb) { break; }
                                 cnt++;
                             }
-                            // for(auto jt:)
+                            for (auto jt : ir->Aphi[it->mykey]) {
+                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto callexp = static_cast<IR::Call*>(src);
+                                callexp->args.erase(callexp->args.begin() + cnt);
+                                auto def = (static_cast<IR::Temp*>(
+                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                ->tempid);
+                                if (isConstDef(jt.second)) {
+                                    curTemp.push(def);
+                                } else if (isCopyDef(jt.second)) {
+                                    copyTemp.push(def);
+                                }
+                            }
                             ir->rmEdge(nodes->at(jb), it);
                             // TODO
                             break;
@@ -490,6 +454,101 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                     stml->stm = new IR::Jump(cjumpstm->falseLabel);
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->trueLabel) {
+                            for (auto jt : (*(it->pred()))) {
+                                if (jt->mykey == jb) { break; }
+                                cnt++;
+                            }
+                            for (auto jt : ir->Aphi[it->mykey]) {
+                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto callexp = static_cast<IR::Call*>(src);
+                                callexp->args.erase(callexp->args.begin() + cnt);
+                                auto def = (static_cast<IR::Temp*>(
+                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                ->tempid);
+                                if (isConstDef(jt.second)) {
+                                    curTemp.push(def);
+                                } else if (isCopyDef(jt.second)) {
+                                    copyTemp.push(def);
+                                }
+                            }
+                            ir->rmEdge(nodes->at(jb), it);
+                            // TODO
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    };
+    auto branchTestCOPY = [&](IR::StmList* stml) {
+        if (stml->stm->kind == IR::stmType::cjump) {
+            auto cjumpstm = static_cast<IR::Cjump*>(stml->stm);
+            if (cjumpstm->left->kind == IR::expType::temp
+                && cjumpstm->right->kind == IR::expType::temp
+                && static_cast<IR::Temp*>(cjumpstm->left)->tempid
+                       == static_cast<IR::Temp*>(cjumpstm->right)->tempid) {
+
+                bool b;
+                if (cjumpstm->op == IR::RelOp::T_eq || cjumpstm->op == IR::RelOp::T_le
+                    || cjumpstm->op == IR::RelOp::T_ge) {
+                    b = true;
+                } else if (cjumpstm->op == IR::RelOp::T_ne) {
+                    b = false;
+                } else
+                    return;
+
+                auto jb = stmlBlockmap[stml];
+                auto nodes = ir->nodes();
+                int cnt = 0;
+                // fixme without free stm
+                if (b) {
+                    stml->stm = new IR::Jump(cjumpstm->trueLabel);
+                    for (auto it : (*(nodes->at(jb))->succ())) {
+                        if (getNodeLabel(it) == cjumpstm->falseLabel) {
+                            for (auto jt : (*(it->pred()))) {
+                                if (jt->mykey == jb) { break; }
+                                cnt++;
+                            }
+                            for (auto jt : ir->Aphi[it->mykey]) {
+                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto callexp = static_cast<IR::Call*>(src);
+                                callexp->args.erase(callexp->args.begin() + cnt);
+                                auto def = (static_cast<IR::Temp*>(
+                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                ->tempid);
+                                if (isConstDef(jt.second)) {
+                                    curTemp.push(def);
+                                } else if (isCopyDef(jt.second)) {
+                                    copyTemp.push(def);
+                                }
+                            }
+                            ir->rmEdge(nodes->at(jb), it);
+                            // TODO
+                            break;
+                        }
+                    }
+                } else {
+                    stml->stm = new IR::Jump(cjumpstm->falseLabel);
+                    for (auto it : (*(nodes->at(jb))->succ())) {
+                        if (getNodeLabel(it) == cjumpstm->trueLabel) {
+                            for (auto jt : (*(it->pred()))) {
+                                if (jt->mykey == jb) { break; }
+                                cnt++;
+                            }
+                            // update phi
+                            for (auto jt : ir->Aphi[it->mykey]) {
+                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto callexp = static_cast<IR::Call*>(src);
+                                callexp->args.erase(callexp->args.begin() + cnt);
+                                auto def = (static_cast<IR::Temp*>(
+                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                ->tempid);
+                                if (isConstDef(jt.second)) {
+                                    curTemp.push(def);
+                                } else if (isCopyDef(jt.second)) {
+                                    copyTemp.push(def);
+                                }
+                            }
                             ir->rmEdge(nodes->at(jb), it);
                             // TODO
                             break;
@@ -500,26 +559,64 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
         }
     };
     auto bfsMark = [&]() {
-        // while (!curBlock.empty() && !curTemp.empty()) {
-        while (!curTemp.empty()) {
-            auto cur = curTemp.front();
-            curTemp.pop();
-            auto def = (static_cast<IR::Move*>(tempDef[cur]->stm))->src;
-            int val = evalExp(def);
-            for (auto it : tempUse[cur]) {
-                constReplace(cur, it->stm, val);
-                auto nxdf = getDef(it->stm);
-                if (nxdf) {
-                    // set up next temp
-                    bool necessary = isConstDef(it->stm);
-                    if (necessary) { curTemp.push(static_cast<IR::Temp*>(*nxdf)->tempid); }
+        while (!copyTemp.empty() && !curTemp.empty()) {
+            while (!curTemp.empty()) {
+                auto cur = curTemp.front();
+                curTemp.pop();
+                auto def = (static_cast<IR::Move*>(tempDef[cur]->stm))->src;
+                int val = evalExp(def);
+                for (auto it : tempUse[cur]) {
+                    // constReplace(cur, it->stm, val);
+                    auto uses = getUses(it->stm);
+                    for (auto jt : uses) {
+                        if (static_cast<IR::Temp*>(*jt)->tempid == cur) {
+                            // FIXME need free here
+                            *jt = new IR::Const(val);
+                        }
+                    }
+                    auto nxdf = getDef(it->stm);
+                    if (nxdf) {
+                        // set up next temp
+                        bool necessary = isConstDef(it->stm);
+                        if (necessary) { curTemp.push(static_cast<IR::Temp*>(*nxdf)->tempid); }
+                    }
+                    branchTest(it);
                 }
-                branchTest(it);
+                tempDef[cur]->stm = nopStm();
             }
-            tempDef[cur]->stm = nopStm();
+            while (!copyTemp.empty()) {
+                auto cur = copyTemp.front();
+                copyTemp.pop();
+                auto def = (static_cast<IR::Move*>(tempDef[cur]->stm))->src;
+                if (isConstExp(def)) {
+                    curTemp.push(cur);
+                    continue;
+                }
+                auto val = evalCopy(def);
+                for (auto it : tempUse[cur]) {
+                    // copyReplace(cur, it->stm, val);
+                    auto uses = getUses(it->stm);
+                    for (auto jt : uses) {
+                        if (static_cast<IR::Temp*>(*jt)->tempid == cur) {
+                            // FIXME need free here
+                            *jt = new IR::Temp(val);
+                        }
+                    }
+                    auto nxdf = getDef(it->stm);
+                    if (nxdf) {
+                        // set up next temp
+                        bool cpy = isCopyDef(it->stm);
+                        if (cpy) { copyTemp.push(static_cast<IR::Temp*>(*nxdf)->tempid); }
+                    }
+                    branchTestCOPY(it);
+                }
+                if (def->kind == IR::expType::call) {
+                    ir->Aphi[stmlBlockmap[tempDef[cur]]].erase(cur);
+                }
+                tempDef[cur]->stm = nopStm();
+            }
+            //     while (!curBlock.empty()) {}
         }
-        //     while (!curBlock.empty()) {}
-        // }
     };
     setup();
     bfsMark();
