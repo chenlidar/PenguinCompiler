@@ -469,12 +469,18 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                 auto b = evalRel(cjumpstm->op, lv, rv);
                 auto jb = stmlBlockmap[stml];
                 auto nodes = ir->nodes();
-
+                int cnt = 0;
                 // fixme without free stm
                 if (b) {
                     stml->stm = new IR::Jump(cjumpstm->trueLabel);
+
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->falseLabel) {
+                            for (auto jt : (*(it->pred()))) {
+                                if (jt->mykey == jb) { break; }
+                                cnt++;
+                            }
+                            // for(auto jt:)
                             ir->rmEdge(nodes->at(jb), it);
                             // TODO
                             break;
@@ -516,5 +522,6 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
         // }
     };
     setup();
+    bfsMark();
 }
 }  // namespace SSAOPT
