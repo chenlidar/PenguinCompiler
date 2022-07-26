@@ -41,6 +41,7 @@ namespace SSAOPT {
 // }
 int evalExp(IR::Exp* exp) {
     // MUST MAKE SURE EXP IS CONSTEXP
+    // calculate the value of given const exp
     switch (exp->kind) {
     case IR::expType::binop: {
         auto binopexp = static_cast<IR::Binop*>(exp);
@@ -96,6 +97,7 @@ bool isConstExp(IR::Exp* exp) {
     return false;
 }
 bool isConstDef(IR::Stm* stm) {
+    // check the stm moving a const value to a temp
     if (stm->kind == IR::stmType::move) {
         auto movestm = static_cast<IR::Move*>(stm);
         if (movestm->dst->kind != IR::expType::temp) return false;
@@ -106,6 +108,7 @@ bool isConstDef(IR::Stm* stm) {
     return false;
 }
 bool isCopyDef(IR::Stm* stm) {
+    // check the stm moving a temp or a single phi to a temp
     if (stm->kind == IR::stmType::move) {
         auto movestm = static_cast<IR::Move*>(stm);
         if (movestm->dst->kind != IR::expType::temp) return false;
@@ -201,6 +204,30 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
             }
         }
     };
+    function<void(int, int)> cutEdge = [&](int from, int to) {
+        int cnt = 0;
+        auto toNode = nodes->at(to);
+        for (auto jt : (*(toNode->pred()))) {
+            if (jt->mykey == from) { break; }
+            cnt++;
+        }
+        // jt to modify the phi func
+        for (auto jt : ir->Aphi[to]) {
+            auto src = (static_cast<IR::Move*>(jt.second))->src;
+            auto callexp = static_cast<IR::Call*>(src);
+            callexp->args.erase(callexp->args.begin() + cnt);
+            auto def = (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second)->dst))->tempid);
+            if (isConstDef(jt.second)) {
+                curTemp.push(def);
+            } else if (isCopyDef(jt.second)) {
+                copyTemp.push(def);
+            }
+        }
+        ir->rmEdge(nodes->at(from), toNode);
+        if (toNode->pred()->empty()) {
+            while (!toNode->succ()->empty()) { cutEdge(to, (*(toNode->succ()->begin()))->mykey); }
+        }
+    };
     auto branchTest = [&](IR::StmList* stml) {
         if (stml->stm->kind == IR::stmType::cjump) {
             auto cjumpstm = static_cast<IR::Cjump*>(stml->stm);
@@ -212,27 +239,11 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                 int cnt = 0;
                 // fixme without free stm
                 if (b) {
+                    // jb---from  it---block cannot reach
                     stml->stm = new IR::Jump(cjumpstm->trueLabel);
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->falseLabel) {
-                            for (auto jt : (*(it->pred()))) {
-                                if (jt->mykey == jb) { break; }
-                                cnt++;
-                            }
-                            for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
-                                auto callexp = static_cast<IR::Call*>(src);
-                                callexp->args.erase(callexp->args.begin() + cnt);
-                                auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
-                                                ->tempid);
-                                if (isConstDef(jt.second)) {
-                                    curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
-                                    copyTemp.push(def);
-                                }
-                            }
-                            ir->rmEdge(nodes->at(jb), it);
+                            cutEdge(jb, it->mykey);
                             break;
                         }
                     }
@@ -240,25 +251,7 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                     stml->stm = new IR::Jump(cjumpstm->falseLabel);
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->trueLabel) {
-                            for (auto jt : (*(it->pred()))) {
-                                if (jt->mykey == jb) { break; }
-                                cnt++;
-                            }
-                            for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
-                                auto callexp = static_cast<IR::Call*>(src);
-                                callexp->args.erase(callexp->args.begin() + cnt);
-                                auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
-                                                ->tempid);
-                                if (isConstDef(jt.second)) {
-                                    curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
-                                    copyTemp.push(def);
-                                }
-                            }
-                            ir->rmEdge(nodes->at(jb), it);
-                            // TODO
+                            cutEdge(jb, it->mykey);
                             break;
                         }
                     }
@@ -291,25 +284,7 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                     stml->stm = new IR::Jump(cjumpstm->trueLabel);
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->falseLabel) {
-                            for (auto jt : (*(it->pred()))) {
-                                if (jt->mykey == jb) { break; }
-                                cnt++;
-                            }
-                            for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
-                                auto callexp = static_cast<IR::Call*>(src);
-                                callexp->args.erase(callexp->args.begin() + cnt);
-                                auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
-                                                ->tempid);
-                                if (isConstDef(jt.second)) {
-                                    curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
-                                    copyTemp.push(def);
-                                }
-                            }
-                            ir->rmEdge(nodes->at(jb), it);
-                            // TODO
+                            cutEdge(jb, it->mykey);
                             break;
                         }
                     }
@@ -317,26 +292,7 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                     stml->stm = new IR::Jump(cjumpstm->falseLabel);
                     for (auto it : (*(nodes->at(jb))->succ())) {
                         if (getNodeLabel(it) == cjumpstm->trueLabel) {
-                            for (auto jt : (*(it->pred()))) {
-                                if (jt->mykey == jb) { break; }
-                                cnt++;
-                            }
-                            // update phi
-                            for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
-                                auto callexp = static_cast<IR::Call*>(src);
-                                callexp->args.erase(callexp->args.begin() + cnt);
-                                auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
-                                                ->tempid);
-                                if (isConstDef(jt.second)) {
-                                    curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
-                                    copyTemp.push(def);
-                                }
-                            }
-                            ir->rmEdge(nodes->at(jb), it);
-                            // TODO
+                            cutEdge(jb, it->mykey);
                             break;
                         }
                     }
