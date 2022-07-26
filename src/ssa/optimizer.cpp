@@ -228,6 +228,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     setup();
     bfsMark();
     elimilation();
+    return 0;
 }
 // enum class COND { undefined, constant, indefinite };
 // struct TEMP_COND {
@@ -431,15 +432,15 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                                 cnt++;
                             }
                             for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
                                 auto callexp = static_cast<IR::Call*>(src);
                                 callexp->args.erase(callexp->args.begin() + cnt);
                                 auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                (static_cast<IR::Move*>(jt.second->stm)->dst))
                                                 ->tempid);
-                                if (isConstDef(jt.second)) {
+                                if (isConstDef(jt.second->stm)) {
                                     curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
+                                } else if (isCopyDef(jt.second->stm)) {
                                     copyTemp.push(def);
                                 }
                             }
@@ -456,15 +457,15 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                                 cnt++;
                             }
                             for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
                                 auto callexp = static_cast<IR::Call*>(src);
                                 callexp->args.erase(callexp->args.begin() + cnt);
                                 auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                (static_cast<IR::Move*>(jt.second->stm)->dst))
                                                 ->tempid);
-                                if (isConstDef(jt.second)) {
+                                if (isConstDef(jt.second->stm)) {
                                     curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
+                                } else if (isCopyDef(jt.second->stm)) {
                                     copyTemp.push(def);
                                 }
                             }
@@ -507,15 +508,15 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                                 cnt++;
                             }
                             for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
                                 auto callexp = static_cast<IR::Call*>(src);
                                 callexp->args.erase(callexp->args.begin() + cnt);
                                 auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                (static_cast<IR::Move*>(jt.second->stm)->dst))
                                                 ->tempid);
-                                if (isConstDef(jt.second)) {
+                                if (isConstDef(jt.second->stm)) {
                                     curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
+                                } else if (isCopyDef(jt.second->stm)) {
                                     copyTemp.push(def);
                                 }
                             }
@@ -534,15 +535,15 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
                             }
                             // update phi
                             for (auto jt : ir->Aphi[it->mykey]) {
-                                auto src = (static_cast<IR::Move*>(jt.second))->src;
+                                auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
                                 auto callexp = static_cast<IR::Call*>(src);
                                 callexp->args.erase(callexp->args.begin() + cnt);
                                 auto def = (static_cast<IR::Temp*>(
-                                                (static_cast<IR::Move*>(jt.second)->dst))
+                                                (static_cast<IR::Move*>(jt.second->stm)->dst))
                                                 ->tempid);
-                                if (isConstDef(jt.second)) {
+                                if (isConstDef(jt.second->stm)) {
                                     curTemp.push(def);
-                                } else if (isCopyDef(jt.second)) {
+                                } else if (isCopyDef(jt.second->stm)) {
                                     copyTemp.push(def);
                                 }
                             }

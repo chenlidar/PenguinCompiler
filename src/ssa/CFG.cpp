@@ -1,4 +1,5 @@
 #include "CFG.hpp"
+#include "../util/utils.hpp"
 namespace CFG {
 CFGraph::CFGraph(CANON::Block blocks) {
     LNTable = std::unordered_map<Temp_Label, GRAPH::Node*>();
@@ -6,15 +7,18 @@ CFGraph::CFGraph(CANON::Block blocks) {
         IR::StmList* stmlist = llist->head;
         GRAPH::Node* node = this->addNode(stmlist);
         orig.push_back(std::unordered_set<Temp_Temp>());
+        blocklabel.push_back(stmlist);
         IR::Stm* stm = stmlist->stm;
         assert(stm->kind == IR::stmType::label);
         Temp_Label label = static_cast<IR::Label*>(stm)->label;
         LNTable.insert(std::make_pair(label, node));
     }
-    GRAPH::Node* endnode = this->addNode(new IR::StmList(new IR::Label(blocks.label), nullptr));
+    Temp_Label label = "RETURN";
+    auto endlabelstm = new IR::StmList(new IR::Label(label), nullptr);
+    GRAPH::Node* endnode = this->addNode(endlabelstm);
     exitnum = endnode->mykey;
     orig.push_back(std::unordered_set<Temp_Temp>());
-    Temp_Label label = "RETURN";
+    blocklabel.push_back(endlabelstm);
     LNTable.insert(std::make_pair(label, endnode));
     for (auto node : mynodes) {
         if (node == endnode) continue;  // last node
@@ -23,18 +27,10 @@ CFGraph::CFGraph(CANON::Block blocks) {
         auto list = stmlist;
         for (; list->tail; list = list->tail) {
             stm = list->stm;
-            switch (stm->kind) {
-            case IR::stmType::move: {
-                orig[node->mykey].insert(
-                    static_cast<IR::Temp*>(static_cast<IR::Move*>(stm)->dst)->tempid);
-            } break;
-            case IR::stmType::jump:
-            case IR::stmType::cjump:
-            case IR::stmType::label:
-            case IR::stmType::exp: break;
-            default: assert(0);
-            }
+            IR::Exp** def = getDef(stm);
+            if (def) orig[node->mykey].insert(static_cast<IR::Temp*>(*def)->tempid);
         }
+        blockjump.push_back(list);
         stm = list->stm;
         switch (stm->kind) {
         case IR::stmType::jump: {
@@ -54,6 +50,29 @@ CFGraph::CFGraph(CANON::Block blocks) {
         } break;
         default: assert(0);
         }
+    }
+    blockjump.push_back(nullptr);
+    exist = std::vector<bool>(nodecount, false);
+    prednode = std::vector<std::vector<int>>(nodecount, std::vector<int>());
+    dfs(0);
+    for (int i = 0; i < nodecount; i++) {
+        if (exist[i]) continue;
+        for (auto pred : *mynodes[i]->pred()) { pred->succs.erase(pred->succs.find(mynodes[i])); }
+        mynodes[i]->preds.clear();
+        for (auto succ : *mynodes[i]->succ()) { succ->preds.erase(succ->preds.find(mynodes[i])); }
+        mynodes[i]->succs.clear();
+        orig[i].clear();
+    }
+    for (int i = 0; i < nodecount; i++) {
+        if (!exist[i]) continue;
+        for (auto pred : *mynodes[i]->pred()) prednode[i].push_back(pred->mykey);
+    }
+}
+void CFGraph::dfs(int node) {
+    exist[node] = true;
+    for (auto it : *mynodes[node]->succ()) {
+        if (exist[it->mykey]) continue;
+        dfs(it->mykey);
     }
 }
 };  // namespace CFG

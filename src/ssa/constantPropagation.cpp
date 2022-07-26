@@ -213,13 +213,14 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
         }
         // jt to modify the phi func
         for (auto jt : ir->Aphi[to]) {
-            auto src = (static_cast<IR::Move*>(jt.second))->src;
+            auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
             auto callexp = static_cast<IR::Call*>(src);
             callexp->args.erase(callexp->args.begin() + cnt);
-            auto def = (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second)->dst))->tempid);
-            if (isConstDef(jt.second)) {
+            auto def
+                = (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second->stm)->dst))->tempid);
+            if (isConstDef(jt.second->stm)) {
                 curTemp.push(def);
-            } else if (isCopyDef(jt.second)) {
+            } else if (isCopyDef(jt.second->stm)) {
                 copyTemp.push(def);
             }
         }

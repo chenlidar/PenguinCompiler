@@ -16,10 +16,11 @@ Dtree::Dtree(GRAPH::Graph* _g)
     , DF() {
     g = _g;
     dfs(0, -1);  // must be a function label
-    for (int i = g->nodecount - 1; i >= 1; i--) {
+    for (int i = cnt - 1; i >= 1; i--) {
         auto node = vertex[i];
         auto p = parent[node];
         auto s = p;
+        // assert(node >= 0);
         for (auto pred : *g->nodes()->at(node)->pred()) {
             int nxts = -1;
             if (dfnum[pred->mykey] <= dfnum[node])
@@ -45,8 +46,9 @@ Dtree::Dtree(GRAPH::Graph* _g)
         if (samedom[node] != -1) { idom[node] = idom[samedom[node]]; }
     }
     for (int i = 1; i < cnt; i++) {
-        assert(idom[i] != -1);
-        this->children[idom[i]].push_back(i);
+        int node = vertex[i];
+        assert(idom[node] != -1);
+        this->children[idom[node]].push_back(node);
     }
 }
 void Dtree::dfs(int node, int fa) {
@@ -77,7 +79,6 @@ int Dtree::find(int node) {
     return ancestor[node] = find(ancestor[node]);
 }
 void Dtree::computeDF(int node) {
-    DF = std::vector<std::vector<int>>(g->nodecount, std::vector<int>());
     for (auto succ : *g->nodes()->at(node)->succ()) {
         if (idom[succ->mykey] != node) DF[node].push_back(succ->mykey);
     }
@@ -93,6 +94,7 @@ void Dtree::computeDF(int node) {
     }
 }
 void Dtree::computeDF() {
+    DF = std::vector<std::vector<int>>(g->nodecount, std::vector<int>());
     for (int i = 0; i < ancestor.size(); i++) ancestor[i] = i;
     computeDF(0);
 }
