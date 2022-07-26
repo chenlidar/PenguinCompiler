@@ -175,7 +175,7 @@ static StmListList* mkBlocks(StmList* stms, Temp_Label done) {
     }
     if (state == IN) {
         state = OUT;
-        tail = tail->tail = new StmList(new Jump(done), nullptr);
+        tail = tail->tail = new StmList(new Jump("RETURN"), nullptr);
         ltail = ltail->tail = new StmListList(head->tail, nullptr);
     }
     return lhead->tail;

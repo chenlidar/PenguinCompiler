@@ -10,8 +10,7 @@ class SSAIR : public CFG::CFGraph {
 public:
     SSAIR(CANON::Block blocks);
     CANON::Block ssa2ir();
-    std::unordered_map<int, std::unordered_map<Temp_Temp, IR::Stm*>>
-        Aphi;
+    std::unordered_map<int, std::unordered_map<Temp_Temp, IR::StmList*>> Aphi;
 
 private:
     DTREE::Dtree* dtree;

@@ -11,6 +11,7 @@
 #include <sstream>
 #include <typeinfo>
 #include "util/showIR.hpp"
+#include "ssa/BuildSSA.hpp"
 extern int yyparse();
 extern AST::CompUnitList* root;
 IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* globalArray,
@@ -137,7 +138,9 @@ int main(int argc, char** argv) {
             IR::Stm* stmq = QUADRUPLE::handle(out);
             out = CANON::linearize(stmq);
             CANON::Block blocks = CANON::basicBlocks(out);
-            // TODO:do ssa in this place
+            // DONE:do ssa in this place
+            SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+            blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //
             // showir(out);
@@ -151,7 +154,9 @@ int main(int argc, char** argv) {
             IR::Stm* stmq = QUADRUPLE::handle(out);
             out = CANON::linearize(stmq);
             CANON::Block blocks = CANON::basicBlocks(out);
-            // TODO:do ssa in this place
+            // DONE:do ssa in this place
+            SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+            blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //
             // showir(out);

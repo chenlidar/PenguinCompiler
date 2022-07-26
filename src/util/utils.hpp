@@ -31,6 +31,7 @@ static IR::PatchList* joinPatch(IR::PatchList* first, IR::PatchList* second) {
 }
 static IR::StmList* getLast(IR::StmList* list) {
     IR::StmList* last = list;
+    assert(last->tail);
     while (last->tail->tail) last = last->tail;
     return last;
 }
@@ -188,7 +189,7 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
         if (isRealregister(tempexp->tempid)) return;
         uses.push_back(exp);
     };
-    auto processExpInMove = [&](IR::Exp* exp) {
+    auto processExpInMove = [&](IR::Exp* &exp) {
         switch (exp->kind) {
         case IR::expType::binop: {
             auto binopexp = static_cast<IR::Binop*>(exp);
@@ -220,6 +221,11 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
     case IR::stmType::move: {
         auto movstm = static_cast<IR::Move*>(stm);
         processExpInMove(movstm->src);
+        if(movstm->dst->kind==IR::expType::mem){
+            auto memexp=static_cast<IR::Mem*>(movstm->dst);
+            processTempExp(&(memexp->mem));
+        }
+        break;
     }
     case IR::stmType::exp: {
         auto expstm = static_cast<IR::ExpStm*>(stm);

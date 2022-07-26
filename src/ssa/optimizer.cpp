@@ -227,6 +227,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     setup();
     bfsMark();
     elimilation();
+    return 0;
 }
-SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {}
+SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) { return 0; }
 }  // namespace SSAOPT
