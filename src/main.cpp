@@ -11,6 +11,7 @@
 #include <sstream>
 #include <typeinfo>
 #include "util/showIR.hpp"
+#include "ssa/BuildSSA.hpp"
 extern int yyparse();
 extern AST::CompUnitList* root;
 IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* globalArray,
@@ -34,7 +35,8 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
             *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
         } break;
         case TY::tyType::Ty_float: {
-            assert(0);
+            assert(entry->ty->value);
+            *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
         } break;
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";
@@ -134,7 +136,12 @@ int main(int argc, char** argv) {
                 out->tail = initarray;
             }
             IR::Stm* stmq = QUADRUPLE::handle(out);
-            out = CANON::handle(stmq);
+            out = CANON::linearize(stmq);
+            CANON::Block blocks = CANON::basicBlocks(out);
+            // DONE:do ssa in this place
+            SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+            blocks = ssa->ssa2ir();
+            out = CANON::traceSchedule(blocks);
             //
             // showir(out);
             int stksize = fenv->look(funcname)->stksize;
@@ -145,7 +152,12 @@ int main(int argc, char** argv) {
         } else {
             IR::StmList* out = CANON::linearize(stm);
             IR::Stm* stmq = QUADRUPLE::handle(out);
-            out = CANON::handle(stmq);
+            out = CANON::linearize(stmq);
+            CANON::Block blocks = CANON::basicBlocks(out);
+            // DONE:do ssa in this place
+            SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+            blocks = ssa->ssa2ir();
+            out = CANON::traceSchedule(blocks);
             //
             // showir(out);
             bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;

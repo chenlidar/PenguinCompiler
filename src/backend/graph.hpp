@@ -43,11 +43,11 @@ struct Node {
 };
 
 class Graph {
-private:
-    int nodecount;
+protected:
     std::vector<Node*> mynodes;
 
 public:
+    int nodecount;
     Graph() {
         nodecount = 0;
         mynodes = std::vector<Node*>();

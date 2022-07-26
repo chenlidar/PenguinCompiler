@@ -25,6 +25,11 @@ struct StmListList {
 struct Block {
     StmListList* llist;
     Temp_Label label;
+    Block(StmListList* _llist, Temp_Label _label) {
+        llist = _llist;
+        label = _label;
+    }
+    Block() {}
 };
 StmList* linearize(Stm* stm);
 Block basicBlocks(StmList* stmList);

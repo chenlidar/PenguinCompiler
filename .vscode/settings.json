@@ -84,6 +84,7 @@
         "shared_mutex": "cpp",
         "thread": "cpp",
         "*.def": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "unordered_set": "cpp"
     }
 }

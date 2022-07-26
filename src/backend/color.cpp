@@ -41,7 +41,9 @@ void COL_result::decrementDegree(GRAPH::Node* node) {
         SpillWorklist.erase(node);
         if (moveRelated(node))
             FreezeWorklist.insert(node);
-        else { SimplifyWorklist.insert(node); }
+        else {
+            SimplifyWorklist.insert(node);
+        }
     }
 }
 void COL_result::simplify() {

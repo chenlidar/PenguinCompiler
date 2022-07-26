@@ -13,26 +13,10 @@ using std::unique_ptr;
 using std::vector;
 
 // use Binop::plus
-enum class binop { T_plus, T_minus, T_mul, T_div, T_mod};
-enum class RelOp {
-    T_eq,
-    T_ne,
-    T_lt,
-    T_gt,
-    T_le,
-    T_ge
-};
+enum class binop { T_plus, T_minus, T_mul, T_div, T_mod };
+enum class RelOp { T_eq, T_ne, T_lt, T_gt, T_le, T_ge };
 
-enum class expType {
-    constx,
-    binop,
-    fbinop,
-    temp,
-    mem,
-    eseq,
-    name,
-    call
-};
+enum class expType { constx, binop, temp, mem, eseq, name, call };
 enum class stmType { seq, label, jump, cjump, move, exp };
 
 RelOp commute(RelOp op);  // a op b    ==    b commute(op) a
@@ -79,10 +63,9 @@ public:
 };
 class Jump : public Stm {
 public:
-    Exp* exp;
-    vector<string> jumps;
-    Jump(Exp* ep, vector<string> s) {
-        exp = ep, jumps = s;
+    string target;
+    Jump(string _target) {
+        target = _target;
         kind = stmType::jump;
     }
     void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
@@ -126,7 +109,7 @@ public:
 };
 
 class Const : public Exp {
-   public:
+public:
     int val;
     Const(int x) {
         val = x;
@@ -194,9 +177,9 @@ public:
 };
 class Call : public Exp {
 public:
-    Exp* fun;
+    string fun;
     vector<Exp*> args;
-    Call(Exp* fu, vector<Exp*> ar) {
+    Call(string fu, vector<Exp*> ar) {
         args = ar, fun = fu;
         kind = expType::call;
     }

@@ -3,6 +3,9 @@
 #include "../structure/treeIR.hpp"
 #include "../structure/ty.hpp"
 #include "../structure/ast.h"
+#include <memory>
+#include <vector>
+#include <assert.h>
 static inline IR::Stm* nopStm() { return (new IR::ExpStm(new IR::Const(0))); }
 static bool isNop(IR::Stm* x) {
     return x->kind == IR::stmType::exp
@@ -28,6 +31,7 @@ static IR::PatchList* joinPatch(IR::PatchList* first, IR::PatchList* second) {
 }
 static IR::StmList* getLast(IR::StmList* list) {
     IR::StmList* last = list;
+    assert(last->tail);
     while (last->tail->tail) last = last->tail;
     return last;
 }
@@ -59,12 +63,8 @@ static TY::tyType getArrayType(TY::Type* ty) {
     while (ty->kind == TY::tyType::Ty_array) ty = ty->tp;
     return ty->kind;
 }
-static IR::Exp* ir_i2f(IR::Exp* exp) {
-    return new IR::Call(new IR::Name("__aeabi_i2f"), IR::ExpList(1, exp));
-}
-static IR::Exp* ir_f2i(IR::Exp* exp) {
-    return new IR::Call(new IR::Name("__aeabi_f2iz"), IR::ExpList(1, exp));
-}
+static IR::Exp* ir_i2f(IR::Exp* exp) { return new IR::Call("__aeabi_i2f", IR::ExpList(1, exp)); }
+static IR::Exp* ir_f2i(IR::Exp* exp) { return new IR::Call("__aeabi_f2iz", IR::ExpList(1, exp)); }
 template <typename T> static T cal(IR::binop op, T l, T r) {
     switch (op) {
     case IR::binop::T_plus: return l + r;
@@ -124,10 +124,10 @@ static IR::Exp* calIRfloat(IR::binop bop, IR::Exp* lexp, IR::Exp* rexp) {
     param.push_back(lexp);
     param.push_back(rexp);
     switch (bop) {
-    case IR::binop::T_plus: return new IR::Call(new IR::Name("__aeabi_fadd"), param);
-    case IR::binop::T_minus: return new IR::Call(new IR::Name("__aeabi_fsub"), param);
-    case IR::binop::T_mul: return new IR::Call(new IR::Name("__aeabi_fmul"), param);
-    case IR::binop::T_div: return new IR::Call(new IR::Name("__aeabi_fdiv"), param);
+    case IR::binop::T_plus: return new IR::Call("__aeabi_fadd", param);
+    case IR::binop::T_minus: return new IR::Call("__aeabi_fsub", param);
+    case IR::binop::T_mul: return new IR::Call("__aeabi_fmul", param);
+    case IR::binop::T_div: return new IR::Call("__aeabi_fdiv", param);
     default: assert(0);
     }
     return nullptr;
@@ -157,4 +157,96 @@ static IR::Exp* TyIRBinop(IR::binop bop, TY::Type* lty, IR::Exp* lexp, TY::Type*
     } else
         assert(0);
 }
+static inline bool isRealregister(Temp_Temp temp) {
+    return temp < 1000;  // according to temptemp.hpp
+}
+static IR::Exp** getDef(IR::Stm* stm) {  // return 0 means no def,else return the def temp_temp
+    switch (stm->kind) {
+    case IR::stmType::move: {
+        auto movstm = static_cast<IR::Move*>(stm);
+        if (movstm->dst->kind == IR::expType::temp) {
+            auto tempexp = static_cast<IR::Temp*>(movstm->dst);
+            if (isRealregister(tempexp->tempid)) return 0;
+            return &(movstm->dst);
+        } else
+            return 0;
+    }
+    case IR::stmType::exp: return 0;
+    case IR::stmType::cjump: return 0;
+    case IR::stmType::label: return 0;
+    case IR::stmType::seq: assert(0);
+    case IR::stmType::jump: return 0;
+    default: assert(0);
+    }
+    assert(0);
+    return 0;
+}
+static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
+    std::vector<IR::Exp**> uses;
+    auto processTempExp = [&](IR::Exp** exp) {
+        if ((*exp)->kind != IR::expType::temp) return;
+        auto tempexp = static_cast<IR::Temp*>(*exp);
+        if (isRealregister(tempexp->tempid)) return;
+        uses.push_back(exp);
+    };
+    auto processExpInMove = [&](IR::Exp* &exp) {
+        switch (exp->kind) {
+        case IR::expType::binop: {
+            auto binopexp = static_cast<IR::Binop*>(exp);
+            processTempExp(&binopexp->left);
+            processTempExp(&binopexp->right);
+            break;
+        }
+        case IR::expType::call: {
+            auto callexp = static_cast<IR::Call*>(exp);
+            for (auto& it : (callexp->args)) processTempExp(&it);
+            break;
+        }
+        case IR::expType::constx: break;
+        case IR::expType::eseq: assert(0);
+        case IR::expType::mem: {
+            auto memexp = static_cast<IR::Mem*>(exp);
+            processTempExp(&memexp->mem);
+            break;
+        }
+        case IR::expType::name: break;
+        case IR::expType::temp: {
+            processTempExp(&exp);
+            break;
+        }
+        }
+    };
+
+    switch (stm->kind) {
+    case IR::stmType::move: {
+        auto movstm = static_cast<IR::Move*>(stm);
+        processExpInMove(movstm->src);
+        if(movstm->dst->kind==IR::expType::mem){
+            auto memexp=static_cast<IR::Mem*>(movstm->dst);
+            processTempExp(&(memexp->mem));
+        }
+        break;
+    }
+    case IR::stmType::exp: {
+        auto expstm = static_cast<IR::ExpStm*>(stm);
+        if (expstm->exp->kind == IR::expType::call) {
+            auto callexp = static_cast<IR::Call*>(expstm->exp);
+            for (auto& it : (callexp->args)) { processTempExp(&it); }
+        }
+        break;
+    }
+    case IR::stmType::cjump: {
+        auto cjumpstm = static_cast<IR::Cjump*>(stm);
+        processTempExp(&cjumpstm->left);
+        processTempExp(&cjumpstm->right);
+        break;
+    }
+    case IR::stmType::label: break;
+    case IR::stmType::seq: assert(0);
+    case IR::stmType::jump: break;
+    default: assert(0);
+    }
+    return std::move(uses);
+}
+
 #endif
