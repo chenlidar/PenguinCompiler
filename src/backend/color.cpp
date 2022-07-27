@@ -41,9 +41,7 @@ void COL_result::decrementDegree(GRAPH::Node* node) {
         SpillWorklist.erase(node);
         if (moveRelated(node))
             FreezeWorklist.insert(node);
-        else {
-            SimplifyWorklist.insert(node);
-        }
+        else { SimplifyWorklist.insert(node); }
     }
 }
 void COL_result::simplify() {
@@ -78,7 +76,7 @@ void COL_result::combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u n
         if (!ActiveMove.count(instr) && !ig->WorklistMove.count(instr)) continue;
         ig->Movelist.at(u).insert(instr);
     }
-    // enableMove(v);
+    enableMove(v);
     for (auto it : *v->succ()) {
         it->mygraph->addEdge(it, u);
         it->mygraph->addEdge(u, it);

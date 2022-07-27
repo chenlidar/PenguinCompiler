@@ -1,9 +1,10 @@
 #include "../backend/graph.hpp"
 #include "Dtree.hpp"
+#include "CFG.hpp"
 namespace CDG {
 class CDgraph : public GRAPH::Graph {
 public:
-    CDgraph(GRAPH::Graph* g);
+    CDgraph(CFG::CFGraph* g);
     std::vector<std::vector<int>> CDnode;
 
 private:
