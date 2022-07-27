@@ -1,8 +1,9 @@
 #include "Dtree.hpp"
 #include "assert.h"
 namespace DTREE {
-Dtree::Dtree(GRAPH::Graph* _g)
+Dtree::Dtree(GRAPH::Graph* _g, int _entrynum)
     : cnt(0)
+    , entrynum(_entrynum)
     , dfnum(_g->nodecount, -1)
     , vertex(_g->nodecount, -1)
     , parent(_g->nodecount, -1)
@@ -15,7 +16,7 @@ Dtree::Dtree(GRAPH::Graph* _g)
     , children(_g->nodecount, std::vector<int>())
     , DF() {
     g = _g;
-    dfs(0, -1);  // must be a function label
+    dfs(entrynum, -1);  // must be a function label
     for (int i = cnt - 1; i >= 1; i--) {
         auto node = vertex[i];
         auto p = parent[node];
@@ -96,6 +97,6 @@ void Dtree::computeDF(int node) {
 void Dtree::computeDF() {
     DF = std::vector<std::vector<int>>(g->nodecount, std::vector<int>());
     for (int i = 0; i < ancestor.size(); i++) ancestor[i] = i;
-    computeDF(0);
+    computeDF(vertex[0]);
 }
 }  // namespace DTREE
