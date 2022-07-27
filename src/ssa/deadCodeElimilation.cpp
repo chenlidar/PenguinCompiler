@@ -24,7 +24,11 @@ bool SSA::Optimizer::isNecessaryStm(IR::Stm* stm) {
         auto movestm = static_cast<IR::Move*>(stm);
         if (movestm->dst->kind == IR::expType::mem) return true;
         // fixme: all funcs have side-effect?
-        if (movestm->src->kind == IR::expType::call) return true;
+        if (movestm->src->kind == IR::expType::call) {
+            auto callexp = static_cast<IR::Call*>(movestm->src);
+            if (callexp->fun[0] == '$') return false;
+            return true;
+        }
         if (movestm->dst->kind == IR::expType::temp
             && isRealregister(static_cast<IR::Temp*>(movestm->dst)->tempid))
             return true;
@@ -272,6 +276,17 @@ void SSA::Optimizer::deadCodeElimilation() {
                     // std::cerr << "DELETE::";
                     // tail->stm->printIR();
                     // auto todelete=tail;
+                    if (tail->stm->kind == IR::stmType::move) {
+                        auto movestm = static_cast<IR::Move*>(tail->stm);
+                        if (movestm->src->kind == IR::expType::call) {
+                            auto callexp = static_cast<IR::Call*>(movestm->src);
+                            if (callexp->fun[0] == '$') {
+                                ir->Aphi[cur->mykey].erase(
+                                    static_cast<IR::Temp*>(movestm->dst)->tempid);
+                            }
+                        }
+                    }
+
                     auto newtail = tail->tail;
                     tail->tail = 0;
                     tail = newtail;
