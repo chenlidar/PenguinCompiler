@@ -14,7 +14,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     placePhi();
     // E. rename temp, output a graph
     rename();
-    endlabel=blocks.label;
+    endlabel = blocks.label;
     opt.ir = this;
 }
 void SSA::SSAIR::placePhi() {
@@ -47,7 +47,19 @@ void SSA::SSAIR::placePhi() {
         }
     }
 }
-void SSA::SSAIR::rename() { rename(0); }
+void SSA::SSAIR::rename() {
+    rename(0);
+    std::vector<std::pair<Temp_Temp, IR::StmList*>> v;
+    for (int i = 0; i < nodecount; i++) {
+        v.clear();
+        for (auto it : Aphi[i]) { v.push_back(it); }
+        Aphi[i].clear();
+        for (auto& it : v) {
+            it.first = static_cast<IR::Temp*>(*getDef(it.second->stm))->tempid;
+            Aphi[i].insert(it);
+        }
+    }
+}
 void SSA::SSAIR::rename(int node) {
     IR::StmList* stmlist = (IR::StmList*)mynodes[node]->nodeInfo();
     IR::vector<Temp_Temp> rev = IR::vector<Temp_Temp>();
