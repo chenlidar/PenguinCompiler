@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_COMPILER "clang++")
 file(GLOB_RECURSE SRC "src/*.cpp")
-add_compile_options(-O0 -g -std=c++11)
+add_compile_options(-O2 -g -std=c++11)
 include_directories(src)
 include_directories(test)
 add_executable(test-asm ${SRC})
