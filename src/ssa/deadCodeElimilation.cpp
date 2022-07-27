@@ -58,7 +58,6 @@ void SSA::Optimizer::deadCodeElimilation() {
     CDG::CDgraph gp(ir);
 
     auto setup = [&]() {
-        printf("mayday!!\n");
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
