@@ -7,7 +7,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     : CFG::CFGraph(blocks) {
     // A. stmlist -> graph
     // B. Dominator tree
-    dtree = new DTREE::Dtree(this);
+    dtree = new DTREE::Dtree(this, 0);
     // C. Dominance frontiers
     dtree->computeDF();
     // D. insert phi function
