@@ -24,7 +24,7 @@ void CDgraph::bfs(int node) {
         int n = q.front();
         q.pop();
         for (auto pre : dtree->DF[n]) {
-            CDnode[node].push_back(pre);
+            if(pre!=nodecount-1)CDnode[node].push_back(pre);
             if (!vis[pre]) {
                 vis[pre] = true;
                 q.push(pre);
