@@ -3,6 +3,7 @@
 #include "../structure/treeIR.hpp"
 #include "../structure/ty.hpp"
 #include "../structure/ast.h"
+#include "../backend/graph.hpp"
 #include <memory>
 #include <vector>
 #include <assert.h>
@@ -189,7 +190,7 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
         if (isRealregister(tempexp->tempid)) return;
         uses.push_back(exp);
     };
-    auto processExpInMove = [&](IR::Exp* &exp) {
+    auto processExpInMove = [&](IR::Exp*& exp) {
         switch (exp->kind) {
         case IR::expType::binop: {
             auto binopexp = static_cast<IR::Binop*>(exp);
@@ -221,8 +222,8 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
     case IR::stmType::move: {
         auto movstm = static_cast<IR::Move*>(stm);
         processExpInMove(movstm->src);
-        if(movstm->dst->kind==IR::expType::mem){
-            auto memexp=static_cast<IR::Mem*>(movstm->dst);
+        if (movstm->dst->kind == IR::expType::mem) {
+            auto memexp = static_cast<IR::Mem*>(movstm->dst);
             processTempExp(&(memexp->mem));
         }
         break;

@@ -140,6 +140,7 @@ int main(int argc, char** argv) {
             CANON::Block blocks = CANON::basicBlocks(out);
             // DONE:do ssa in this place
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+            ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //
@@ -156,6 +157,7 @@ int main(int argc, char** argv) {
             CANON::Block blocks = CANON::basicBlocks(out);
             // DONE:do ssa in this place
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+            ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //

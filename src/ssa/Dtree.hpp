@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __DTREE
+#define __DTREE
 #include "../backend/graph.hpp"
 #include <unordered_set>
 namespace DTREE {
@@ -28,3 +29,4 @@ private:
     int find(int node);
 };
 }  // namespace DTREE
+#endif

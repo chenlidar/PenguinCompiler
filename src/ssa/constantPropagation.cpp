@@ -1,4 +1,4 @@
-#include "optimizer.hpp"
+//#include "optimizer.hpp"
 #include "BuildSSA.hpp"
 #include "../structure/treeIR.hpp"
 #include <vector>
@@ -17,7 +17,7 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-namespace SSAOPT {
+namespace SSA {
 // enum class COND { undefined, constant, indefinite };
 // struct TEMP_COND {
 //     COND cond;
@@ -159,8 +159,10 @@ Temp_Temp evalCopy(IR::Exp* exp) {
         auto callexp = static_cast<IR::Call*>(exp);
         return static_cast<IR::Temp*>(callexp->args[0])->tempid;
     }
+    assert(0);
+    return -1;
 }
-SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
+void SSA::Optimizer::constantPropagation() {
     // unordered_map<Temp_Temp, TEMP_COND> tempCondition;
     unordered_map<IR::StmList*, int> stmlBlockmap;
     unordered_map<Temp_Temp, IR::StmList*> tempDef;
@@ -364,4 +366,4 @@ SSA::SSAIR* SSAOPT::Optimizer::constantPropagation(SSA::SSAIR* ir) {
     setup();
     bfsMark();
 }
-}  // namespace SSAOPT
+}  // namespace SSA

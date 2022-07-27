@@ -1,4 +1,4 @@
-#include "optimizer.hpp"
+//#include "optimizer.hpp"
 #include "BuildSSA.hpp"
 #include "../structure/treeIR.hpp"
 #include <vector>
@@ -17,7 +17,7 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-namespace SSAOPT {
+namespace SSA {
 bool isNecessaryStm(IR::Stm* stm) {
     switch (stm->kind) {
     case IR::stmType::move: {
@@ -45,7 +45,7 @@ bool isNecessaryStm(IR::Stm* stm) {
     return false;
 }
 
-SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
+void SSA::Optimizer::deadCodeElimilation() {
     unordered_map<Temp_Temp, IR::Stm*> tempDef;
     unordered_map<IR::Stm*, int> stmBlockmap;
     unordered_set<IR::Stm*> ActivatedStm;
@@ -58,6 +58,7 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     CDG::CDgraph gp(ir);
 
     auto setup = [&]() {
+        printf("mayday!!\n");
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -230,4 +231,4 @@ SSA::SSAIR* SSAOPT::Optimizer::deadCodeElimilation(SSA::SSAIR* ir) {
     elimilation();
 }
 
-}  // namespace SSAOPT
+}  // namespace SSA

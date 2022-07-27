@@ -1,8 +1,9 @@
 #include <assert.h>
 #include "BuildSSA.hpp"
 #include "../util/utils.hpp"
-using namespace SSA;
-SSAIR::SSAIR(CANON::Block blocks)
+#include "Dtree.hpp"
+// using namespace SSA;
+SSA::SSAIR::SSAIR(CANON::Block blocks)
     : CFG::CFGraph(blocks) {
     // A. stmlist -> graph
     // B. Dominator tree
@@ -13,8 +14,9 @@ SSAIR::SSAIR(CANON::Block blocks)
     placePhi();
     // E. rename temp, output a graph
     rename();
+    opt.ir = this;
 }
-void SSAIR::placePhi() {
+void SSA::SSAIR::placePhi() {
     defsites = std::unordered_map<Temp_Temp, std::vector<int>>();
     for (int i = 0; i < nodecount; i++) {
         for (auto dst : orig[i]) { defsites[dst].push_back(i); }
@@ -44,8 +46,8 @@ void SSAIR::placePhi() {
         }
     }
 }
-void SSAIR::rename() { rename(0); }
-void SSAIR::rename(int node) {
+void SSA::SSAIR::rename() { rename(0); }
+void SSA::SSAIR::rename(int node) {
     IR::StmList* stmlist = (IR::StmList*)mynodes[node]->nodeInfo();
     IR::vector<Temp_Temp> rev = IR::vector<Temp_Temp>();
     for (; stmlist; stmlist = stmlist->tail) {
@@ -98,7 +100,7 @@ void SSAIR::rename(int node) {
     for (auto var : rev) stk[var].pop();
 }
 
-CANON::Block SSAIR::ssa2ir() {
+CANON::Block SSA::SSAIR::ssa2ir() {
     for (int i = 0; i < nodecount; i++) {
         if (mynodes[i]->inDegree() <= 1) continue;  // one pred or no pred nodedont have phi
         if (Aphi[i].size() == 0) continue;  // exitnode must has 0 phi
@@ -129,17 +131,15 @@ CANON::Block SSAIR::ssa2ir() {
                 blocklabel.push_back(prelist);
                 blockjump.push_back(prelist->tail);
                 prednode.push_back(std::vector<int>({pre}));
-                pre=prenode;
+                pre = prenode;
             }
             for (auto it : Aphi[i]) {
                 auto movephi = static_cast<IR::Move*>(it.second->stm);
                 auto callphi = static_cast<IR::Call*>(movephi->src);
                 int tempid = static_cast<IR::Temp*>(callphi->args[cnt])->tempid;
                 int dsttemp = static_cast<IR::Temp*>(movephi->dst)->tempid;
-                blockjump[pre]->tail
-                    = new IR::StmList(blockjump[pre]->stm, nullptr);
-                blockjump[pre]->stm
-                    = new IR::Move(new IR::Temp(dsttemp), new IR::Temp(tempid));
+                blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
+                blockjump[pre]->stm = new IR::Move(new IR::Temp(dsttemp), new IR::Temp(tempid));
                 blockjump[pre] = blockjump[pre]->tail;
             }
             cnt++;
