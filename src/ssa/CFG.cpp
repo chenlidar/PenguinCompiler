@@ -13,7 +13,7 @@ CFGraph::CFGraph(CANON::Block blocks) {
         Temp_Label label = static_cast<IR::Label*>(stm)->label;
         LNTable.insert(std::make_pair(label, node));
     }
-    Temp_Label label = "RETURN";
+    Temp_Label label = blocks.label;
     auto endlabelstm = new IR::StmList(new IR::Label(label), nullptr);
     GRAPH::Node* endnode = this->addNode(endlabelstm);
     exitnum = endnode->mykey;

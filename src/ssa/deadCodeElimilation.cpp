@@ -18,7 +18,7 @@ using std::unordered_set;
 using std::vector;
 
 namespace SSA {
-bool isNecessaryStm(IR::Stm* stm) {
+bool SSA::Optimizer::isNecessaryStm(IR::Stm* stm) {
     switch (stm->kind) {
     case IR::stmType::move: {
         auto movestm = static_cast<IR::Move*>(stm);
@@ -38,7 +38,7 @@ bool isNecessaryStm(IR::Stm* stm) {
     }
     case IR::stmType::cjump: return false;
     case IR::stmType::label: {
-        return static_cast<IR::Label*>(stm)->label == "RETURN";
+        return static_cast<IR::Label*>(stm)->label == this->ir->endlabel;
     }
     case IR::stmType::seq: assert(0);
     case IR::stmType::jump: return false;

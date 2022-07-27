@@ -6,7 +6,6 @@
 #include "../backend/canon.hpp"
 #include "CFG.hpp"
 #include "./Dtree.hpp"
-#include "optimizer.hpp"
 namespace SSA {
 class SSAIR;
 class Optimizer {
@@ -14,6 +13,9 @@ public:
     void deadCodeElimilation();
     void constantPropagation();
     SSA::SSAIR* ir;
+
+private:
+    bool isNecessaryStm(IR::Stm* stm);
 };
 class SSAIR : public CFG::CFGraph {
 public:
@@ -21,6 +23,7 @@ public:
     CANON::Block ssa2ir();
     std::unordered_map<int, std::unordered_map<Temp_Temp, IR::StmList*>> Aphi;
     SSA::Optimizer opt;
+    Temp_Label endlabel;
 
 private:
     DTREE::Dtree* dtree;

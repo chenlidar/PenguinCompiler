@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
             }
             IR::Stm* stmq = QUADRUPLE::handle(out);
             out = CANON::linearize(stmq);
-            CANON::Block blocks = CANON::basicBlocks(out);
+            CANON::Block blocks = CANON::basicBlocks(out,funcname);
             // DONE:do ssa in this place
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
             ssa->opt.deadCodeElimilation();
@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
             IR::StmList* out = CANON::linearize(stm);
             IR::Stm* stmq = QUADRUPLE::handle(out);
             out = CANON::linearize(stmq);
-            CANON::Block blocks = CANON::basicBlocks(out);
+            CANON::Block blocks = CANON::basicBlocks(out,funcname);
             // DONE:do ssa in this place
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
             ssa->opt.deadCodeElimilation();

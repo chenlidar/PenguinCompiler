@@ -116,21 +116,14 @@ IR::Tr_Exp::Tr_Exp(Stm* stm) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //   TILE
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Label::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
-    ls->push_back(new ASM::Label(label));
-}
-void Jump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
-    if (target == "RETURN") {
-        target = exitlabel;
-        ls->push_back(new ASM::Oper(string("b ") + exitlabel, Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets({target})));
-    } else
-        ls->push_back(new ASM::Oper(string("b ") + target, Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets({target})));
+void Label::ir2asm(ASM::InstrList* ls) { ls->push_back(new ASM::Label(label)); }
+void Jump::ir2asm(ASM::InstrList* ls) {
+    ls->push_back(new ASM::Oper(string("b ") + target, Temp_TempList(), Temp_TempList(),
+                                ASM::Targets({target})));
 
     // Jump( temp ,LabelList( NamedLabel("END") ))
 }
-void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+void Cjump::ir2asm(ASM::InstrList* ls) {
     // TODO
     // Cjump(op , e1 , Binop(mul, e2, Const(2^k)) , Lable(L) , falselabel)
     // Cjump(op , e1 , Binop(mul, Const(2^k), e2) , Lable(L) , falselabel)
@@ -170,7 +163,7 @@ void Cjump::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
                                     Temp_TempList(), jumplist));
     }
 }
-void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+void Move::ir2asm(ASM::InstrList* ls) {
     /* TODO
     //Move(Mem(Binop(minus, e1, Const(k))), e2)
     //Move(Mem(Binop(plus, e1, Const(k))), e2)
@@ -289,7 +282,7 @@ void Move::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
     } else
         assert(0);
 }
-void ExpStm::ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) {
+void ExpStm::ir2asm(ASM::InstrList* ls) {
     //  FIXME
     if (this->exp->kind == expType::call) this->exp->ir2asm(ls);
 }
@@ -391,9 +384,9 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
     if (stksize) {
         (new IR::Move(new IR::Temp(13),
                       new IR::Binop(IR::binop::T_plus, new IR::Temp(13), new IR::Const(-stksize))))
-            ->ir2asm(ls, "");
+            ->ir2asm(ls);
     }
-    for (; head; head = head->tail) head->stm->ir2asm(ls, "");
+    for (; head; head = head->tail) head->stm->ir2asm(ls);
     Temp_TempList uses = Temp_TempList();
     for (int i = 0; i < cnt; i++) { uses.push_back(i); }
 #ifndef VFP
@@ -476,17 +469,14 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
     if (stksize) {
         (new IR::Move(new IR::Temp(13),
                       new IR::Binop(IR::binop::T_plus, new IR::Temp(13), new IR::Const(stksize))))
-            ->ir2asm(ls, "");
+            ->ir2asm(ls);
     }
     return 0;  // r0
 }
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();
-    IR::Stm* label = getLast(stmlist)->tail->stm;
-    assert(label->kind == stmType::label);
-    Temp_Label exitlabel = static_cast<IR::Label*>(label)->label;
     stmlist = CANON::funcEntryExit1(stmlist);
-    for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body, exitlabel);
+    for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body);
     return proc;
 }
 

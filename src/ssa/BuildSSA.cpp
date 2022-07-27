@@ -14,6 +14,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     placePhi();
     // E. rename temp, output a graph
     rename();
+    endlabel=blocks.label;
     opt.ir = this;
 }
 void SSA::SSAIR::placePhi() {
@@ -155,6 +156,6 @@ CANON::Block SSA::SSAIR::ssa2ir() {
         tail = tail->tail = new CANON::StmListList((IR::StmList*)mynodes[i]->nodeInfo(), nullptr);
     }
     b.llist = head->tail;
-    b.label = Temp_newlabel();
+    b.label = endlabel;
     return b;
 }
