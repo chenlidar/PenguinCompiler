@@ -262,9 +262,10 @@ void SSA::Optimizer::deadCodeElimilation() {
                 auto& v = (ir->prednode[it->mykey]);
                 for (int i = 0; i < len; i++) {
                     for (auto kt : phimap[it->mykey][v[i]]) {
-                        newargs.push_back(callexp->args[i]);
+                        newargs.push_back(callexp->args[i]->quad());
                     }
                 }
+                for (auto kt : callexp->args) delete kt;
                 callexp->args = move(newargs);
             }
             ir->prednode[it->mykey] = move(newprednode);
