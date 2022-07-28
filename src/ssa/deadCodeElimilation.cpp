@@ -1,4 +1,3 @@
-//#include "optimizer.hpp"
 #include "BuildSSA.hpp"
 #include "../structure/treeIR.hpp"
 #include <vector>
@@ -23,7 +22,7 @@ bool SSA::Optimizer::isNecessaryStm(IR::Stm* stm) {
     case IR::stmType::move: {
         auto movestm = static_cast<IR::Move*>(stm);
         if (movestm->dst->kind == IR::expType::mem) return true;
-        // fixme: all funcs have side-effect?
+        // FIXME: all funcs have side-effect?
         if (movestm->src->kind == IR::expType::call) {
             auto callexp = static_cast<IR::Call*>(movestm->src);
             if (callexp->fun[0] == '$') return false;
@@ -42,8 +41,6 @@ bool SSA::Optimizer::isNecessaryStm(IR::Stm* stm) {
     }
     case IR::stmType::cjump: return false;
     case IR::stmType::label: {
-        // std::cerr << static_cast<IR::Label*>(stm)->label << "^^^^^" << this->ir->endlabel
-        //           << std::endl;
         return static_cast<IR::Label*>(stm)->label == this->ir->endlabel;
     }
     case IR::stmType::seq: assert(0);
@@ -63,6 +60,7 @@ void SSA::Optimizer::deadCodeElimilation() {
     auto nodesz = ir->nodes()->size();
     vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
     vector<unordered_map<int, vector<int>>> phimap(nodesz);
+    int oldParentKey;
     CDG::CDgraph gp(ir);
 
     auto setup = [&]() {
@@ -71,27 +69,21 @@ void SSA::Optimizer::deadCodeElimilation() {
             auto stml = static_cast<IR::StmList*>(it->info);
             while (stml) {
                 auto stm = stml->stm;
-                // stm->printIR();
                 //  set up stm-block mapping
                 stmBlockmap[stm] = it->mykey;
 
                 // set up def-stm mapping
                 auto df = getDef(stm);
                 if (df) tempDef[static_cast<IR::Temp*>(*df)->tempid] = stm;
+
                 // set up seed stm
                 bool necessary = isNecessaryStm(stm);
                 if (necessary) {
                     ActivatedStm.insert(stm);
-                    // stm->printIR();
                     Curstm.push(stm);
                     // set up activated block
                     ActivatedBlock.insert(it->mykey);
                 }
-                // auto us = getUses(stm);
-                // for(auto it:us){
-                //     //maybe same stm pushed into info
-                //     tempDef[*it].use.push_back(stm);
-                // }
 
                 // set up jump
                 if (!stml->tail) {
@@ -137,7 +129,7 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
-    int oldParentKey;
+    // FIXME can we remember the block?
     auto FindNextAcitveNode = [&](GRAPH::Node* node) {
         if (ActivatedBlock.count(node->mykey)) return node;
         unordered_set<GRAPH::Node*> vis;
@@ -167,12 +159,10 @@ void SSA::Optimizer::deadCodeElimilation() {
         CurNode.push((nodes->at(0)));  // push the first node
         auto vis = unordered_set<int>();
         while (!CurNode.empty()) {
-
             auto cur = CurNode.front();
             CurNode.pop();
             if (vis.count(cur->mykey)) continue;
             vis.insert(cur->mykey);
-            // std::cerr << "???\n";
             auto stml = (IR::StmList*)(cur->info);
             auto head = stml, tail = stml->tail;
             while (tail) {
@@ -189,8 +179,6 @@ void SSA::Optimizer::deadCodeElimilation() {
                                     trueNode = FindNextAcitveNode(it);
                                     trueoldkey = oldParentKey;
                                     phimap[trueNode->mykey][oldParentKey].push_back(cur->mykey);
-                                    // std::cerr << "truenode: " << trueNode << ' ' << it
-                                    //           << std::endl;
                                     cjumpstm->trueLabel = getNodeLabel(trueNode);
                                 } else if (nodelabel == cjumpstm->falseLabel) {
                                     oldParentKey = cur->mykey;
@@ -198,22 +186,8 @@ void SSA::Optimizer::deadCodeElimilation() {
                                     falseoldkey = oldParentKey;
                                     phimap[falseNode->mykey][oldParentKey].push_back(cur->mykey);
                                     cjumpstm->falseLabel = getNodeLabel(falseNode);
-                                    // std::cerr << "falsenode: " << falseNode << ' ' << it
-                                    //           << std::endl;
                                 }
                             }
-                            // int len = ir->prednode[trueNode->mykey].size();
-                            // for (int i = 0; i < len; i++) {
-                            //     if (ir->prednode[trueNode->mykey][i] == trueoldkey) {
-                            //         ir->prednode[trueNode->mykey][i] = cur->mykey;
-                            //     }
-                            // }
-                            // len = ir->prednode[falseNode->mykey].size();
-                            // for (int i = 0; i < len; i++) {
-                            //     if (ir->prednode[falseNode->mykey][i] == falseoldkey) {
-                            //         ir->prednode[falseNode->mykey][i] = cur->mykey;
-                            //     }
-                            // }
                             newsucc[cur->mykey].insert(trueNode);
                             newsucc[cur->mykey].insert(falseNode);
                             assert(trueNode);
@@ -232,13 +206,6 @@ void SSA::Optimizer::deadCodeElimilation() {
                                 if (nextNode) break;
                             }
                             phimap[nextNode->mykey][oldParentKey].push_back(cur->mykey);
-                            // int len = ir->prednode[nextNode->mykey].size();
-                            // for (int i = 0; i < len; i++) {
-                            //     if (ir->prednode[nextNode->mykey][i] == oldkey) {
-                            //         ir->prednode[nextNode->mykey][i] = cur->mykey;
-                            //     }
-                            // }
-
                             newsucc[cur->mykey].insert(nextNode);
                             newpred[nextNode->mykey].insert(cur);
                             CurNode.push(nextNode);
@@ -254,14 +221,7 @@ void SSA::Optimizer::deadCodeElimilation() {
                             oldkey = oldParentKey;
                             if (nextNode) break;
                         }
-
                         phimap[nextNode->mykey][oldParentKey].push_back(cur->mykey);
-                        // int len = ir->prednode[nextNode->mykey].size();
-                        // for (int i = 0; i < len; i++) {
-                        //     if (ir->prednode[nextNode->mykey][i] == oldkey) {
-                        //         ir->prednode[nextNode->mykey][i] = cur->mykey;
-                        //     }
-                        // }
                         newsucc[cur->mykey].insert(nextNode);
                         newpred[nextNode->mykey].insert(cur);
                         CurNode.push(nextNode);
@@ -273,9 +233,6 @@ void SSA::Optimizer::deadCodeElimilation() {
                     break;
                 }
                 if (!ActivatedStm.count(tail->stm)) {
-                    // std::cerr << "DELETE::";
-                    // tail->stm->printIR();
-                    // auto todelete=tail;
                     if (tail->stm->kind == IR::stmType::move) {
                         auto movestm = static_cast<IR::Move*>(tail->stm);
                         if (movestm->src->kind == IR::expType::call) {
@@ -293,8 +250,6 @@ void SSA::Optimizer::deadCodeElimilation() {
                     head->tail = newtail;
                     // delete todelete
                 } else {
-                    // std::cerr << "RESERVE::";
-                    // tail->stm->printIR();
                     head = head->tail;
                     tail = tail->tail;
                 }
@@ -305,15 +260,7 @@ void SSA::Optimizer::deadCodeElimilation() {
             ir->nodes()->at(i)->succs = move(newsucc[i]);
         }
     };
-    vector<int> aa, bb;
-    for (auto it : (*ir->nodes())) { aa.push_back(it->pred()->size()); }
-
-    setup();
-    // int len = 0;
-    // for (auto it : ActivatedBlock) { std::cerr << len++ << ':' << it << std::endl; }
-    bfsMark();
-
-    auto showmark = [&]() {
+    auto showmark = [&]() {  // func that can output ssa for debuging
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -326,6 +273,7 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
+
     auto updatephi = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -352,19 +300,9 @@ void SSA::Optimizer::deadCodeElimilation() {
             ir->prednode[it->mykey] = move(newprednode);
         }
     };
-    // std::cerr << "------------------------------------------------\n";
-    // showmark();
-    // std::cerr << "------------------------------------------------\n";
+    setup();
+    bfsMark();
     elimilation();
     updatephi();
-    // for (auto it : (*ir->nodes())) { bb.push_back(it->pred()->size()); }
-    // int len = aa.size();
-    // for (int i = 0; i < len; i++) {
-    //     if (aa[i] != bb[i] && bb[i]) {
-    //         std::cerr << "@@@" << getNodeLabel(ir->nodes()->at(i)) << std::endl;
-    //     }
-    // }
-    // showmark();
 }
-
 }  // namespace SSA
