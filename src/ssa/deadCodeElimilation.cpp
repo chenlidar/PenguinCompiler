@@ -57,7 +57,6 @@ void SSA::Optimizer::deadCodeElimilation() {
     queue<IR::Stm*> Curstm;
     auto nodesz = ir->nodes()->size();
     vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
-    // vector<unordered_map<int, vector<int>>> phimap(nodesz);
     int oldParentKey;
     CDG::CDgraph gp(ir);
 
@@ -271,8 +270,6 @@ void SSA::Optimizer::deadCodeElimilation() {
         }
     };
     auto showmark = [&]() {  // func that can output ssa for debuging
-        static int cnt = 0;
-        std::cerr << ++cnt << "DEAD###\n";
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -284,32 +281,6 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
-    // auto updatephi = [&]() {
-    //     auto nodes = ir->nodes();
-    //     for (const auto& it : (*nodes)) {
-    //         vector<int> newprednode;
-    //         for (auto jt : (ir->prednode[it->mykey])) {
-    //             for (auto kt : phimap[it->mykey][jt]) { newprednode.push_back(kt); }
-    //         }
-    //         for (auto jt : ir->Aphi[it->mykey]) {
-    //             auto stml = jt.second;
-    //             auto stm = stml->stm;
-    //             auto movestm = static_cast<IR::Move*>(stm);
-    //             auto callexp = static_cast<IR::Call*>(movestm->src);
-    //             vector<IR::Exp*> newargs;
-    //             int len = (ir->prednode[it->mykey]).size();
-    //             auto& v = (ir->prednode[it->mykey]);
-    //             for (int i = 0; i < len; i++) {
-    //                 for (auto kt : phimap[it->mykey][v[i]]) {
-    //                     newargs.push_back(callexp->args[i]->quad());
-    //                 }
-    //             }
-    //             for (auto kt : callexp->args) delete kt;
-    //             callexp->args = move(newargs);
-    //         }
-    //         ir->prednode[it->mykey] = move(newprednode);
-    //     }
-    // };
     auto cleanup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -329,7 +300,6 @@ void SSA::Optimizer::deadCodeElimilation() {
     bfsMark();
     // showmark();
     elimilation();
-    // updatephi();
     cleanup();
     // showmark();
 }
