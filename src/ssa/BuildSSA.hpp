@@ -32,7 +32,6 @@ private:
     void placePhi();
     void rename();
     void rename(int node);
-    void edge_split();
 };
 
 }  // namespace SSA

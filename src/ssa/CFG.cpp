@@ -67,12 +67,49 @@ CFGraph::CFGraph(CANON::Block blocks) {
         if (!exist[i]) continue;
         for (auto pred : *mynodes[i]->pred()) prednode[i].push_back(pred->mykey);
     }
+    cut_edge();
 }
 void CFGraph::dfs(int node) {
     exist[node] = true;
     for (auto it : *mynodes[node]->succ()) {
         if (exist[it->mykey]) continue;
         dfs(it->mykey);
+    }
+}
+void CFGraph::cut_edge() {
+    int nodenum = nodecount;
+    for (int i = 0; i < nodenum; i++) {
+        if (mynodes[i]->inDegree() <= 1) continue;
+        Temp_Label label = static_cast<IR::Label*>(blocklabel[i]->stm)->label;
+        for (auto& pre : prednode[i]) {
+            if (blockjump[pre]->stm->kind == IR::stmType::cjump) {
+                Temp_Label prelabel;
+                int prenode = pre;
+                IR::Stm* cjmp = blockjump[pre]->stm;
+                IR::StmList* prelist;
+                if (static_cast<IR::Cjump*>(cjmp)->trueLabel == label) {  // truelabel
+                    prelabel = Temp_newlabel();
+                    static_cast<IR::Cjump*>(cjmp)->trueLabel = prelabel;
+                    prelist = new IR::StmList(new IR::Label(prelabel),
+                                              new IR::StmList(new IR::Jump(label), NULL));
+                    prenode = this->addNode(prelist)->mykey;
+                } else {  // falselabel
+                    prelabel = Temp_newlabel();
+                    static_cast<IR::Cjump*>(cjmp)->falseLabel = prelabel;
+                    prelist = new IR::StmList(new IR::Label(prelabel),
+                                              new IR::StmList(new IR::Jump(label), NULL));
+                    prenode = this->addNode(prelist)->mykey;
+                }
+                this->rmEdge(mynodes[pre], mynodes[i]);
+                this->addEdge(mynodes[pre], mynodes[prenode]);
+                this->addEdge(mynodes[prenode], mynodes[i]);
+                blocklabel.push_back(prelist);
+                blockjump.push_back(prelist->tail);
+                orig.push_back(std::unordered_set<Temp_Temp>());
+                prednode.push_back(std::vector<int>({pre}));
+                pre = prenode;
+            }
+        }
     }
 }
 };  // namespace CFG

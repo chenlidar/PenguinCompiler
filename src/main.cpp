@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
             // ssa->opt.constantPropagation();
-            ssa->opt.deadCodeElimilation();
+            // ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
             ssa->opt.deadCodeElimilation();
             // ssa->opt.constantPropagation();
             ssa->opt.constantPropagation();
-            ssa->opt.deadCodeElimilation();
+            // ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //

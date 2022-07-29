@@ -18,6 +18,7 @@ public:
 private:
     std::unordered_map<Temp_Label, GRAPH::Node*> LNTable;
     void dfs(int node);
+    void cut_edge();
 };
 }  // namespace CFG
 #endif
