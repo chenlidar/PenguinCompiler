@@ -204,31 +204,29 @@ void SSA::Optimizer::constantPropagation() {
         // }
     };
 
-    // function<void(int, int)> cutEdge = [&](int from, int to) {
-    //     assert(0);
-    //     int cnt = 0;
-    //     auto toNode = nodes->at(to);
-    //     for (auto jt : ir->prednode[to]) {
-    //         if (jt == from) { break; }
-    //         cnt++;
-    //     }
-    //     assert(cnt != ir->prednode[to].size());
-    //     ir->prednode[to].erase(ir->prednode[to].begin() + cnt);
-    //     // jt to modify the phi func
-    //     for (auto jt : ir->Aphi[to]) {
-    //         auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
-    //         auto callexp = static_cast<IR::Call*>(src);
-    //         callexp->args.erase(callexp->args.begin() + cnt);
-    //         auto def
-    //             =
-    //             (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second->stm)->dst))->tempid);
-    //     }
-    //     ir->rmEdge(nodes->at(from), toNode);
-    //     if (toNode->pred()->empty()) {
-    //         while (!toNode->succ()->empty()) { cutEdge(to, (*(toNode->succ()->begin()))->mykey);
-    //         }
-    //     }
-    // };
+    function<void(int, int)> cutEdge = [&](int from, int to) {
+        // assert(0);
+        int cnt = 0;
+        auto toNode = nodes->at(to);
+        for (auto jt : ir->prednode[to]) {
+            if (jt == from) { break; }
+            cnt++;
+        }
+        assert(cnt != ir->prednode[to].size());
+        ir->prednode[to].erase(ir->prednode[to].begin() + cnt);
+        // jt to modify the phi func
+        for (auto jt : ir->Aphi[to]) {
+            auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
+            auto callexp = static_cast<IR::Call*>(src);
+            callexp->args.erase(callexp->args.begin() + cnt);
+            auto def
+                = (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second->stm)->dst))->tempid);
+        }
+        ir->rmEdge(nodes->at(from), toNode);
+        if (toNode->pred()->empty()) {
+            while (!toNode->succ()->empty()) { cutEdge(to, (*(toNode->succ()->begin()))->mykey); }
+        }
+    };
     // auto branchTest = [&](IR::StmList* stml) {
     //     if (stml->stm->kind == IR::stmType::cjump) {
     //         auto cjumpstm = static_cast<IR::Cjump*>(stml->stm);
@@ -655,11 +653,11 @@ void SSA::Optimizer::constantPropagation() {
         for (auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
             if (!blockCondition.count(it->mykey)) {
-                // while (!it->pred()->empty()) { it->pred()->erase(it->pred()->begin()); }
-                // while (!it->succ()->empty()) {
-                //     cutEdge(it->mykey, (*(it->pred()->begin()))->mykey);
-                // }
-                // it->info = 0;
+                while (!it->pred()->empty()) { ir->rmEdge((*(it->pred()->begin())), it); }
+                while (!it->succ()->empty()) {
+                    cutEdge(it->mykey, (*(it->succ()->begin()))->mykey);
+                }
+                it->info = 0;
                 continue;
             }
             auto head = stml, tail = stml->tail;
@@ -699,16 +697,56 @@ void SSA::Optimizer::constantPropagation() {
                     tail = tail->tail;
                 }
             }
+            if (head && head->stm->kind == IR::stmType::cjump) {
+                auto cjmpstm = static_cast<IR::Cjump*>(head->stm);
+                bool ht = false, hf = false;
+                for (auto jt : *(it->succ())) {
+                    if (!blockCondition.count(jt->mykey)) continue;
+                    if (getNodeLabel(jt) == cjmpstm->trueLabel) {
+                        ht = true;
+                    } else if (getNodeLabel(jt) == cjmpstm->falseLabel) {
+                        hf = true;
+                    }
+                }
+                assert(ht || hf);
+                if (!ht) {
+                    head->stm = new IR::Jump(cjmpstm->falseLabel);
+                    // delete cj
+                }
+                if (!hf) {
+                    head->stm = new IR::Jump(cjmpstm->trueLabel);
+                    // delete cj
+                }
+            }
         }
     };
     auto showmark = [&]() {  // func that can output ssa for debuging
+        std::cerr << "CON###\n";
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
             while (stml) {
                 auto stm = stml->stm;
                 stm->printIR();
+                // if(stm->kind==IR::stmType::move){
+                //     auto mv=static_cast<IR::Move*>(stm);
+
+                // }
                 stml = stml->tail;
+            }
+        }
+    };
+    auto cleanup = [&]() {
+        auto nodes = ir->nodes();
+        for (const auto& it : (*nodes)) {
+            if (it->inDegree() == 1) {
+                for (auto jt : ir->Aphi[it->mykey]) {
+                    auto mv = static_cast<IR::Move*>(jt.second->stm);
+                    auto cl = static_cast<IR::Call*>(mv->src);
+                    mv->src = cl->args[0]->quad();
+                    // delete cl
+                }
+                ir->Aphi[it->mykey].clear();
             }
         }
     };
@@ -719,12 +757,13 @@ void SSA::Optimizer::constantPropagation() {
         }
     };
 
-    showmark();
+    // showmark();
 
     setup();
     bfsMark();
     replaceTemp();
-    showmark();
+    cleanup();
+    // showmark();
     // showtemptable();
 };
 

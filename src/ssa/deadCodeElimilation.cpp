@@ -57,7 +57,7 @@ void SSA::Optimizer::deadCodeElimilation() {
     queue<IR::Stm*> Curstm;
     auto nodesz = ir->nodes()->size();
     vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
-    vector<unordered_map<int, vector<int>>> phimap(nodesz);
+    // vector<unordered_map<int, vector<int>>> phimap(nodesz);
     int oldParentKey;
     CDG::CDgraph gp(ir);
 
@@ -119,6 +119,25 @@ void SSA::Optimizer::deadCodeElimilation() {
                             ActivatedBlock.insert(it);
                             ActivatedStm.insert(jmp);
                             Curstm.push(jmp);
+                        }
+                    }
+                }
+            }
+            auto df = getDef(stm);
+            if (df && ir->Aphi[block->mykey].count(static_cast<IR::Temp*>(*df)->tempid)) {
+                for (auto it : *(block->pred())) {
+                    auto predlabel = getNodeLabelStm(it);
+                    if (!ActivatedStm.count(predlabel)) {
+                        ActivatedStm.insert(predlabel);
+                        for (auto jt : gp.CDnode[it->mykey]) {
+                            auto jmp = blockJumpStm[jt]->stm;
+                            if (jmp->kind == IR::stmType::cjump) {
+                                if (!ActivatedStm.count(jmp)) {
+                                    ActivatedBlock.insert(jt);
+                                    ActivatedStm.insert(jmp);
+                                    Curstm.push(jmp);
+                                }
+                            }
                         }
                     }
                 }
@@ -195,22 +214,33 @@ void SSA::Optimizer::deadCodeElimilation() {
                         oldParentKey = cur->mykey;
                         trueNode = FindNextAcitveNode(it);
                         trueoldkey = oldParentKey;
-                        phimap[trueNode->mykey][oldParentKey].push_back(cur->mykey);
-                        cjumpstm->trueLabel = getNodeLabel(trueNode);
+                        // phimap[trueNode->mykey][oldParentKey].push_back(cur->mykey);
+                        if (trueoldkey != cur->mykey) {
+                            cjumpstm->trueLabel = getNodeLabel(ir->nodes()->at(trueoldkey));
+                            ActivatedStm.insert(getNodeLabelStm(ir->nodes()->at(trueoldkey)));
+                            newpred[trueoldkey].insert(cur);
+                            newsucc[cur->mykey].insert(ir->nodes()->at(trueoldkey));
+                        }
+                        newpred[trueNode->mykey].insert(ir->nodes()->at(trueoldkey));
+                        CurNode.push(trueNode);
+                        newsucc[trueoldkey].insert(trueNode);
                     } else if (nodelabel == cjumpstm->falseLabel) {
                         oldParentKey = cur->mykey;
                         falseNode = FindNextAcitveNode(it);
                         falseoldkey = oldParentKey;
-                        phimap[falseNode->mykey][oldParentKey].push_back(cur->mykey);
-                        cjumpstm->falseLabel = getNodeLabel(falseNode);
+                        // phimap[falseNode->mykey][oldParentKey].push_back(cur->mykey);
+                        if (falseoldkey != cur->mykey) {
+                            cjumpstm->falseLabel = getNodeLabel(ir->nodes()->at(falseoldkey));
+                            ActivatedStm.insert(getNodeLabelStm(ir->nodes()->at(falseoldkey)));
+                            newpred[falseoldkey].insert(cur);
+                            newsucc[cur->mykey].insert(ir->nodes()->at(falseoldkey));
+                        }
+                        newpred[falseNode->mykey].insert(ir->nodes()->at(falseoldkey));
+                        CurNode.push(falseNode);
+                        newsucc[falseoldkey].insert(falseNode);
                     }
                 }
-                newsucc[cur->mykey].insert(trueNode);
-                newsucc[cur->mykey].insert(falseNode);
-                newpred[trueNode->mykey].insert(cur);
-                newpred[falseNode->mykey].insert(cur);
-                CurNode.push(trueNode);
-                CurNode.push(falseNode);
+
             } else {  // jump or useless cjump
                 int oldkey = 0;
                 GRAPH::Node* nextNode = 0;
@@ -220,12 +250,19 @@ void SSA::Optimizer::deadCodeElimilation() {
                     oldkey = oldParentKey;
                     if (nextNode) break;
                 }
-                phimap[nextNode->mykey][oldParentKey].push_back(cur->mykey);
-                newsucc[cur->mykey].insert(nextNode);
-                newpred[nextNode->mykey].insert(cur);
+                // phimap[nextNode->mykey][oldParentKey].push_back(cur->mykey);
+                Temp_Label nxlb = getNodeLabel(nextNode);
+                if (oldkey != cur->mykey) {
+                    nxlb = getNodeLabel(ir->nodes()->at(oldkey));
+                    ActivatedStm.insert(getNodeLabelStm((ir->nodes()->at(oldkey))));
+                    newpred[oldkey].insert(cur);
+                    newsucc[cur->mykey].insert(ir->nodes()->at(oldkey));
+                }
+                newpred[nextNode->mykey].insert(ir->nodes()->at(oldkey));
                 CurNode.push(nextNode);
+                newsucc[oldkey].insert(nextNode);
                 delete blockJumpStm[cur->mykey]->stm;
-                blockJumpStm[cur->mykey]->stm = new IR::Jump(getNodeLabel(nextNode));
+                blockJumpStm[cur->mykey]->stm = new IR::Jump(nxlb);
             }
         }
         for (int i = 0; i < nodesz; i++) {
@@ -234,6 +271,8 @@ void SSA::Optimizer::deadCodeElimilation() {
         }
     };
     auto showmark = [&]() {  // func that can output ssa for debuging
+        static int cnt = 0;
+        std::cerr << ++cnt << "DEAD###\n";
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -245,35 +284,53 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
-    auto updatephi = [&]() {
+    // auto updatephi = [&]() {
+    //     auto nodes = ir->nodes();
+    //     for (const auto& it : (*nodes)) {
+    //         vector<int> newprednode;
+    //         for (auto jt : (ir->prednode[it->mykey])) {
+    //             for (auto kt : phimap[it->mykey][jt]) { newprednode.push_back(kt); }
+    //         }
+    //         for (auto jt : ir->Aphi[it->mykey]) {
+    //             auto stml = jt.second;
+    //             auto stm = stml->stm;
+    //             auto movestm = static_cast<IR::Move*>(stm);
+    //             auto callexp = static_cast<IR::Call*>(movestm->src);
+    //             vector<IR::Exp*> newargs;
+    //             int len = (ir->prednode[it->mykey]).size();
+    //             auto& v = (ir->prednode[it->mykey]);
+    //             for (int i = 0; i < len; i++) {
+    //                 for (auto kt : phimap[it->mykey][v[i]]) {
+    //                     newargs.push_back(callexp->args[i]->quad());
+    //                 }
+    //             }
+    //             for (auto kt : callexp->args) delete kt;
+    //             callexp->args = move(newargs);
+    //         }
+    //         ir->prednode[it->mykey] = move(newprednode);
+    //     }
+    // };
+    auto cleanup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
-            vector<int> newprednode;
-            for (auto jt : (ir->prednode[it->mykey])) {
-                for (auto kt : phimap[it->mykey][jt]) { newprednode.push_back(kt); }
-            }
-            for (auto jt : ir->Aphi[it->mykey]) {
-                auto stml = jt.second;
-                auto stm = stml->stm;
-                auto movestm = static_cast<IR::Move*>(stm);
-                auto callexp = static_cast<IR::Call*>(movestm->src);
-                vector<IR::Exp*> newargs;
-                int len = (ir->prednode[it->mykey]).size();
-                auto& v = (ir->prednode[it->mykey]);
-                for (int i = 0; i < len; i++) {
-                    for (auto kt : phimap[it->mykey][v[i]]) {
-                        newargs.push_back(callexp->args[i]->quad());
-                    }
+            if (it->inDegree() == 1) {
+                for (auto jt : ir->Aphi[it->mykey]) {
+                    auto mv = static_cast<IR::Move*>(jt.second->stm);
+                    auto cl = static_cast<IR::Call*>(mv->src);
+                    mv->src = cl->args[0]->quad();
+                    // delete cl
                 }
-                for (auto kt : callexp->args) delete kt;
-                callexp->args = move(newargs);
+                ir->Aphi[it->mykey].clear();
             }
-            ir->prednode[it->mykey] = move(newprednode);
         }
     };
+    // showmark();
     setup();
     bfsMark();
+    // showmark();
     elimilation();
-    updatephi();
+    // updatephi();
+    cleanup();
+    // showmark();
 }
 }  // namespace SSA

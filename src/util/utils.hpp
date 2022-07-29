@@ -253,4 +253,7 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
 static Temp_Label getNodeLabel(GRAPH::Node* node) {
     return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm)->label;
 }
+static IR::Label* getNodeLabelStm(GRAPH::Node* node) {
+    return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm);
+}
 #endif
