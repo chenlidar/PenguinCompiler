@@ -149,10 +149,10 @@ CANON::Block SSA::SSAIR::ssa2ir() {
             for (auto it : Aphi[i]) {
                 auto movephi = static_cast<IR::Move*>(it.second->stm);
                 auto callphi = static_cast<IR::Call*>(movephi->src);
-                int tempid = static_cast<IR::Temp*>(callphi->args[cnt])->tempid;
+                IR::Exp* paramexp = callphi->args[cnt];
                 int dsttemp = static_cast<IR::Temp*>(movephi->dst)->tempid;
                 blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
-                blockjump[pre]->stm = new IR::Move(new IR::Temp(dsttemp), new IR::Temp(tempid));
+                blockjump[pre]->stm = new IR::Move(new IR::Temp(dsttemp), paramexp);
                 blockjump[pre] = blockjump[pre]->tail;
             }
             cnt++;
