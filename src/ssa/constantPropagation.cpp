@@ -147,26 +147,22 @@ void SSA::Optimizer::constantPropagation() {
         }
     };
     auto doDef = [&](IR::StmList* stml) {
+        if (!stml) return;
         auto defid = static_cast<IR::Temp*>(static_cast<IR::Move*>(stml->stm)->dst)->tempid;
         auto src = static_cast<IR::Move*>(stml->stm)->src;
-        int base = 0, nxcond = 0;
+        int base = 0;
         if (tempCondition.count(defid)) { base = static_cast<int>(tempCondition[defid].cond); }
         if (base == 2) return;
         switch (src->kind) {
         case IR::expType::binop: {
             auto bexp = static_cast<IR::Binop*>(src);
             if (isTempConst(bexp->left) && isTempConst(bexp->right)) {
-                nxcond = 1;
                 tempCondition[defid] = cst(tempEval(bexp));
             } else {
                 auto lf = isTempIndefinite(bexp->left);
                 auto rf = isTempIndefinite(bexp->right);
-                if (lf || rf) {
-                    nxcond = 2;
-                    tempCondition[defid] = idf();
-                } else {
-                    assert(0);
-                }
+                assert(lf || rf);
+                tempCondition[defid] = idf();
             }
             break;
         }
@@ -184,7 +180,7 @@ void SSA::Optimizer::constantPropagation() {
                             auto tempid = static_cast<IR::Temp*>(cal->args[i])->tempid;
                             if (!tempCondition.count(tempid)) {
                                 if (isRealregister(tempid)) {
-                                    nxcond = 2;
+                                    fall = 1;
                                     tempCondition[defid] = idf();
                                     break;
                                 }
@@ -192,15 +188,14 @@ void SSA::Optimizer::constantPropagation() {
                             } else {
                                 auto b = isTempIndefinite(cal->args[i]);
                                 if (b) {
-                                    nxcond = 2;
+                                    fall = 1;
                                     tempCondition[defid] = idf();
                                     break;
                                 }
                                 assert(isTempConst(cal->args[i]));
-
                                 int tval = tempEval(cal->args[i]);
                                 if (flag && tval != guess) {
-                                    nxcond = 2;
+                                    fall = 1;
                                     tempCondition[defid] = idf();
                                     break;
                                 } else {
@@ -211,7 +206,7 @@ void SSA::Optimizer::constantPropagation() {
                         } else if (cal->args[i]->kind == IR::expType::constx) {
                             if (flag) {
                                 if (guess != tempEval(cal->args[i])) {
-                                    nxcond = 2;
+                                    fall = 1;
                                     tempCondition[defid] = idf();
                                     break;
                                 }
@@ -223,63 +218,39 @@ void SSA::Optimizer::constantPropagation() {
                             assert(0);
                     }
                 }
-                if (nxcond < 2) {
-                    if (flag) {
-                        nxcond = 1;
-                        tempCondition[defid] = cst(guess);
-                    } else {
-                        // all cannot reach or without initialization
-                        nxcond = 1;
-                        tempCondition[defid] = cst(0);
-                    }
-                }
-            } else {
+                // all cannot reach or without initialization will be 0--origin guess
+                if (!fall) tempCondition[defid] = cst(guess);
+            } else  // normal call
                 tempCondition[defid] = idf();
-                nxcond = 2;
-            }
             break;
         }
         case IR::expType::constx: {
             auto cs = static_cast<IR::Const*>(src);
             tempCondition[defid] = cst(cs->val);
-            nxcond = 1;
             break;
         }
         case IR::expType::eseq: assert(0);
-        case IR::expType::mem: {
-            tempCondition[defid] = idf();
-            nxcond = 2;
-            break;
-        }
+        case IR::expType::mem:  // fallthrough
         case IR::expType::name: {
             tempCondition[defid] = idf();
-            nxcond = 2;
             break;
         }
         case IR::expType::temp: {
             auto ot = isTempIndefinite(src);
-            if (ot) {
+            if (ot)
                 tempCondition[defid] = idf();
-                nxcond = 2;
-            } else {
+            else
                 tempCondition[defid] = tempCondition[static_cast<IR::Temp*>(src)->tempid];
-                nxcond = 1;
-            }
             break;
         }
         default: assert(0);
         }
-        if (nxcond > base) {
-            // FIXME
-            curTemp.push(defid);
-        }
+        if (static_cast<int>(tempCondition[defid].cond) > base) curTemp.push(defid);
     };
     auto doJump = [&](IR::StmList* stml) {
         auto stm = stml->stm;
         auto curb = stmlBlockmap[stml];
-        // stm->printIR();
         if (stm->kind == IR::stmType::jump) {
-            assert(nodes->at(curb)->succ()->size() == 1);
             auto nx = (*nodes->at(curb)->succ()->begin())->mykey;
             if (!blockCondition.count(nx)) {
                 blockCondition.insert(nx);
@@ -290,29 +261,14 @@ void SSA::Optimizer::constantPropagation() {
             if (isTempConst(cjmp->left) && isTempConst(cjmp->right)) {
                 auto lv = tempEval(cjmp->left), rv = tempEval(cjmp->right);
                 auto b = evalRel(cjmp->op, lv, rv);
-                int todelete = -1;
-                if (b) {
-                    for (auto it : (*(nodes->at(curb))->succ())) {
-                        if (getNodeLabel(it) == cjmp->trueLabel) {
-                            auto nx = it->mykey;
-                            if (!blockCondition.count(nx)) {
-                                blockCondition.insert(nx);
-                                curBlock.push(nx);
-                            }
-                        } else {
-                            todelete = it->mykey;
-                        }
-                    }
-                } else {
-                    for (auto it : (*(nodes->at(curb))->succ())) {
-                        if (getNodeLabel(it) == cjmp->falseLabel) {
-                            auto nx = it->mykey;
-                            if (!blockCondition.count(nx)) {
-                                blockCondition.insert(nx);
-                                curBlock.push(nx);
-                            }
-                        } else {
-                            todelete = it->mykey;
+                auto tg = cjmp->falseLabel;
+                if (b) tg = cjmp->trueLabel;
+                for (auto it : (*(nodes->at(curb))->succ())) {
+                    if (getNodeLabel(it) == tg) {
+                        auto nx = it->mykey;
+                        if (!blockCondition.count(nx)) {
+                            blockCondition.insert(nx);
+                            curBlock.push(nx);
                         }
                     }
                 }
@@ -368,14 +324,12 @@ void SSA::Optimizer::constantPropagation() {
                 auto cur = curTemp.front();
                 curTemp.pop();
                 auto def = (static_cast<IR::Move*>(tempDef[cur]->stm))->src;
-
                 for (auto use : tempUse[cur]) {
                     auto df = getDef(use->stm);
-                    if (df) { doDef(use); }
+                    if (df) doDef(use);
                     if (use->stm->kind == IR::stmType::cjump
-                        || use->stm->kind == IR::stmType::jump) {
+                        || use->stm->kind == IR::stmType::jump)
                         doJump(use);
-                    }
                 }
             }
         }
@@ -441,17 +395,16 @@ void SSA::Optimizer::constantPropagation() {
                 assert(ht || hf);
                 if (!ht) {
                     head->stm = new IR::Jump(cjmpstm->falseLabel);
-                    // delete cj
+                    delete cjmpstm;
                 }
                 if (!hf) {
                     head->stm = new IR::Jump(cjmpstm->trueLabel);
-                    // delete cj
+                    delete cjmpstm;
                 }
             }
         }
     };
     auto showmark = [&]() {  // func that can output ssa for debuging
-        std::cerr << "CON###\n";
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -470,7 +423,7 @@ void SSA::Optimizer::constantPropagation() {
                     auto mv = static_cast<IR::Move*>(jt.second->stm);
                     auto cl = static_cast<IR::Call*>(mv->src);
                     mv->src = cl->args[0]->quad();
-                    // delete cl
+                    delete cl;
                 }
                 ir->Aphi[it->mykey].clear();
             }
