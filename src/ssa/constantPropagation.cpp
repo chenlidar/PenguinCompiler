@@ -69,19 +69,21 @@ void SSA::Optimizer::constantPropagation() {
     function<void(int, int)> cutEdge = [&](int from, int to) {
         int cnt = 0;
         auto toNode = nodes->at(to);
-        for (auto jt : ir->prednode[to]) {
-            if (jt == from) { break; }
-            cnt++;
-        }
-        assert(cnt != ir->prednode[to].size());
-        ir->prednode[to].erase(ir->prednode[to].begin() + cnt);
-        // jt to modify the phi func
-        for (auto jt : ir->Aphi[to]) {
-            auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
-            auto callexp = static_cast<IR::Call*>(src);
-            callexp->args.erase(callexp->args.begin() + cnt);
-            auto def
-                = (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second->stm)->dst))->tempid);
+        if (ir->Aphi[to].size()) {
+            for (auto jt : ir->prednode[to]) {
+                if (jt == from) { break; }
+                cnt++;
+            }
+            assert(cnt != ir->prednode[to].size());
+            ir->prednode[to].erase(ir->prednode[to].begin() + cnt);
+            // jt to modify the phi func
+            for (auto jt : ir->Aphi[to]) {
+                auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
+                auto callexp = static_cast<IR::Call*>(src);
+                callexp->args.erase(callexp->args.begin() + cnt);
+                auto def = (static_cast<IR::Temp*>((static_cast<IR::Move*>(jt.second->stm)->dst))
+                                ->tempid);
+            }
         }
         ir->rmEdge(nodes->at(from), toNode);
         if (toNode->pred()->empty()) {
@@ -343,7 +345,7 @@ void SSA::Optimizer::constantPropagation() {
                 while (!it->succ()->empty()) {
                     cutEdge(it->mykey, (*(it->succ()->begin()))->mykey);
                 }
-                it->info = 0;
+                stml->tail = 0;
                 continue;
             }
             auto head = stml, tail = stml->tail;

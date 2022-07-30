@@ -295,12 +295,27 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
+    auto cleanNotActiveNode = [&]() {
+        auto nodes = ir->nodes();
+        int len = nodes->size();
+        for (int i = 0; i < len; i++) {
+            if (!ActivatedBlock.count(i)) {
+                ir->Aphi[i].clear();
+                auto stml = static_cast<IR::StmList*>(nodes->at(i)->info);
+                // delete
+                stml->tail = blockJumpStm[i];
+                ir->prednode[i].clear();
+                for (auto j : *(nodes->at(i)->pred())) { ir->prednode[i].push_back(j->mykey); }
+            }
+        }
+    };
     // showmark();
     setup();
     bfsMark();
     // showmark();
     elimilation();
     cleanup();
+    cleanNotActiveNode();
     // showmark();
 }
 }  // namespace SSA
