@@ -50,6 +50,20 @@ bool evalRel(IR::RelOp op, int lv, int rv) {
     }
     assert(0);
 }
+class DSU {
+public:
+    unordered_map<int, int> ff;
+    int f(int x) {
+        if (!ff.count(x)) return ff[x] = x;
+        if (ff[x] == x) return x;
+        return ff[x] = f(ff[x]);
+    }
+    void addedge(int x, int y) {
+        auto a = f(x), b = f(y);
+        ff[a] = b;
+    }
+    bool sameset(int x, int y) { return f(x) == f(y); }
+};
 void SSA::Optimizer::constantPropagation() {
     unordered_map<Temp_Temp, TEMP_COND> tempCondition;
     unordered_map<IR::StmList*, int> stmlBlockmap;
@@ -59,6 +73,7 @@ void SSA::Optimizer::constantPropagation() {
     queue<int> curBlock;
     queue<Temp_Temp> curTemp;
     queue<Temp_Temp> copyTemp;
+    DSU dsu;
 
     auto nodes = ir->nodes();
     auto setup = [&]() {
@@ -431,6 +446,58 @@ void SSA::Optimizer::constantPropagation() {
             }
         }
     };
+    auto checkCopy = [&]() {
+        auto nodes = ir->nodes();
+        for (const auto& it : (*nodes)) {
+            auto stml = static_cast<IR::StmList*>(it->info);
+            while (stml) {
+                auto stm = stml->stm;
+                if (stm->kind == IR::stmType::move) {
+                    auto mv = static_cast<IR::Move*>(stm);
+                    if (mv->dst->kind == IR::expType::temp && mv->src->kind == IR::expType::temp) {
+                        auto from = static_cast<IR::Temp*>(mv->src)->tempid,
+                             to = static_cast<IR::Temp*>(mv->dst)->tempid;
+                        if (!isRealregister(from) && !isRealregister(to)) {
+                            dsu.addedge(from, to);
+                        }
+                    }
+                }
+            }
+        }
+    };
+    auto cleanCopy = [&]() {
+        auto nodes = ir->nodes();
+        for (const auto& it : (*nodes)) {
+            auto stml = static_cast<IR::StmList*>(it->info);
+            while (stml) {
+                auto stm = stml->stm;
+                bool flag = false;
+                if (stm->kind == IR::stmType::move) {
+                    auto mv = static_cast<IR::Move*>(stm);
+                    if (mv->dst->kind == IR::expType::temp && mv->src->kind == IR::expType::temp) {
+                        auto from = static_cast<IR::Temp*>(mv->src)->tempid,
+                             to = static_cast<IR::Temp*>(mv->dst)->tempid;
+                        if (!isRealregister(from) && !isRealregister(to)) {
+                            if (dsu.sameset(from, to)) {
+                                delete stm;
+                                stml->stm = nopStm();
+                                flag = true;
+                            }
+                        }
+                    }
+                }
+                if (!flag) {
+                    auto uses = getUses(stm);
+                    for (auto it : uses) {
+                        auto tmp = static_cast<IR::Temp*>(*it);
+                        if (dsu.f(tmp->tempid) != tmp->tempid) {
+                            tmp->tempid = dsu.f(tmp->tempid);
+                        }
+                    }
+                }
+            }
+        }
+    };
     auto showtemptable = [&]() {
         for (auto it : tempCondition) {
             std::cerr << "t" << it.first << ": type" << static_cast<int>(it.second.cond)
@@ -442,6 +509,9 @@ void SSA::Optimizer::constantPropagation() {
     bfsMark();
     replaceTemp();
     cleanup();
+    checkCopy();
+    cleanCopy();
+
     // showmark();
     // showtemptable();
 };
