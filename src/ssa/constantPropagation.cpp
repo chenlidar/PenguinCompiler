@@ -54,7 +54,10 @@ class DSU {
 public:
     unordered_map<int, int> ff;
     int f(int x) {
-        if (!ff.count(x)) return ff[x] = x;
+        if (!ff.count(x)) {
+            ff[x] = x;
+            return x;
+        }
         if (ff[x] == x) return x;
         return ff[x] = f(ff[x]);
     }
@@ -458,10 +461,12 @@ void SSA::Optimizer::constantPropagation() {
                         auto from = static_cast<IR::Temp*>(mv->src)->tempid,
                              to = static_cast<IR::Temp*>(mv->dst)->tempid;
                         if (!isRealregister(from) && !isRealregister(to)) {
-                            dsu.addedge(from, to);
+                            // replace the def temp by the use temp
+                            dsu.addedge(to, from);
                         }
                     }
                 }
+                stml = stml->tail;
             }
         }
     };
@@ -494,7 +499,15 @@ void SSA::Optimizer::constantPropagation() {
                             tmp->tempid = dsu.f(tmp->tempid);
                         }
                     }
+                    auto df = getDef(stm);
+                    if (df) {
+                        auto def = static_cast<IR::Temp*>(*df);
+                        if (dsu.f(def->tempid) != def->tempid) {
+                            def->tempid = dsu.f(def->tempid);
+                        }
+                    }
                 }
+                stml = stml->tail;
             }
         }
     };
@@ -509,10 +522,10 @@ void SSA::Optimizer::constantPropagation() {
     bfsMark();
     replaceTemp();
     cleanup();
+    // showmark();
     checkCopy();
     cleanCopy();
-
     // showmark();
-    // showtemptable();
+    //  showtemptable();
 };
 }  // namespace SSA

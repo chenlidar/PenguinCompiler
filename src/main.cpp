@@ -142,12 +142,13 @@ int main(int argc, char** argv) {
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
-            //  ssa->opt.constantPropagation();
+            ssa->opt.PRE();
+            ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //
-            // showir(out);
+            showir(out);
             int stksize = fenv->look(funcname)->stksize;
             RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, false, true), stksize);
             std::cout << globalVar->str();
@@ -160,10 +161,10 @@ int main(int argc, char** argv) {
             CANON::Block blocks = CANON::basicBlocks(out, funcname);
             // DONE:do ssa in this place
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
-            //  ssa->opt.constantPropagation();
+            ssa->opt.PRE();
+            ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
