@@ -141,8 +141,8 @@ int main(int argc, char** argv) {
             // DONE:do ssa in this place
             SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
             ssa->opt.deadCodeElimilation();
-            ssa->opt.constantPropagation();
             //  ssa->opt.constantPropagation();
+            ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
