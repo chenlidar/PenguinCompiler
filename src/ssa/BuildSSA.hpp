@@ -21,6 +21,7 @@ private:
     void buildTable();
     void insertPRE();
     void deletePRE();
+    void buildAvail();
     void buildAvail(int node, int fa);
     void buildAntic();
     void deletenode(int node, int fa);
@@ -82,11 +83,13 @@ private:
         }
     };
     typedef std::unordered_map<Biexp, int, hash_name> Vtb;
-    std::vector<Vtb> avail;
-    std::vector<std::unordered_map<int, Biexp>> phicomp;
+    std::vector<std::unordered_set<int>> avail_out;
+    std::vector<std::unordered_map<int,int>> avail_map;
+    Vtb G_map;
     std::vector<std::list<Biexp>> anticIn, anticOut;
     std::vector<std::vector<Biexp>> exp_gen;
     std::vector<std::unordered_set<int>> tmp_gen;
+    Biexp U2Biexp(IR::Exp* e);
 };
 class SSAIR : public CFG::CFGraph {
 public:
