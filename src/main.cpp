@@ -149,6 +149,7 @@ int main(int argc, char** argv) {
             //
             // showir(out);
             int stksize = fenv->look(funcname)->stksize;
+            // out->printIR();
             RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, false, true), stksize);
             std::cout << globalVar->str();
             std::cout << globalArray->str();
@@ -170,6 +171,7 @@ int main(int argc, char** argv) {
             //
             // showir(out);
             bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
+            // out->printIR();
             int stksize = fenv->look(funcname)->stksize;
             RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, false), stksize);
         }

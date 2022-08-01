@@ -233,6 +233,10 @@ public:
     StmList(Stm* _stm, StmList* _tail)
         : stm(_stm)
         , tail(_tail) {}
+    void printIR() {
+        if (stm) stm->printIR();
+        if (tail) tail->printIR();
+    }
 };
 typedef std::vector<Exp*> ExpList;
 ASM::Proc* ir2asm(StmList* stmlist);
