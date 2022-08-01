@@ -35,6 +35,7 @@ void Optimizer::buildAvail(int node, int fa) {
                    && static_cast<IR::Call*>(mvstm->src)->fun[0] == '$')
             ;
         else {
+            assert(mvstm->src->kind!=IR::expType::constx);
             tmp_gen[node].insert(static_cast<IR::Temp*>(*dst)->tempid);
             continue;
         }
@@ -73,16 +74,16 @@ void Optimizer::buildAntic() {
             }
             for (auto it : anticIn[succnode]) {
                 auto nw = it;
-                if (nw.l->kind == IR::expType::temp) {
-                    int tempid = static_cast<IR::Temp*>(nw.l)->tempid;
+                if (nw.l.kind == IR::expType::temp) {
+                    int tempid = nw.l.val;
                     if (ir->Aphi[succnode].count(tempid)) {
                         nw.l = static_cast<IR::Call*>(
                                    static_cast<IR::Move*>(ir->Aphi[succnode].at(tempid)->stm)->src)
                                    ->args.at(cnt);
                     }
                 }
-                if (nw.r->kind == IR::expType::temp) {
-                    int tempid = static_cast<IR::Temp*>(nw.r)->tempid;
+                if (nw.r.kind == IR::expType::temp) {
+                    int tempid = nw.r.val;
                     if (ir->Aphi[succnode].count(tempid)) {
                         nw.r = static_cast<IR::Call*>(
                                    static_cast<IR::Move*>(ir->Aphi[succnode].at(tempid)->stm)->src)
@@ -106,21 +107,21 @@ void Optimizer::buildAntic() {
             assert(node == ir->exitnum);
         // anticIn
         for (auto it : newout) {
-            if (it.l->kind == IR::expType::temp
-                && tmp_gen[node].count(static_cast<IR::Temp*>(it.l)->tempid))
+            if (it.l.kind == IR::expType::temp
+                && tmp_gen[node].count(it.l.val))
                 continue;
-            if (it.r->kind == IR::expType::temp
-                && tmp_gen[node].count(static_cast<IR::Temp*>(it.r)->tempid))
+            if (it.r.kind == IR::expType::temp
+                && tmp_gen[node].count(it.r.val))
                 continue;
             newin.push_back(it);
         }
         for (int i = exp_gen[node].size() - 1; i >= 0; i--) {
             auto it = exp_gen[node][i];
-            if (it.l->kind == IR::expType::temp
-                && tmp_gen[node].count(static_cast<IR::Temp*>(it.l)->tempid))
+            if (it.l.kind == IR::expType::temp
+                && tmp_gen[node].count(it.l.val))
                 continue;
-            if (it.r->kind == IR::expType::temp
-                && tmp_gen[node].count(static_cast<IR::Temp*>(it.r)->tempid))
+            if (it.r.kind == IR::expType::temp
+                && tmp_gen[node].count(it.r.val))
                 continue;
             newin.push_front(it);
         }

@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
             blocks = ssa->ssa2ir();
             out = CANON::traceSchedule(blocks);
             //
-            showir(out);
+            // showir(out);
             int stksize = fenv->look(funcname)->stksize;
             RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, false, true), stksize);
             std::cout << globalVar->str();

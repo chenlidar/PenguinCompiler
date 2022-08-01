@@ -23,24 +23,42 @@ private:
     void deletePRE();
     void buildAvail(int node, int fa);
     void buildAntic();
-    void deletenode(int node,int fa);
+    void deletenode(int node, int fa);
 
+    struct Uexp {
+        IR::expType kind;
+        int val;
+        std::string name;
+        Uexp(IR::Exp* u) {
+            kind = u->kind;
+            val = 0;
+            name = "";
+            switch (u->kind) {
+            case IR::expType::name: {
+                name = static_cast<IR::Name*>(u)->name;
+            } break;
+            case IR::expType::temp: {
+                val = static_cast<IR::Temp*>(u)->tempid;
+            } break;
+            case IR::expType::constx: {
+                val = static_cast<IR::Const*>(u)->val;
+            } break;
+            default: assert(0);
+            }
+        }
+        Uexp(){}
+    };
     struct Biexp {
         IR::binop op;
-        IR::Exp *l, *r;
+        Uexp l, r;
         bool operator==(const Biexp& e2) const {
-            auto eq = [&](IR::Exp* l, IR::Exp* r) {
-                if (l->kind != r->kind) return false;
-                switch (l->kind) {
-                case IR::expType::name:
-                    return static_cast<IR::Name*>(l)->name == static_cast<IR::Name*>(r)->name;
+            auto eq = [&](Uexp l, Uexp r) {
+                if (l.kind != r.kind) return false;
+                switch (l.kind) {
+                case IR::expType::name: return l.name == r.name;
                 case IR::expType::temp:
-                    return static_cast<IR::Temp*>(l)->tempid == static_cast<IR::Temp*>(r)->tempid;
-                case IR::expType::constx:
-                    return static_cast<IR::Const*>(l)->val == static_cast<IR::Const*>(r)->val;
-                default: {
-                    std::cerr<<"ERR: "<<static_cast<int>(l->kind)<<"\n";
-                    assert(0);}
+                case IR::expType::constx: return l.val == r.val;
+                default: assert(0);
                 }
             };
             return op == e2.op
@@ -50,20 +68,22 @@ private:
         }
         Biexp(IR::binop _op, IR::Exp* _l, IR::Exp* _r) {
             op = _op;
-            l = _l;
-            r = _r;
+            l = Uexp(_l);
+            r = Uexp(_r);
         }
-        Biexp() {}
+        Biexp(){}
     };
     struct hash_name {
         size_t operator()(const Biexp& p) const {
-            return std::hash<int>()(static_cast<int>(p.op)) ^ std::hash<uint64_t>()((uint64_t)p.l)
-                   ^ std::hash<uint64_t>()((uint64_t)p.r);
+            return std::hash<int>()(static_cast<int>(p.op))
+                   ^ std::hash<int>()(static_cast<int>(p.l.kind))
+                   ^ std::hash<int>()(static_cast<int>(p.r.kind)) ^ std::hash<int>()(p.l.val)
+                   ^ std::hash<int>()(p.r.val);
         }
     };
     typedef std::unordered_map<Biexp, int, hash_name> Vtb;
     std::vector<Vtb> avail;
-    std::vector<std::unordered_map<int,Biexp>> phicomp;
+    std::vector<std::unordered_map<int, Biexp>> phicomp;
     std::vector<std::list<Biexp>> anticIn, anticOut;
     std::vector<std::vector<Biexp>> exp_gen;
     std::vector<std::unordered_set<int>> tmp_gen;
