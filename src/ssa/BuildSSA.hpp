@@ -5,6 +5,7 @@
 #include "../backend/flowgraph.hpp"
 #include "../backend/canon.hpp"
 #include "CFG.hpp"
+#include "CDG.hpp"
 #include "./Dtree.hpp"
 #include <functional>
 namespace SSA {
@@ -19,11 +20,13 @@ public:
 private:
     bool isNecessaryStm(IR::Stm* stm);
     void buildTable();
+    void insertPRE(int node);
     void insertPRE();
     void deletePRE();
     void buildAvail();
     void buildAvail(int node, int fa);
     void buildAntic();
+    bool buildAntic(int node);
     void deletenode(int node, int fa);
 
     struct Uexp {
@@ -47,7 +50,7 @@ private:
             default: assert(0);
             }
         }
-        Uexp(){}
+        Uexp() {}
     };
     struct Biexp {
         IR::binop op;
@@ -72,7 +75,13 @@ private:
             l = Uexp(_l);
             r = Uexp(_r);
         }
-        Biexp(){}
+        Biexp() {}
+        bool isTemp() { return l.kind == IR::expType::temp && r.kind == IR::expType::constx; }
+        bool isConst() {
+            return (l.kind == IR::expType::constx || l.kind == IR::expType::name)
+                   && r.kind == IR::expType::constx;
+        }
+        bool isExp() { return l.kind == IR::expType::temp && r.kind == IR::expType::temp; }
     };
     struct hash_name {
         size_t operator()(const Biexp& p) const {
@@ -84,12 +93,17 @@ private:
     };
     typedef std::unordered_map<Biexp, int, hash_name> Vtb;
     std::vector<std::unordered_set<int>> avail_out;
-    std::vector<std::unordered_map<int,int>> avail_map;
+    std::vector<std::unordered_map<int, int>> avail_map;
     Vtb G_map;
-    std::vector<std::list<Biexp>> anticIn, anticOut;
-    std::vector<std::vector<Biexp>> exp_gen;
+    std::unordered_map<int, Biexp> vG_map;
+    std::vector<std::list<Biexp>> anticIn;
+    std::vector<std::unordered_map<int, Biexp>> anticIn_map;
+    std::vector<std::list<Biexp>> exp_gen;
+    std::vector<std::unordered_map<int, Biexp>> exp_map;
     std::vector<std::unordered_set<int>> tmp_gen;
     Biexp U2Biexp(IR::Exp* e);
+    int findGV(const Biexp& biexp);
+    CDG::CDgraph* cdg;
 };
 class SSAIR : public CFG::CFGraph {
 public:

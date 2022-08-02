@@ -117,12 +117,22 @@ CANON::Block SSA::SSAIR::ssa2ir() {
     for (int i = 0; i < nodecount; i++) {
         if (mynodes[i]->inDegree() <= 1) continue;  // one pred or no pred nodedont have phi
         if (Aphi[i].size() == 0) continue;  // exitnode must has 0 phi
+        assert(blocklabel[i]->stm->kind == IR::stmType::label);
         Temp_Label label = static_cast<IR::Label*>(blocklabel[i]->stm)->label;
         int cnt = 0;
         for (auto& pre : prednode[i]) {
             assert(blockjump[pre]->stm->kind != IR::stmType::cjump);
             for (auto it : Aphi[i]) {
+                if (it.second->stm->kind == IR::stmType::move)
+                    ;
+                else {
+                    fprintf(stderr, "%p\n", it.second);
+                    std::cerr << "***" << static_cast<int>(it.second->stm->kind) << "\n";
+                }
+                assert(it.second->stm->kind == IR::stmType::move);
                 auto movephi = static_cast<IR::Move*>(it.second->stm);
+                assert(movephi->src->kind == IR::expType::call);
+                assert(movephi->dst->kind == IR::expType::temp);
                 auto callphi = static_cast<IR::Call*>(movephi->src);
                 IR::Exp* paramexp = callphi->args[cnt];
                 int dsttemp = static_cast<IR::Temp*>(movephi->dst)->tempid;

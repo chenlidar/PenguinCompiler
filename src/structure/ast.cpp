@@ -440,14 +440,14 @@ IR::Stm* AST::ContinueStmt::ast2ir(Table::Stable<TY::Entry*>* venv,
 IR::Stm* AST::ReturnStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                  Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
     if (this->exp == nullptr) {
-        return new IR::Jump(name+"_RETURN3124");
+        return new IR::Jump(name + "_RETURN3124");
     } else {
         TY::tyType lty = fenv->look(name)->ty->tp->kind;
         IR::ExpTy expty = this->exp->ast2ir(venv, fenv, name);
         TY::tyType rty = expty.ty->kind;
         IR::Exp* rexp = expty.exp->unEx();
         rexp = TyIRAssign(rexp, lty, rty);
-        return seq(new IR::Move(new IR::Temp(0), rexp), new IR::Jump(name+"_RETURN3124"));
+        return seq(new IR::Move(new IR::Temp(0), rexp), new IR::Jump(name + "_RETURN3124"));
     }
 }
 IR::ExpTy AST::Exp::calArray(IR::Exp* addr, int noff, TY::Type* ty,

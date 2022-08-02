@@ -14,11 +14,11 @@ public:
     std::vector<IR::StmList*> blocklabel, blockjump;
     std::vector<bool> exist;
     std::vector<std::vector<int>> prednode;
+    void cut_edge();
 
 private:
     std::unordered_map<Temp_Label, GRAPH::Node*> LNTable;
     void dfs(int node);
-    void cut_edge();
 };
 }  // namespace CFG
 #endif

@@ -181,9 +181,9 @@ static StmListList* mkBlocks(StmList* stms, Temp_Label done) {
     return lhead->tail;
 }
 
-Block CANON::basicBlocks(StmList* stmList,std::string funcname) {
+Block CANON::basicBlocks(StmList* stmList, std::string funcname) {
     Block b;
-    b.label = funcname+"_RETURN3124";
+    b.label = funcname + "_RETURN3124";
     b.llist = mkBlocks(stmList, b.label);
     return b;
 }
