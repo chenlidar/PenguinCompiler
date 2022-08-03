@@ -508,14 +508,14 @@ void SSA::Optimizer::constantPropagation() {
         }
     };
     // ir->showmark();
-    setup();
-    bfsMark();
-    replaceTemp();
-    cleanup();
+    // setup();
+    // bfsMark();
+    // replaceTemp();
+    // cleanup();
     // showmark();
     checkCopy();
     cleanCopy();
-    // showmark();
+    ir->showmark();
     //  showtemptable();
 };
 }  // namespace SSA

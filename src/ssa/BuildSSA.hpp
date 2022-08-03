@@ -121,7 +121,7 @@ public:
             }
         }
     }
-    std::unordered_map<int, std::unordered_map<Temp_Temp, IR::StmList*>> Aphi;
+    std::unordered_map<int, std::map<Temp_Temp, IR::StmList*>> Aphi;
     SSA::Optimizer opt;
     Temp_Label endlabel;
     DTREE::Dtree* dtree;

@@ -12,7 +12,6 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     dtree->computeDF();
     // D. insert phi function
     placePhi();
-    showmark();
     // E. rename temp, output a graph
     rename();
     endlabel = blocks.label;
