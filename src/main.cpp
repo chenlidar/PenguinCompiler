@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
             //
             // showir(out);
             int stksize = fenv->look(funcname)->stksize;
-            RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, false, true), stksize);
+            // RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, false, true), stksize);
             std::cout << globalVar->str();
             std::cout << globalArray->str();
             break;  // function, global var behind main will never used;
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
             // showir(out);
             bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
             int stksize = fenv->look(funcname)->stksize;
-            RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, false), stksize);
+            // RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, false), stksize);
         }
     }
 

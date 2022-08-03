@@ -6,7 +6,7 @@ CFGraph::CFGraph(CANON::Block blocks) {
     for (CANON::StmListList* llist = blocks.llist; llist; llist = llist->tail) {  // add node
         IR::StmList* stmlist = llist->head;
         GRAPH::Node* node = this->addNode(stmlist);
-        orig.push_back(std::unordered_set<Temp_Temp>());
+        orig.push_back(std::set<Temp_Temp>());
         blocklabel.push_back(stmlist);
         IR::Stm* stm = stmlist->stm;
         assert(stm->kind == IR::stmType::label);
@@ -17,7 +17,7 @@ CFGraph::CFGraph(CANON::Block blocks) {
     auto endlabelstm = new IR::StmList(new IR::Label(label), nullptr);
     GRAPH::Node* endnode = this->addNode(endlabelstm);
     exitnum = endnode->mykey;
-    orig.push_back(std::unordered_set<Temp_Temp>());
+    orig.push_back(std::set<Temp_Temp>());
     blocklabel.push_back(endlabelstm);
     LNTable.insert(std::make_pair(label, endnode));
     for (auto node : mynodes) {
@@ -105,7 +105,7 @@ void CFGraph::cut_edge() {
                 this->addEdge(mynodes[prenode], mynodes[i]);
                 blocklabel.push_back(prelist);
                 blockjump.push_back(prelist->tail);
-                orig.push_back(std::unordered_set<Temp_Temp>());
+                orig.push_back(std::set<Temp_Temp>());
                 prednode.push_back(std::vector<int>({pre}));
                 pre = prenode;
             }

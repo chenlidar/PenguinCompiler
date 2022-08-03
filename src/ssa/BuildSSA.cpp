@@ -7,12 +7,12 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     : CFG::CFGraph(blocks) {
     // A. stmlist -> graph
     // B. Dominator tree
-    showmark();
     dtree = new DTREE::Dtree(this, 0);
     // C. Dominance frontiers
     dtree->computeDF();
     // D. insert phi function
     placePhi();
+    showmark();
     // E. rename temp, output a graph
     rename();
     endlabel = blocks.label;
