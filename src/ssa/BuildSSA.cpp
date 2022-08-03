@@ -90,8 +90,7 @@ void SSA::SSAIR::rename(int node) {
             static_cast<IR::Temp*>(*dst)->tempid = temp;
         }
     }
-    for (auto succn : *mynodes[node]->succ()) {
-        int succ = succn->mykey;
+    for (auto succ : *mynodes[node]->succ()) {
         for (auto it : Aphi[succ]) {
             IR::Move* phimove = static_cast<IR::Move*>(it.second->stm);
             IR::Call* phicall = static_cast<IR::Call*>(phimove->src);

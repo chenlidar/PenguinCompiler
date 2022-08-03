@@ -57,23 +57,23 @@ CFGraph::CFGraph(CANON::Block blocks) {
     dfs(0);
     for (int i = 0; i < nodecount; i++) {
         if (exist[i]) continue;
-        for (auto pred : *mynodes[i]->pred()) { pred->succs.erase(pred->succs.find(mynodes[i])); }
-        mynodes[i]->preds.clear();
-        for (auto succ : *mynodes[i]->succ()) { succ->preds.erase(succ->preds.find(mynodes[i])); }
-        mynodes[i]->succs.clear();
+        while (mynodes[i]->preds.size())
+            this->rmEdge(mynodes[*mynodes[i]->preds.begin()], mynodes[i]);
+        while (mynodes[i]->succs.size())
+            this->rmEdge(mynodes[i], mynodes[*mynodes[i]->succs.begin()]);
         orig[i].clear();
     }
     for (int i = 0; i < nodecount; i++) {
         if (!exist[i]) continue;
-        for (auto pred : *mynodes[i]->pred()) prednode[i].push_back(pred->mykey);
+        for (auto pred : *mynodes[i]->pred()) prednode[i].push_back(pred);
     }
     cut_edge();
 }
 void CFGraph::dfs(int node) {
     exist[node] = true;
     for (auto it : *mynodes[node]->succ()) {
-        if (exist[it->mykey]) continue;
-        dfs(it->mykey);
+        if (exist[it]) continue;
+        dfs(it);
     }
 }
 void CFGraph::cut_edge() {

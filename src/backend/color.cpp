@@ -37,7 +37,7 @@ void COL_result::decrementDegree(GRAPH::Node* node) {
     if (Precolored.count(NodeTemp(node))) return;
     if (node->outDegree() == REGNUM - 1) {
         enableMove(node);
-        for (auto adjnode : *node->succ()) enableMove(adjnode);
+        for (auto adjnode : *node->succ()) enableMove(ig->nodes()->at(adjnode));
         SpillWorklist.erase(node);
         if (moveRelated(node))
             FreezeWorklist.insert(node);
@@ -51,8 +51,8 @@ void COL_result::simplify() {
     SimplifyWorklist.erase(node);
     SelectStack.push(node);
     for (auto adjnode : *node->succ()) {
-        node->mygraph->rmNode(node, adjnode);
-        decrementDegree(adjnode);
+        node->mygraph->rmNode(node, ig->mynodes[adjnode]);
+        decrementDegree(ig->mynodes[adjnode]);
     }
 }
 void COL_result::addWorklist(Temp_Temp temp) {
@@ -80,10 +80,10 @@ void COL_result::combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u n
     }
     enableMove(v);
     for (auto it : *v->succ()) {
-        it->mygraph->addEdge(it, u);
-        it->mygraph->addEdge(u, it);
-        it->mygraph->rmNode(v, it);
-        decrementDegree(it);  // maybe a precolor
+        ig->addEdge(ig->mynodes[it], u);
+        ig->addEdge(u, ig->mynodes[it]);
+        ig->rmNode(v, ig->mynodes[it]);
+        decrementDegree(ig->mynodes[it]);  // maybe a precolor
     }
     if (u->outDegree() >= REGNUM && FreezeWorklist.count(u)) {  // u may already in SpillWorklist
         FreezeWorklist.erase(u);
@@ -93,8 +93,8 @@ void COL_result::combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u n
 bool COL_result::george(GRAPH::Node* u, GRAPH::Node* v) {
     assert(!Precolored.count(NodeTemp(v)));
     for (auto adjnode : *v->succ()) {
-        if (adjnode->outDegree() < REGNUM || Precolored.count(NodeTemp(adjnode))
-            || adjnode->succ()->count(u))
+        if (ig->mynodes[adjnode]->outDegree() < REGNUM || Precolored.count(NodeTemp(ig->mynodes[adjnode]))
+            || ig->mynodes[adjnode]->succ()->count(u->mykey))
             continue;
         else
             return false;
@@ -102,12 +102,12 @@ bool COL_result::george(GRAPH::Node* u, GRAPH::Node* v) {
     return true;
 }
 bool COL_result::briggs(GRAPH::Node* u, GRAPH::Node* v) {
-    std::set<GRAPH::Node*> cnt;
+    std::set<int> cnt;
     for (auto node : *u->succ()) {
-        if (node->outDegree() >= REGNUM || Precolored.count(NodeTemp(node))) cnt.insert(node);
+        if (ig->mynodes[node]->outDegree() >= REGNUM || Precolored.count(NodeTemp(ig->mynodes[node]))) cnt.insert(node);
     }
     for (auto node : *v->succ()) {
-        if (node->outDegree() >= REGNUM || Precolored.count(NodeTemp(node))) cnt.insert(node);
+        if (ig->mynodes[node]->outDegree() >= REGNUM || Precolored.count(NodeTemp(ig->mynodes[node]))) cnt.insert(node);
     }
     return cnt.size() < REGNUM;
 }
@@ -129,7 +129,7 @@ void COL_result::unionNode() {
     if (x == y) {  // 1,4, x may become not moverelate
         UnionMove.insert(instr);
         addWorklist(x);
-    } else if (Precolored.count(y) || v->succ()->count(u)) {  // 1 || 2
+    } else if (Precolored.count(y) || v->succ()->count(u->mykey)) {  // 1 || 2
         addWorklist(x);
         addWorklist(y);
     } else if ((Precolored.count(x) && george(u, v))
@@ -191,8 +191,8 @@ void COL_result::assignColor() {
         std::set<Temp_Temp> okcolor = Precolored;
         node->mygraph->reverseNode(node);
         for (auto adjnode : *node->succ()) {
-            if (ColorMap.count(findAlias(NodeTemp(adjnode)))) {
-                okcolor.erase(ColorMap[findAlias(NodeTemp(adjnode))]);
+            if (ColorMap.count(findAlias(NodeTemp(ig->mynodes[adjnode])))) {
+                okcolor.erase(ColorMap[findAlias(NodeTemp(ig->mynodes[adjnode]))]);
             }
         }
         if (okcolor.empty()) {

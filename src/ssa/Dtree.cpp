@@ -24,10 +24,10 @@ Dtree::Dtree(GRAPH::Graph* _g, int _entrynum)
         // assert(node >= 0);
         for (auto pred : *g->nodes()->at(node)->pred()) {
             int nxts = -1;
-            if (dfnum[pred->mykey] <= dfnum[node])
-                nxts = pred->mykey;
+            if (dfnum[pred] <= dfnum[node])
+                nxts = pred;
             else
-                nxts = semi[findLowestSemiAncestor(pred->mykey)];
+                nxts = semi[findLowestSemiAncestor(pred)];
             if (dfnum[s] > dfnum[nxts]) s = nxts;
         }
         semi[node] = s;
@@ -58,8 +58,8 @@ void Dtree::dfs(int node, int fa) {
     parent[node] = fa;
     cnt++;
     for (auto succ : *g->nodes()->at(node)->succ()) {
-        if (dfnum[succ->mykey] != -1) continue;
-        dfs(succ->mykey, node);
+        if (dfnum[succ] != -1) continue;
+        dfs(succ, node);
     }
 }
 void Dtree::link(int fa, int node) {
@@ -81,7 +81,7 @@ int Dtree::find(int node) {
 }
 void Dtree::computeDF(int node) {
     for (auto succ : *g->nodes()->at(node)->succ()) {
-        if (idom[succ->mykey] != node) DF[node].push_back(succ->mykey);
+        if (idom[succ] != node) DF[node].push_back(succ);
     }
     for (int succ : children[node]) {
         assert(ancestor[succ] == succ);

@@ -12,7 +12,7 @@ namespace SSA {
 class SSAIR;
 class Optimizer {
 public:
-    void deadCodeElimilation();
+    // void deadCodeElimilation();
     void constantPropagation();
     void PRE();
     SSA::SSAIR* ir;
