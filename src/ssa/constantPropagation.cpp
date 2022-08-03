@@ -424,17 +424,7 @@ void SSA::Optimizer::constantPropagation() {
             }
         }
     };
-    auto showmark = [&]() {  // func that can output ssa for debuging
-        auto nodes = ir->nodes();
-        for (const auto& it : (*nodes)) {
-            auto stml = static_cast<IR::StmList*>(it->info);
-            while (stml) {
-                auto stm = stml->stm;
-                stm->printIR();
-                stml = stml->tail;
-            }
-        }
-    };
+    
     auto cleanup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -517,7 +507,7 @@ void SSA::Optimizer::constantPropagation() {
                       << "   val:" << it.second.val << std::endl;
         }
     };
-    // showmark();
+    // ir->showmark();
     setup();
     bfsMark();
     replaceTemp();

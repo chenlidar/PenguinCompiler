@@ -7,6 +7,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     : CFG::CFGraph(blocks) {
     // A. stmlist -> graph
     // B. Dominator tree
+    showmark();
     dtree = new DTREE::Dtree(this, 0);
     // C. Dominance frontiers
     dtree->computeDF();
@@ -18,7 +19,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     opt.ir = this;
 }
 void SSA::SSAIR::placePhi() {
-    defsites = std::unordered_map<Temp_Temp, std::vector<int>>();
+    defsites = std::map<Temp_Temp, std::vector<int>>();
     for (int i = 0; i < nodecount; i++) {
         for (auto dst : orig[i]) { defsites[dst].push_back(i); }
     }
