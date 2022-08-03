@@ -2,6 +2,7 @@
 #include "BuildSSA.hpp"
 #include "../util/utils.hpp"
 #include "Dtree.hpp"
+#include <queue>
 // using namespace SSA;
 SSA::SSAIR::SSAIR(CANON::Block blocks)
     : CFG::CFGraph(blocks) {
@@ -122,23 +123,65 @@ CANON::Block SSA::SSAIR::ssa2ir() {
         int cnt = 0;
         for (auto& pre : prednode[i]) {
             assert(blockjump[pre]->stm->kind != IR::stmType::cjump);
+            std::unordered_map<int, int> indg;
+            std::unordered_map<int, IR::Move*> mvstms;
             for (auto it : Aphi[i]) {
-                if (it.second->stm->kind == IR::stmType::move)
-                    ;
-                else {
-                    fprintf(stderr, "%p\n", it.second);
-                    std::cerr << "***" << static_cast<int>(it.second->stm->kind) << "\n";
-                }
-                assert(it.second->stm->kind == IR::stmType::move);
                 auto movephi = static_cast<IR::Move*>(it.second->stm);
-                assert(movephi->src->kind == IR::expType::call);
-                assert(movephi->dst->kind == IR::expType::temp);
                 auto callphi = static_cast<IR::Call*>(movephi->src);
                 IR::Exp* paramexp = callphi->args[cnt];
-                int dsttemp = static_cast<IR::Temp*>(movephi->dst)->tempid;
-                blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
-                blockjump[pre]->stm = new IR::Move(new IR::Temp(dsttemp), paramexp);
-                blockjump[pre] = blockjump[pre]->tail;
+                assert(static_cast<IR::Temp*>(movephi->dst)->tempid == it.first);
+                int dsttemp = it.first;
+                if (paramexp->kind == IR::expType::temp) {
+                    int srctemp = static_cast<IR::Temp*>(paramexp)->tempid;
+                    if (srctemp == dsttemp) continue;
+                    indg[srctemp] += 1;
+                }
+                IR::Move* mv = new IR::Move(new IR::Temp(dsttemp), paramexp);
+                mvstms.insert({dsttemp, mv});
+            }
+            std::queue<int> mvq;
+            std::unordered_set<int> addtmp;
+            for (auto it : mvstms) {
+                if (indg[it.first] == 0) mvq.push(it.first);
+            }
+            while (!mvstms.empty()) {
+                while (!mvq.empty()) {
+                    int dstmp = mvq.front();
+                    mvq.pop();
+                    IR::Move* mvn = mvstms.at(dstmp);
+                    blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
+                    blockjump[pre]->stm = mvn;
+                    blockjump[pre] = blockjump[pre]->tail;
+                    if (mvn->src->kind == IR::expType::temp) {
+                        int srctmp = static_cast<IR::Temp*>(mvn->src)->tempid;
+                        if (!addtmp.count(srctmp)) {
+                            indg.at(srctmp) -= 1;
+                            assert(indg.at(srctmp) >= 0);
+                            if (indg.at(srctmp) == 0) {
+                                if (mvstms.count(srctmp)) { mvq.push(srctmp); }
+                            }
+                        }
+                    }
+                    mvstms.erase(dstmp);
+                }
+                if (!mvstms.empty()) {  // has circle
+                    int dsttmp = mvstms.begin()->first;
+                    IR::Move* mvn = mvstms.begin()->second;
+                    assert(mvn->src->kind == IR::expType::temp);
+                    int srctmp = static_cast<IR::Temp*>(mvn->src)->tempid;
+                    assert(indg[dsttmp] == 1);
+                    assert(indg[srctmp] == 1);
+                    assert(mvstms.count(srctmp));
+                    int temp = Temp_newtemp();
+                    addtmp.insert(temp);
+                    static_cast<IR::Temp*>(mvn->src)->tempid = temp;
+                    IR::Move* insmv = new IR::Move(new IR::Temp(temp), new IR::Temp(srctmp));
+                    blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
+                    blockjump[pre]->stm = insmv;
+                    blockjump[pre] = blockjump[pre]->tail;
+                    indg[srctmp] = 0;
+                    mvq.push(srctmp);
+                }
             }
             cnt++;
         }
