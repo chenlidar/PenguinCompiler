@@ -515,7 +515,7 @@ void SSA::Optimizer::constantPropagation() {
     // showmark();
     checkCopy();
     cleanCopy();
-    ir->showmark();
+    // ir->showmark();
     //  showtemptable();
 };
 }  // namespace SSA
