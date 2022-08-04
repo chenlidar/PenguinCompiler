@@ -7,14 +7,16 @@
 #include "CFG.hpp"
 #include "CDG.hpp"
 #include "./Dtree.hpp"
+#include <map>
 #include <functional>
 namespace SSA {
 class SSAIR;
 class Optimizer {
 public:
-    void deadCodeElimilation();
+    // void deadCodeElimilation();
     void constantPropagation();
     void PRE();
+    
     SSA::SSAIR* ir;
 
 private:
@@ -109,14 +111,24 @@ class SSAIR : public CFG::CFGraph {
 public:
     SSAIR(CANON::Block blocks);
     CANON::Block ssa2ir();
-    std::unordered_map<int, std::unordered_map<Temp_Temp, IR::StmList*>> Aphi;
+    void showmark() {  // func that can output ssa for debuging
+        for (const auto& it : mynodes) {
+            auto stml = static_cast<IR::StmList*>(it->info);
+            while (stml) {
+                auto stm = stml->stm;
+                stm->printIR();
+                stml = stml->tail;
+            }
+        }
+    }
+    std::unordered_map<int, std::map<Temp_Temp, IR::StmList*>> Aphi;
     SSA::Optimizer opt;
     Temp_Label endlabel;
     DTREE::Dtree* dtree;
 
 private:
-    std::unordered_map<Temp_Temp, std::vector<int>> defsites;
-    std::unordered_map<Temp_Temp, std::stack<Temp_Temp>> stk;
+    std::map<Temp_Temp, std::vector<int>> defsites;
+    std::map<Temp_Temp, std::stack<Temp_Temp>> stk;
     void placePhi();
     void rename();
     void rename(int node);

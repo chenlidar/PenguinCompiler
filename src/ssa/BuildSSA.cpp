@@ -19,7 +19,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     opt.ir = this;
 }
 void SSA::SSAIR::placePhi() {
-    defsites = std::unordered_map<Temp_Temp, std::vector<int>>();
+    defsites = std::map<Temp_Temp, std::vector<int>>();
     for (int i = 0; i < nodecount; i++) {
         for (auto dst : orig[i]) { defsites[dst].push_back(i); }
     }
@@ -91,8 +91,7 @@ void SSA::SSAIR::rename(int node) {
             static_cast<IR::Temp*>(*dst)->tempid = temp;
         }
     }
-    for (auto succn : *mynodes[node]->succ()) {
-        int succ = succn->mykey;
+    for (auto succ : *mynodes[node]->succ()) {
         for (auto it : Aphi[succ]) {
             IR::Move* phimove = static_cast<IR::Move*>(it.second->stm);
             IR::Call* phicall = static_cast<IR::Call*>(phimove->src);

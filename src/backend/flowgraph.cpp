@@ -30,7 +30,7 @@ void FlowGraph::FG_AssemFlowGraph(ASM::InstrList* il) {
                 if (!static_cast<ASM::Oper*>(instr)->jumps.empty()) {
                     type = IT_JUMP;
                     // put this instruction into a separate list
-                    jumpList->insert(curr);
+                    jumpList->insert(curr->mykey);
                 }
                 defs = static_cast<ASM::Oper*>(instr)->dst;
                 uses = static_cast<ASM::Oper*>(instr)->src;
@@ -62,7 +62,7 @@ void FlowGraph::FG_AssemFlowGraph(ASM::InstrList* il) {
     //(II) Iterate over the list that has all the JUMP instruction collected.
     Temp_LabelList labels;
     for (auto& curr : *jumpList) {
-        ASM::Instr* x = (ASM::Instr*)(curr->nodeInfo());
+        ASM::Instr* x = (ASM::Instr*)(this->mynodes[curr]->nodeInfo());
         labels = static_cast<ASM::Oper*>(x)->jumps;  // no need to check its nullity again
         GRAPH::Node* dest;
         // for each target it may jump to, add a corresponding edge in the graph
@@ -72,7 +72,7 @@ void FlowGraph::FG_AssemFlowGraph(ASM::InstrList* il) {
                 // quickly retieve the target node using the label-node table
                 dest = LNTable.at(label);
                 // establish edge between this node and its jump target
-                curr->mygraph->addEdge(curr, dest);
+                this->addEdge(this->mynodes[curr],dest);
             }
         }
     }

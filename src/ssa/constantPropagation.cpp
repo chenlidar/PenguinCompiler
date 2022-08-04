@@ -105,7 +105,7 @@ void SSA::Optimizer::constantPropagation() {
         }
         ir->rmEdge(nodes->at(from), toNode);
         if (toNode->pred()->empty()) {
-            while (!toNode->succ()->empty()) { cutEdge(to, (*(toNode->succ()->begin()))->mykey); }
+            while (!toNode->succ()->empty()) { cutEdge(to, *(toNode->succ()->begin())); }
         }
     };
     auto isTempIndefinite = [&](IR::Exp* exp) {
@@ -271,7 +271,7 @@ void SSA::Optimizer::constantPropagation() {
         auto stm = stml->stm;
         auto curb = stmlBlockmap[stml];
         if (stm->kind == IR::stmType::jump) {
-            auto nx = (*nodes->at(curb)->succ()->begin())->mykey;
+            auto nx = *nodes->at(curb)->succ()->begin();
             if (!blockCondition.count(nx)) {
                 blockCondition.insert(nx);
                 curBlock.push(nx);
@@ -284,8 +284,8 @@ void SSA::Optimizer::constantPropagation() {
                 auto tg = cjmp->falseLabel;
                 if (b) tg = cjmp->trueLabel;
                 for (auto it : (*(nodes->at(curb))->succ())) {
-                    if (getNodeLabel(it) == tg) {
-                        auto nx = it->mykey;
+                    if (getNodeLabel(ir->mynodes[it]) == tg) {
+                        auto nx = it;
                         if (!blockCondition.count(nx)) {
                             blockCondition.insert(nx);
                             curBlock.push(nx);
@@ -297,7 +297,7 @@ void SSA::Optimizer::constantPropagation() {
             if ((cjmp->left->kind == IR::expType::temp && isTempIndefinite(cjmp->left))
                 || (cjmp->right->kind == IR::expType::temp && isTempIndefinite(cjmp->right))) {
                 for (auto it : (*(nodes->at(curb))->succ())) {
-                    auto nx = it->mykey;
+                    auto nx = it;
                     if (!blockCondition.count(nx)) {
                         blockCondition.insert(nx);
                         curBlock.push(nx);
@@ -335,8 +335,8 @@ void SSA::Optimizer::constantPropagation() {
                     stml = stml->tail;
                 }
                 for (auto nx : *(ir->nodes()->at(cur)->succ())) {
-                    if (blockCondition.count(nx->mykey)) {
-                        for (auto st : ir->Aphi[nx->mykey]) { doDef(st.second); }
+                    if (blockCondition.count(nx)) {
+                        for (auto st : ir->Aphi[nx]) { doDef(st.second); }
                     }
                 }
             }
@@ -359,9 +359,9 @@ void SSA::Optimizer::constantPropagation() {
         for (auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
             if (!blockCondition.count(it->mykey)) {
-                while (!it->pred()->empty()) { ir->rmEdge((*(it->pred()->begin())), it); }
+                while (!it->pred()->empty()) { ir->rmEdge(ir->mynodes[*it->pred()->begin()], it); }
                 while (!it->succ()->empty()) {
-                    cutEdge(it->mykey, (*(it->succ()->begin()))->mykey);
+                    cutEdge(it->mykey, *(it->succ()->begin()));
                 }
                 stml->tail = 0;
                 continue;
@@ -405,10 +405,10 @@ void SSA::Optimizer::constantPropagation() {
                 auto cjmpstm = static_cast<IR::Cjump*>(head->stm);
                 bool ht = false, hf = false;
                 for (auto jt : *(it->succ())) {
-                    if (!blockCondition.count(jt->mykey)) continue;
-                    if (getNodeLabel(jt) == cjmpstm->trueLabel) {
+                    if (!blockCondition.count(jt)) continue;
+                    if (getNodeLabel(ir->mynodes[jt]) == cjmpstm->trueLabel) {
                         ht = true;
-                    } else if (getNodeLabel(jt) == cjmpstm->falseLabel) {
+                    } else if (getNodeLabel(ir->mynodes[jt]) == cjmpstm->falseLabel) {
                         hf = true;
                     }
                 }
@@ -424,17 +424,7 @@ void SSA::Optimizer::constantPropagation() {
             }
         }
     };
-    auto showmark = [&]() {  // func that can output ssa for debuging
-        auto nodes = ir->nodes();
-        for (const auto& it : (*nodes)) {
-            auto stml = static_cast<IR::StmList*>(it->info);
-            while (stml) {
-                auto stm = stml->stm;
-                stm->printIR();
-                stml = stml->tail;
-            }
-        }
-    };
+    
     auto cleanup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -517,15 +507,15 @@ void SSA::Optimizer::constantPropagation() {
                       << "   val:" << it.second.val << std::endl;
         }
     };
-    // showmark();
-    setup();
-    bfsMark();
-    replaceTemp();
-    cleanup();
+    // ir->showmark();
+    // setup();
+    // bfsMark();
+    // replaceTemp();
+    // cleanup();
     // showmark();
     checkCopy();
     cleanCopy();
-    // showmark();
+    // ir->showmark();
     //  showtemptable();
 };
 }  // namespace SSA

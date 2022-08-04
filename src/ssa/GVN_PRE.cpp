@@ -132,7 +132,7 @@ bool Optimizer::buildAntic(int node) {
     // Anticout
     if (ir->nodes()->at(node)->outDegree() == 1) {
         int cnt = 0;
-        int succnode = (*ir->nodes()->at(node)->succs.begin())->mykey;
+        int succnode = *ir->nodes()->at(node)->succs.begin();
         for (auto pred : ir->prednode[succnode]) {
             if (node == pred) break;
             cnt++;
@@ -172,7 +172,7 @@ bool Optimizer::buildAntic(int node) {
         int cnt = 0;
         int succnode[2];
         for (auto succ : *ir->nodes()->at(node)->succ()) {
-            succnode[cnt] = succ->mykey;
+            succnode[cnt] = succ;
             cnt++;
         }
         for (auto it : anticIn[succnode[0]]) {

@@ -16,7 +16,7 @@ namespace GRAPH {
 
 class Graph;
 class Node;
-typedef std::set<Node*> NodeList;
+typedef std::set<int> NodeList;
 
 struct Node {
     int mykey;
@@ -43,10 +43,8 @@ struct Node {
 };
 
 class Graph {
-protected:
-    std::vector<Node*> mynodes;
-
 public:
+    std::vector<Node*> mynodes;
     int nodecount;
     Graph() {
         nodecount = 0;
