@@ -78,7 +78,7 @@ void COL_result::combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u n
         if (!ActiveMove.count(instr) && !ig->WorklistMove.count(instr)) continue;
         ig->Movelist.at(u).insert(instr);
     }
-    enableMove(v);
+    // enableMove(v); a bug
     for (auto it : *v->succ()) {
         ig->addEdge(ig->mynodes[it], u);
         ig->addEdge(u, ig->mynodes[it]);
