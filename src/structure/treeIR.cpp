@@ -494,9 +494,20 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                 if (m1->dst->kind == expType::mem && m2->src->kind == expType::mem
                     && expEqual(m1->dst, m2->src)) {
                     delete s2->stm;
-                    s2->stm = new IR::Move(m1->src->quad(), m2->dst->quad());
+                    // static int cnt = 0;
+                    // std::cerr << ++cnt << std::endl;
+                    s2->stm = new IR::Move(m2->dst->quad(), m1->src->quad());
                     // can continue to do other optimize
                 }
+                // useless
+                // if (expEqual(m1->dst, m2->dst)) {
+                //     if (m1->src->kind != expType::call) {
+                //         static int cnt = 0;
+                //         std::cerr << ++cnt << std::endl;
+                //         delete s1->stm;
+                //         s1->stm = nopStm();
+                //     }
+                // }
             }
         }
 
