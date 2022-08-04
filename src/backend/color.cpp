@@ -93,7 +93,8 @@ void COL_result::combine(GRAPH::Node* u, GRAPH::Node* v) {  // u pre,v no || u n
 bool COL_result::george(GRAPH::Node* u, GRAPH::Node* v) {
     assert(!Precolored.count(NodeTemp(v)));
     for (auto adjnode : *v->succ()) {
-        if (ig->mynodes[adjnode]->outDegree() < REGNUM || Precolored.count(NodeTemp(ig->mynodes[adjnode]))
+        if (ig->mynodes[adjnode]->outDegree() < REGNUM
+            || Precolored.count(NodeTemp(ig->mynodes[adjnode]))
             || ig->mynodes[adjnode]->succ()->count(u->mykey))
             continue;
         else
@@ -104,10 +105,14 @@ bool COL_result::george(GRAPH::Node* u, GRAPH::Node* v) {
 bool COL_result::briggs(GRAPH::Node* u, GRAPH::Node* v) {
     std::set<int> cnt;
     for (auto node : *u->succ()) {
-        if (ig->mynodes[node]->outDegree() >= REGNUM || Precolored.count(NodeTemp(ig->mynodes[node]))) cnt.insert(node);
+        if (ig->mynodes[node]->outDegree() >= REGNUM
+            || Precolored.count(NodeTemp(ig->mynodes[node])))
+            cnt.insert(node);
     }
     for (auto node : *v->succ()) {
-        if (ig->mynodes[node]->outDegree() >= REGNUM || Precolored.count(NodeTemp(ig->mynodes[node]))) cnt.insert(node);
+        if (ig->mynodes[node]->outDegree() >= REGNUM
+            || Precolored.count(NodeTemp(ig->mynodes[node])))
+            cnt.insert(node);
     }
     return cnt.size() < REGNUM;
 }

@@ -360,9 +360,7 @@ void SSA::Optimizer::constantPropagation() {
             auto stml = static_cast<IR::StmList*>(it->info);
             if (!blockCondition.count(it->mykey)) {
                 while (!it->pred()->empty()) { ir->rmEdge(ir->mynodes[*it->pred()->begin()], it); }
-                while (!it->succ()->empty()) {
-                    cutEdge(it->mykey, *(it->succ()->begin()));
-                }
+                while (!it->succ()->empty()) { cutEdge(it->mykey, *(it->succ()->begin())); }
                 stml->tail = 0;
                 continue;
             }
@@ -424,7 +422,7 @@ void SSA::Optimizer::constantPropagation() {
             }
         }
     };
-    
+
     auto cleanup = [&]() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {

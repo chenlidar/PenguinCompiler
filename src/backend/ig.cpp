@@ -40,7 +40,7 @@ void ConfGraph::Create_ig(LIVENESS::Liveness* live) {
                 || useList->at(0) == 13)
                 ;
             else {
-                //NOTE: may have bug
+                // NOTE: may have bug
                 WorklistMove.insert(insmove);
                 Movelist[Look_ig(defList->at(0))].insert(insmove);
                 Movelist[Look_ig(useList->at(0))].insert(insmove);

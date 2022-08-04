@@ -16,7 +16,7 @@ public:
     void deadCodeElimilation();
     void constantPropagation();
     void PRE();
-    
+
     SSA::SSAIR* ir;
 
 private:

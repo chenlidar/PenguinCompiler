@@ -72,7 +72,7 @@ void FlowGraph::FG_AssemFlowGraph(ASM::InstrList* il) {
                 // quickly retieve the target node using the label-node table
                 dest = LNTable.at(label);
                 // establish edge between this node and its jump target
-                this->addEdge(this->mynodes[curr],dest);
+                this->addEdge(this->mynodes[curr], dest);
             }
         }
     }
