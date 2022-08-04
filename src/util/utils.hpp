@@ -256,6 +256,62 @@ static Temp_Label getNodeLabel(GRAPH::Node* node) {
 static IR::Label* getNodeLabelStm(GRAPH::Node* node) {
     return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm);
 }
+
+static std::pair<int, int> exp2int(IR::Exp* x) {
+    if (x->kind == IR::expType::constx) return {1, static_cast<IR::Const*>(x)->val};
+    if (x->kind == IR::expType::binop) {
+        auto bi = static_cast<IR::Binop*>(x);
+        auto t1 = exp2int(bi->left), t2 = exp2int(bi->right);
+        if (t1.first && t2.first) {
+            switch (bi->op) {
+            case IR::binop::T_plus: return {1, t1.second + t2.second};
+            case IR::binop::T_mul: return {1, t1.second * t2.second};
+            case IR::binop::T_mod: return {1, t1.second % t2.second};
+            case IR::binop::T_minus: return {1, t1.second - t2.second};
+            case IR::binop::T_div: return {1, t1.second / t2.second};
+            default: return {0, 0};
+            }
+        }
+    }
+    return {0, 0};
+}
+static std::pair<int, int> exp2tempid(IR::Exp* x) {
+    if (x->kind == IR::expType::temp) return {1, static_cast<IR::Temp*>(x)->tempid};
+    if (x->kind == IR::expType::binop) {
+        auto bi = static_cast<IR::Binop*>(x);
+        auto t1 = exp2tempid(bi->left);
+        auto t2 = exp2int(bi->right);
+        if (t1.first && t2.first) {
+            switch (bi->op) {
+            case IR::binop::T_plus:
+                if (t2.second == 0) return {1, t1.second};
+            case IR::binop::T_mul:
+                if (t2.second == 1) return {1, t1.second};
+            case IR::binop::T_mod: return {0, 0};
+            case IR::binop::T_minus:
+                if (t2.second == 0) return {1, t1.second};
+            case IR::binop::T_div:
+                if (t2.second == 1) return {1, t1.second};
+            default: return {0, 0};
+            }
+        }
+        t1 = exp2tempid(bi->right);
+        t2 = exp2int(bi->left);
+        if (t1.first && t2.first) {
+            switch (bi->op) {
+            case IR::binop::T_plus:
+                if (t2.second == 0) return {1, t1.second};
+            case IR::binop::T_mul:
+                if (t2.second == 1) return {1, t1.second};
+            case IR::binop::T_mod: return {0, 0};
+            case IR::binop::T_minus: return {0, 0};
+            case IR::binop::T_div: return {0, 0};
+            default: return {0, 0};
+            }
+        }
+    }
+    return {0, 0};
+}
 static bool expEqual(IR::Exp* a, IR::Exp* b) {
     if (a->kind == IR::expType::constx && b->kind == IR::expType::constx) {
         auto aa = static_cast<IR::Const*>(a), bb = static_cast<IR::Const*>(b);
@@ -269,9 +325,23 @@ static bool expEqual(IR::Exp* a, IR::Exp* b) {
         auto aa = static_cast<IR::Mem*>(a), bb = static_cast<IR::Mem*>(b);
         return expEqual(aa->mem, bb->mem);
     }
+    if (a->kind == IR::expType::name && b->kind == IR::expType::name) {
+        auto aa = static_cast<IR::Name*>(a), bb = static_cast<IR::Name*>(b);
+        return aa->name == bb->name;
+    }
     if (a->kind == IR::expType::binop && b->kind == IR::expType::binop) {
         auto aa = static_cast<IR::Binop*>(a), bb = static_cast<IR::Binop*>(b);
         if (aa->op != bb->op) return false;
+        if ((aa->op == IR::binop::T_minus || aa->op == IR::binop::T_plus)
+            && (expEqual(aa->left, bb->right) && expEqual(aa->right, bb->right))) {
+            return true;
+        }
+        return (expEqual(aa->left, bb->left) && expEqual(aa->right, bb->right));
     }
+    auto t1 = exp2int(a), t2 = exp2int(b);
+    if (t1.first && t2.first) return t1.second == t2.second;
+    t1 = exp2tempid(a), t2 = exp2tempid(b);
+    if (t1.first && t2.first) return t1.second == t2.second;
+    return false;
 }
 #endif

@@ -491,7 +491,13 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
             auto w1 = s1->stm, w2 = s2->stm;
             if (w1->kind == stmType::move && w2->kind == stmType::move) {
                 auto m1 = static_cast<Move*>(w1), m2 = static_cast<Move*>(w2);
-                if (m1->dst->kind == expType::mem && m2->src->kind == expType::mem &&) }
+                if (m1->dst->kind == expType::mem && m2->src->kind == expType::mem
+                    && expEqual(m1->dst, m2->src)) {
+                    delete s2->stm;
+                    s2->stm = new IR::Move(m1->src->quad(), m2->dst->quad());
+                    // can continue to do other optimize
+                }
+            }
         }
 
         s1->stm->ir2asm(&proc->body);
