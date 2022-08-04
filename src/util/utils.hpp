@@ -256,4 +256,22 @@ static Temp_Label getNodeLabel(GRAPH::Node* node) {
 static IR::Label* getNodeLabelStm(GRAPH::Node* node) {
     return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm);
 }
+static bool expEqual(IR::Exp* a, IR::Exp* b) {
+    if (a->kind == IR::expType::constx && b->kind == IR::expType::constx) {
+        auto aa = static_cast<IR::Const*>(a), bb = static_cast<IR::Const*>(b);
+        return aa->val == bb->val;
+    }
+    if (a->kind == IR::expType::temp && b->kind == IR::expType::temp) {
+        auto aa = static_cast<IR::Temp*>(a), bb = static_cast<IR::Temp*>(b);
+        return aa->tempid == bb->tempid;
+    }
+    if (a->kind == IR::expType::mem && b->kind == IR::expType::mem) {
+        auto aa = static_cast<IR::Mem*>(a), bb = static_cast<IR::Mem*>(b);
+        return expEqual(aa->mem, bb->mem);
+    }
+    if (a->kind == IR::expType::binop && b->kind == IR::expType::binop) {
+        auto aa = static_cast<IR::Binop*>(a), bb = static_cast<IR::Binop*>(b);
+        if (aa->op != bb->op) return false;
+    }
+}
 #endif

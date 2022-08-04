@@ -476,7 +476,28 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();
     stmlist = CANON::funcEntryExit1(stmlist);
-    for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body);
+    // for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body);
+    StmList *s1, *s2, *s3;
+    s1 = stmlist;
+    while (s1) {
+        s2 = s1->tail;
+        if (s2)
+            s3 = s2->tail;
+        else
+            s3 = 0;
+
+        if (s2 && s3) {}
+        if (s2) {
+            auto w1 = s1->stm, w2 = s2->stm;
+            if (w1->kind == stmType::move && w2->kind == stmType::move) {
+                auto m1 = static_cast<Move*>(w1), m2 = static_cast<Move*>(w2);
+                if (m1->dst->kind == expType::mem && m2->src->kind == expType::mem &&) }
+        }
+
+        s1->stm->ir2asm(&proc->body);
+        s1 = s1->tail;
+    }
+
     return proc;
 }
 
