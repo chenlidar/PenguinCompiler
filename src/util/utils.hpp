@@ -247,7 +247,7 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
     case IR::stmType::jump: break;
     default: assert(0);
     }
-    return std::move(uses);
+    return (uses);
 }
 
 static Temp_Label getNodeLabel(GRAPH::Node* node) {
