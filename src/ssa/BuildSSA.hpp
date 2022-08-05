@@ -16,11 +16,14 @@ public:
     void deadCodeElimilation();
     void constantPropagation();
     void PRE();
+    void combExp();
 
     SSA::SSAIR* ir;
 
 private:
     bool isNecessaryStm(IR::Stm* stm);
+    std::pair<IR::StmList*,IR::StmList*> handelexp(IR::StmList* begin, IR::StmList* end);
+    std::unordered_map<int, std::vector<IR::StmList*>> usemap;
     void buildTable();
     void insertPRE(int node);
     void insertPRE();

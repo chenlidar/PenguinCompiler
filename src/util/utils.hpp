@@ -256,4 +256,13 @@ static Temp_Label getNodeLabel(GRAPH::Node* node) {
 static IR::Label* getNodeLabelStm(GRAPH::Node* node) {
     return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm);
 }
+static bool isphifunc(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::call
+           && static_cast<IR::Call*>(static_cast<IR::Move*>(stm)->src)->fun[0] == '$';
+}
+static bool ismovebi(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::binop;
+}
 #endif
