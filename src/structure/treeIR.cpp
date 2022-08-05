@@ -395,6 +395,25 @@ void Move::ir2asm(ASM::InstrList* ls) {
                 auto rtemp = opsexp->ir2asm(ls);
                 assert(cons != 0);
                 assert(lexp != rtemp);
+
+                if (check2pow(cons)) {
+                    int t = ceil(log2(cons));
+                    auto imm1 = exp2op2(t), imm2 = exp2op2(N - t);
+                    ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, #31"),
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(
+                        std::string("add `d0, `s0, `s1, lsr") + imm2.second, Temp_TempList({lexp}),
+                        Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("bfc `d0, #0, ") + imm1.second,
+                                                Temp_TempList({lexp}), Temp_TempList(),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"),
+                                                Temp_TempList({lexp}),
+                                                Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                    return;
+                }
+
                 auto tmp = Temp_newtemp();
                 auto s1 = new Move(new Temp(tmp),
                                    new Binop(binop::T_div, new Temp(rtemp), new Const(cons)));
