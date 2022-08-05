@@ -201,18 +201,20 @@ void Move::ir2asm(ASM::InstrList* ls) {
             auto imm = exp2op2(cons);
             if (imm.first) {
                 switch (rexp->op) {
-                case IR::binop::T_plus:
-                    auto rtemp = opsexp->ir2asm(ls);
+                case IR::binop::T_plus: {
+                    auto rtemp1 = opsexp->ir2asm(ls);
                     ls->push_back(new ASM::Oper(std::string("add `d0, `s0, ") + imm.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp1}),
                                                 ASM::Targets()));
                     return;
-                case IR::binop::T_minus:
-                    auto rtemp = opsexp->ir2asm(ls);
+                }
+                case IR::binop::T_minus: {
+                    auto rtemp2 = opsexp->ir2asm(ls);
                     ls->push_back(new ASM::Oper(
                         (num1.first ? "rsb" : "sub") + std::string(" `d0, `s0, " + imm.second),
-                        Temp_TempList({lexp}), Temp_TempList({rtemp}), ASM::Targets()));
+                        Temp_TempList({lexp}), Temp_TempList({rtemp2}), ASM::Targets()));
                     return;
+                }
 
                 default: break;
                 }
@@ -254,7 +256,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("add `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("add `d0, `s0, `s1, lsl " + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(
@@ -267,7 +269,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, lsl" + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(

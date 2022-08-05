@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <assert.h>
+#include <string>
 static inline IR::Stm* nopStm() { return (new IR::ExpStm(new IR::Const(0))); }
 static bool isNop(IR::Stm* x) {
     return x->kind == IR::stmType::exp
@@ -347,7 +348,7 @@ static bool expEqual(IR::Exp* a, IR::Exp* b) {
 
 static std::pair<int, std::string> exp2op2(int x) {
     if (x <= 256 && x >= -128) { return {1, "#" + std::to_string(x)}; }
-    return {0, 0};
+    return {0, std::string()};
 }
 static bool check2pow(int x) { return x == (-x & x); }
 static std::pair<int, std::string> exp2op2(IR::Binop* bop) { assert(0); }
