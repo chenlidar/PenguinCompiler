@@ -210,6 +210,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                 }
                 case IR::binop::T_minus: {
                     auto rtemp2 = opsexp->ir2asm(ls);
+                    if (cons < 0 && num1.first) { break; }
                     ls->push_back(new ASM::Oper(
                         (num1.first ? "rsb" : "sub") + std::string(" `d0, `s0, " + imm.second),
                         Temp_TempList({lexp}), Temp_TempList({rtemp2}), ASM::Targets()));
