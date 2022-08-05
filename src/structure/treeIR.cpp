@@ -288,7 +288,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                                                         Temp_TempList({lexp}), Temp_TempList(),
                                                         ASM::Targets()));
                             ls->push_back(
-                                new ASM::Oper(std::string("sub `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("sub `d0, `s0, `s1, lsl " + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({lexp, rtemp}),
                                               ASM::Targets()));
                             break;
@@ -298,7 +298,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("add `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("add `d0, `s0, `s1, lsl " + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
@@ -314,7 +314,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, lsl" + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
@@ -361,10 +361,10 @@ void Move::ir2asm(ASM::InstrList* ls) {
                     delete tmp;
                     auto imm1 = exp2op2(mut.sh);
                     ls->push_back(new ASM::Oper(std::string("smmul `d0, `s0, `s1"),
-                                                Temp_TempList({rtemp}),
+                                                Temp_TempList({ttmp}),
                                                 Temp_TempList({ttmp, rtemp}), ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({ttmp}),
                                                 ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1, lsr #31"),
                                                 Temp_TempList({lexp}),
@@ -375,14 +375,14 @@ void Move::ir2asm(ASM::InstrList* ls) {
                     delete tmp;
                     auto imm1 = exp2op2(mut.sh);
                     ls->push_back(new ASM::Oper(
-                        std::string("smmla `d0, `s0, `s1, `s2"), Temp_TempList({rtemp}),
+                        std::string("smmla `d0, `s0, `s1, `s2"), Temp_TempList({ttmp}),
                         Temp_TempList({rtemp, ttmp, rtemp}), ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({ttmp}),
                                                 ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1, lsr #31"),
-                                                Temp_TempList({lexp}),
-                                                Temp_TempList({lexp, rtemp}), ASM::Targets()));
+                                                Temp_TempList({lexp}), Temp_TempList({lexp, ttmp}),
+                                                ASM::Targets()));
                 }
                 if (cons < 0) {
                     ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
