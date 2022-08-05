@@ -344,4 +344,11 @@ static bool expEqual(IR::Exp* a, IR::Exp* b) {
     if (t1.first && t2.first) return t1.second == t2.second;
     return false;
 }
+
+static std::pair<int, std::string> exp2op2(int x) {
+    if (x <= 256 && x >= -128) { return {1, "#" + std::to_string(x)}; }
+    return {0, 0};
+}
+static bool check2pow(int x) { return x == (-x & x); }
+static std::pair<int, std::string> exp2op2(IR::Binop* bop) { assert(0); }
 #endif

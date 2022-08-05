@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <cmath>
 #include "../backend/canon.hpp"
 #include "../util/utils.hpp"
+#include "../util/muldiv.hpp"
 #include "assem.h"
 using std::endl;
 using std::string;
@@ -185,13 +187,229 @@ void Move::ir2asm(ASM::InstrList* ls) {
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     int int_const;
-    if (this->dst->kind == IR::expType::temp && this->src->kind == IR::expType::binop
-        && static_cast<IR::Binop*>(this->src)->left->kind == IR::expType::temp
-        && static_cast<IR::Binop*>(this->src)->right->kind == IR::expType::temp) {
+    static const int N = 32;
+    if (this->dst->kind == IR::expType::temp && this->src->kind == IR::expType::binop) {
         IR::Binop* rexp = static_cast<IR::Binop*>(this->src);
         Temp_Temp lexp = static_cast<IR::Temp*>(this->dst)->tempid;
-        Temp_Temp ltemp = static_cast<IR::Temp*>(rexp->left)->tempid;
-        Temp_Temp rtemp = static_cast<IR::Temp*>(rexp->right)->tempid;
+
+        auto num1 = exp2int(rexp->left), num2 = exp2int(rexp->right);
+        if (num1.first && num2.first) { assert(0); }
+        if (num1.first || num2.first) {
+
+            auto opsexp = (num1.first) ? rexp->right : rexp->left;
+            auto cons = (num1.first) ? num1.second : num2.second;
+            auto imm = exp2op2(cons);
+            if (imm.first) {
+                switch (rexp->op) {
+                case IR::binop::T_plus:
+                    auto rtemp = opsexp->ir2asm(ls);
+                    ls->push_back(new ASM::Oper(std::string("add `d0, `s0, ") + imm.second,
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                    return;
+                case IR::binop::T_minus:
+                    auto rtemp = opsexp->ir2asm(ls);
+                    ls->push_back(new ASM::Oper(
+                        (num1.first ? "rsb" : "sub") + std::string(" `d0, `s0, " + imm.second),
+                        Temp_TempList({lexp}), Temp_TempList({rtemp}), ASM::Targets()));
+                    return;
+
+                default: break;
+                }
+            }
+
+            if (rexp->op == IR::binop::T_mul) {  //  xx*const
+                if (cons == 0) {
+                    // FIXME rtemp sideeffect
+                    ls->push_back(new ASM::Oper(std::string("mov `d0, #0"), Temp_TempList({lexp}),
+                                                Temp_TempList(), ASM::Targets()));
+                } else if (cons == 1) {
+                    auto rtemp = opsexp->ir2asm(ls);
+                    if (rtemp != lexp) {
+                        ls->push_back(new ASM::Oper(std::string("mov `d0, `s0"),
+                                                    Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                    ASM::Targets()));
+                    }
+                } else if (num1.second == -1) {
+                    auto rtemp = opsexp->ir2asm(ls);
+                    ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                }
+                auto tp = MULoptTest(abs(cons));
+                if (tp) {
+                    auto rtemp = opsexp->ir2asm(ls);
+                    if (cons > 0) {
+                        switch (tp) {
+                        case 1: {
+                            auto s = MULget1(abs(cons));
+                            auto imm1 = exp2op2(s);
+                            ls->push_back(new ASM::Oper(
+                                std::string("lsl `d0, `s0, " + imm1.second), Temp_TempList({lexp}),
+                                Temp_TempList({rtemp}), ASM::Targets()));
+                            break;
+                        }
+                        case 2: {
+                            auto p = MULget2(abs(cons));
+                            auto s = p.first, t = p.second;
+                            auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
+                            ls->push_back(
+                                new ASM::Oper(std::string("add `d0, `s0, `s1, " + imm1.second),
+                                              Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
+                                              ASM::Targets()));
+                            ls->push_back(new ASM::Oper(
+                                std::string("lsl `d0, `s0, " + imm2.second), Temp_TempList({lexp}),
+                                Temp_TempList({lexp}), ASM::Targets()));
+                            break;
+                        }
+                        case 3: {
+                            auto p = MULget3(abs(cons));
+                            auto s = p.first, t = p.second;
+                            auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
+                            ls->push_back(
+                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, " + imm1.second),
+                                              Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
+                                              ASM::Targets()));
+                            ls->push_back(new ASM::Oper(
+                                std::string("lsl `d0, `s0, " + imm2.second), Temp_TempList({lexp}),
+                                Temp_TempList({lexp}), ASM::Targets()));
+                            break;
+                        }
+                        default: assert(0);
+                        }
+                    } else {
+                        switch (tp) {
+                        case 1: {
+                            auto s = MULget1(abs(cons));
+                            auto imm1 = exp2op2(s);
+                            ls->push_back(new ASM::Oper(std::string("mov `d0, #0"),
+                                                        Temp_TempList({lexp}), Temp_TempList(),
+                                                        ASM::Targets()));
+                            ls->push_back(
+                                new ASM::Oper(std::string("sub `d0, `s0, `s1, " + imm1.second),
+                                              Temp_TempList({lexp}), Temp_TempList({lexp, rtemp}),
+                                              ASM::Targets()));
+                            break;
+                        }
+                        case 2: {
+                            auto p = MULget2(abs(cons));
+                            auto s = p.first, t = p.second;
+                            auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
+                            ls->push_back(
+                                new ASM::Oper(std::string("add `d0, `s0, `s1, " + imm1.second),
+                                              Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
+                                              ASM::Targets()));
+                            ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
+                                                        Temp_TempList({lexp}),
+                                                        Temp_TempList({lexp}), ASM::Targets()));
+                            ls->push_back(new ASM::Oper(
+                                std::string("lsl `d0, `s0, " + imm2.second), Temp_TempList({lexp}),
+                                Temp_TempList({lexp}), ASM::Targets()));
+                            break;
+                        }
+                        case 3: {
+                            auto p = MULget3(abs(cons));
+                            auto s = p.first, t = p.second;
+                            auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
+                            ls->push_back(
+                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, " + imm1.second),
+                                              Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
+                                              ASM::Targets()));
+                            ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
+                                                        Temp_TempList({lexp}),
+                                                        Temp_TempList({lexp}), ASM::Targets()));
+                            ls->push_back(new ASM::Oper(
+                                std::string("lsl `d0, `s0, " + imm2.second), Temp_TempList({lexp}),
+                                Temp_TempList({lexp}), ASM::Targets()));
+                            break;
+                        }
+                        default: assert(0);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            if (num2.first && rexp->op == IR::binop::T_div) {
+                auto rtemp = opsexp->ir2asm(ls);
+                assert(cons != 0);
+                assert(lexp != rtemp);
+                auto mut = chooseMultiplier(abs(cons), N - 1);
+                if (abs(cons) == 1) {
+                    if (rtemp != lexp) {
+                        ls->push_back(new ASM::Oper(std::string("mov `d0, `s0"),
+                                                    Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                    ASM::Targets()));
+                    }
+                } else if (check2pow(abs(cons))) {
+                    auto imm1 = exp2op2(mut.l - 1), imm2 = exp2op2(N - mut.l),
+                         imm3 = exp2op2(mut.l);
+                    ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(
+                        std::string("add `d0, `s0, `s1, lsr") + imm2.second,
+                        Temp_TempList({rtemp}), Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm3.second,
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                } else if (mut.m < (1ll << (N - 1))) {
+                    auto tmp = new IR::Const(mut.m);
+                    auto ttmp = tmp->ir2asm(ls);
+                    delete tmp;
+                    auto imm1 = exp2op2(mut.sh);
+                    ls->push_back(new ASM::Oper(std::string("smmul `d0, `s0, `s1"),
+                                                Temp_TempList({rtemp}),
+                                                Temp_TempList({ttmp, rtemp}), ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1, lsr #31"),
+                                                Temp_TempList({lexp}),
+                                                Temp_TempList({lexp, rtemp}), ASM::Targets()));
+                } else {
+                    auto tmp = new IR::Const(mut.m - (1ll << N));
+                    auto ttmp = tmp->ir2asm(ls);
+                    delete tmp;
+                    auto imm1 = exp2op2(mut.sh);
+                    ls->push_back(new ASM::Oper(
+                        std::string("smmla `d0, `s0, `s1, `s2"), Temp_TempList({rtemp}),
+                        Temp_TempList({rtemp, ttmp, rtemp}), ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1, lsr #31"),
+                                                Temp_TempList({lexp}),
+                                                Temp_TempList({lexp, rtemp}), ASM::Targets()));
+                }
+                if (cons < 0) {
+                    ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
+                                                Temp_TempList({lexp}), Temp_TempList({lexp}),
+                                                ASM::Targets()));
+                }
+                return;
+            }
+            if (num2.first && rexp->op == IR::binop::T_mod) {
+                auto rtemp = opsexp->ir2asm(ls);
+                assert(cons != 0);
+                assert(lexp != rtemp);
+                auto tmp = Temp_newtemp();
+                auto s1 = new Move(new Temp(tmp),
+                                   new Binop(binop::T_div, new Temp(rtemp), new Const(cons)));
+                auto s2 = new Move(new Temp(tmp),
+                                   new Binop(binop::T_mul, new Temp(tmp), new Const(cons)));
+                auto s3 = new Move(new Temp(lexp),
+                                   new Binop(binop::T_minus, new Temp(rtemp), new Temp(tmp)));
+                s1->ir2asm(ls);
+                s2->ir2asm(ls);
+                s3->ir2asm(ls);
+                delete s1;
+                delete s2;
+                delete s3;
+                return;
+            }
+        }
+        auto ltemp = rexp->left->ir2asm(ls), rtemp = rexp->right->ir2asm(ls);
         switch (rexp->op) {
         case IR::binop::T_plus:
             ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1"), Temp_TempList({lexp}),

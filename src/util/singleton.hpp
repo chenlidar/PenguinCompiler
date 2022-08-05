@@ -2,6 +2,7 @@
 #define __SINGLETON
 #include "templabel.hpp"
 #include "temptemp.hpp"
+#include "muldiv.hpp"
 class Singleton {
 public:
     // get any instance item by Singleton::instance().xxx
@@ -17,5 +18,6 @@ private:
 public:
     tempManager TempManager;
     labelManager LabelManager;
+    MULOPT mulopt;
 };
 #endif
