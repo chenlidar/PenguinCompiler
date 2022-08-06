@@ -277,7 +277,20 @@ static void cleanExpStm(IR::StmList* stmlist) {
         last = list;
     }
 }
-
+static bool isLdr(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::mem;
+}
+static bool isStr(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->dst->kind == IR::expType::mem;
+}
+static bool isCall(IR::Stm* stm) {
+    return (stm->kind == IR::stmType::move
+            && static_cast<IR::Move*>(stm)->src->kind == IR::expType::call)
+           || (stm->kind == IR::stmType::exp
+               && static_cast<IR::ExpStm*>(stm)->exp->kind == IR::expType::call);
+}
 static std::pair<int, int> exp2int(IR::Exp* x) {
     if (x->kind == IR::expType::constx) return {1, static_cast<IR::Const*>(x)->val};
     if (x->kind == IR::expType::binop) {

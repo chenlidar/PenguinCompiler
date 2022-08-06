@@ -150,6 +150,9 @@ int main(int argc, char** argv) {
         ssa->opt.PRE();
         ssa->opt.constantPropagation();
         ssa->opt.deadCodeElimilation();
+        ssa->opt.CME();
+        ssa->opt.constantPropagation();
+        ssa->opt.deadCodeElimilation();
         blocks = ssa->ssa2ir();
         out = CANON::traceSchedule(blocks);
         //
