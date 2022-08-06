@@ -2,6 +2,7 @@
 #include <string>
 using namespace std;
 
+#if 0
 char m[200];
 char n[200];
 int main()
@@ -13,3 +14,4 @@ int main()
 		printf("%d.%06d\n", a*3600+b*60+c, d);
 	}
 }
+#endif
