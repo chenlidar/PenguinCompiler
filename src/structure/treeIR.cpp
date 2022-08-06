@@ -498,8 +498,13 @@ void Move::ir2asm(ASM::InstrList* ls) {
                && this->src->kind == IR::expType::mem)  // Move(temp,Mem(e))
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
-        src.push_back(static_cast<IR::Mem*>(this->src)->ir2asm(ls));
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
+        assert(static_cast<IR::Mem*>(this->src)->mem->kind == expType::temp
+               || static_cast<IR::Mem*>(this->src)->mem->kind == expType::name);
+        auto mempos = static_cast<IR::Mem*>(this->src)->mem->ir2asm(ls);
+        src.push_back(mempos);
+        ls->push_back(new ASM::Oper(std::string("ldr `d0, [`s0]"), dst, src, ASM::Targets()));
+        // src.push_back(static_cast<IR::Mem*>(this->src)->ir2asm(ls));
+        // ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
     } else if (this->dst->kind == IR::expType::temp)  // Move(temp, e1)
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
@@ -533,16 +538,25 @@ Temp_Temp Const::ir2asm(ASM::InstrList* ls) {
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    if (int_const > 256 || int_const < -128) {
+    if (int_const > 65535 || int_const < -257) {
         ls->push_back(
             new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));
         ls->push_back(
             new ASM::Oper(std::string("movt `d0, #:upper16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));
-    } else
-        ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
-                                    src, ASM::Targets()));
+    } else {
+        if (int_const < 0) {
+            ls->push_back(new ASM::Oper(std::string("mvn `d0, #") + std::to_string(-int_const - 1),
+                                        dst, src, ASM::Targets()));
+        } else if (int_const < 257) {
+            ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
+                                        src, ASM::Targets()));
+        } else {
+            ls->push_back(new ASM::Oper(std::string("movw `d0, #") + std::to_string(int_const),
+                                        dst, src, ASM::Targets()));
+        }
+    }
     return dst[0];
 }
 Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
