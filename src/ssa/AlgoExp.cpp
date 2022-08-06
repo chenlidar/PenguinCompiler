@@ -40,9 +40,9 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
     for (auto list = begin; list != end; list = list->tail) {
         if (ismovebi(list->stm)
             && (static_cast<IR::Binop*>(static_cast<IR::Move*>(list->stm)->src)->op
-                    == IR::binop::T_plus||static_cast<IR::Binop*>(static_cast<IR::Move*>(list->stm)->src)->op
-                    == IR::binop::T_mul
-                ))
+                    == IR::binop::T_plus
+                || static_cast<IR::Binop*>(static_cast<IR::Move*>(list->stm)->src)->op
+                       == IR::binop::T_mul))
             bset.insert(list);
     }
     std::unordered_map<int, IR::Move*> mergemap;
@@ -50,7 +50,8 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
         IR::Stm* stm = list->stm;
         if (!ismovebi(stm)
             || (static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)->op != IR::binop::T_plus
-                &&static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)->op != IR::binop::T_mul)) {  // can not use other,can not be used by other
+                && static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)->op
+                       != IR::binop::T_mul)) {  // can not use other,can not be used by other
             emit(stm);
             continue;
         }
@@ -202,14 +203,17 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
                     // temp
                     for (auto it : tempv) {
                         int sz = it.second;
-                        int btmp = Temp_newtemp(), etmp = Temp_newtemp();
-                        emit(t_T(etmp, it.first));
-                        emit(t_C(btmp, 1));
+                        int btmp, etmp;
+                        btmp = -1;
+                        etmp = it.first;
                         int nwtmp;
                         while (sz != 0) {
                             if (sz & 1) {
                                 nwtmp = Temp_newtemp();
-                                emit(t_TT(nwtmp, bop, btmp, etmp));
+                                if (btmp == -1)
+                                    emit(t_T(nwtmp, etmp));
+                                else
+                                    emit(t_TT(nwtmp, bop, btmp, etmp));
                                 btmp = nwtmp;
                             }
                             nwtmp = Temp_newtemp();
@@ -254,19 +258,13 @@ void Optimizer::combExp() {
     for (auto node : ir->mynodes) {
         if (node->inDegree() == 0 && node->mykey != 0) continue;
         IR::StmList* stmlist = (IR::StmList*)node->nodeInfo();
-        IR::StmList* last = nullptr;
+        cleanExpStm(stmlist);
         for (auto list = stmlist; list; list = list->tail) {
-            if (list->stm->kind == IR::stmType::exp
-                && static_cast<IR::ExpStm*>(list->stm)->exp->kind == IR::expType::constx) {
-                last->tail = list->tail;
-                continue;
-            }
             std::vector<IR::Exp**> v = getUses(list->stm);
             for (auto it : v) {
                 int usetmp = static_cast<IR::Temp*>(*it)->tempid;
                 usemap[usetmp].push_back(list);
             }
-            last = list;
         }
     }
     // B. handel each block

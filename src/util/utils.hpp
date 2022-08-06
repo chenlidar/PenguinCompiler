@@ -265,4 +265,15 @@ static bool ismovebi(IR::Stm* stm) {
     return stm->kind == IR::stmType::move
            && static_cast<IR::Move*>(stm)->src->kind == IR::expType::binop;
 }
+static void cleanExpStm(IR::StmList* stmlist) {
+    IR::StmList* last = nullptr;
+    for (auto list = stmlist; list; list = list->tail) {
+        if (list->stm->kind == IR::stmType::exp
+            && static_cast<IR::ExpStm*>(list->stm)->exp->kind == IR::expType::constx) {
+            last->tail = list->tail;
+            continue;
+        }
+        last = list;
+    }
+}
 #endif

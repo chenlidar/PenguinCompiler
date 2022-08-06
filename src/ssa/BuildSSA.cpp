@@ -192,7 +192,9 @@ CANON::Block SSA::SSAIR::ssa2ir() {
     for (int i = 0; i < nodecount; i++) {
         if (mynodes[i]->inDegree() == 0 && i != 0) continue;
         if (i == exitnum) continue;
-        tail = tail->tail = new CANON::StmListList((IR::StmList*)mynodes[i]->nodeInfo(), nullptr);
+        IR::StmList* stmlist=(IR::StmList*)mynodes[i]->nodeInfo();
+        cleanExpStm(stmlist);
+        tail = tail->tail = new CANON::StmListList(stmlist, nullptr);
     }
     b.llist = head->tail;
     b.label = endlabel;
