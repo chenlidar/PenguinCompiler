@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <assert.h>
+#include <string>
 static inline IR::Stm* nopStm() { return (new IR::ExpStm(new IR::Const(0))); }
 static bool isNop(IR::Stm* x) {
     return x->kind == IR::stmType::exp
@@ -256,7 +257,40 @@ static Temp_Label getNodeLabel(GRAPH::Node* node) {
 static IR::Label* getNodeLabelStm(GRAPH::Node* node) {
     return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm);
 }
-
+static bool isphifunc(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::call
+           && static_cast<IR::Call*>(static_cast<IR::Move*>(stm)->src)->fun[0] == '$';
+}
+static bool ismovebi(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::binop;
+}
+static void cleanExpStm(IR::StmList* stmlist) {
+    IR::StmList* last = nullptr;
+    for (auto list = stmlist; list; list = list->tail) {
+        if (list->stm->kind == IR::stmType::exp
+            && static_cast<IR::ExpStm*>(list->stm)->exp->kind == IR::expType::constx) {
+            last->tail = list->tail;
+            continue;
+        }
+        last = list;
+    }
+}
+static bool isLdr(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::mem;
+}
+static bool isStr(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->dst->kind == IR::expType::mem;
+}
+static bool isCall(IR::Stm* stm) {
+    return (stm->kind == IR::stmType::move
+            && static_cast<IR::Move*>(stm)->src->kind == IR::expType::call)
+           || (stm->kind == IR::stmType::exp
+               && static_cast<IR::ExpStm*>(stm)->exp->kind == IR::expType::call);
+}
 static std::pair<int, int> exp2int(IR::Exp* x) {
     if (x->kind == IR::expType::constx) return {1, static_cast<IR::Const*>(x)->val};
     if (x->kind == IR::expType::binop) {
@@ -347,7 +381,7 @@ static bool expEqual(IR::Exp* a, IR::Exp* b) {
 
 static std::pair<int, std::string> exp2op2(int x) {
     if (x <= 256 && x >= -128) { return {1, "#" + std::to_string(x)}; }
-    return {0, 0};
+    return {0, std::string()};
 }
 static std::pair<int, std::string> exp2offset(int x) {
     if (x <= 4095 && x > 0) { return {1, "#+" + std::to_string(x)}; }

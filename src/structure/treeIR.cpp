@@ -201,18 +201,21 @@ void Move::ir2asm(ASM::InstrList* ls) {
             auto imm = exp2op2(cons);
             if (imm.first) {
                 switch (rexp->op) {
-                case IR::binop::T_plus:
-                    auto rtemp = opsexp->ir2asm(ls);
+                case IR::binop::T_plus: {
+                    auto rtemp1 = opsexp->ir2asm(ls);
                     ls->push_back(new ASM::Oper(std::string("add `d0, `s0, ") + imm.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp1}),
                                                 ASM::Targets()));
                     return;
-                case IR::binop::T_minus:
-                    auto rtemp = opsexp->ir2asm(ls);
+                }
+                case IR::binop::T_minus: {
+                    auto rtemp2 = opsexp->ir2asm(ls);
+                    if (cons < 0 && num1.first) { break; }
                     ls->push_back(new ASM::Oper(
                         (num1.first ? "rsb" : "sub") + std::string(" `d0, `s0, " + imm.second),
-                        Temp_TempList({lexp}), Temp_TempList({rtemp}), ASM::Targets()));
+                        Temp_TempList({lexp}), Temp_TempList({rtemp2}), ASM::Targets()));
                     return;
+                }
 
                 default: break;
                 }
@@ -254,7 +257,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("add `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("add `d0, `s0, `s1, lsl " + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(
@@ -267,7 +270,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, lsl" + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(
@@ -286,7 +289,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                                                         Temp_TempList({lexp}), Temp_TempList(),
                                                         ASM::Targets()));
                             ls->push_back(
-                                new ASM::Oper(std::string("sub `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("sub `d0, `s0, `s1, lsl " + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({lexp, rtemp}),
                                               ASM::Targets()));
                             break;
@@ -296,7 +299,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("add `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("add `d0, `s0, `s1, lsl " + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
@@ -312,7 +315,7 @@ void Move::ir2asm(ASM::InstrList* ls) {
                             auto s = p.first, t = p.second;
                             auto imm1 = exp2op2(s - t), imm2 = exp2op2(t);
                             ls->push_back(
-                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, " + imm1.second),
+                                new ASM::Oper(std::string("rsb `d0, `s0, `s1, lsl" + imm1.second),
                                               Temp_TempList({lexp}), Temp_TempList({rtemp, rtemp}),
                                               ASM::Targets()));
                             ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
@@ -359,10 +362,10 @@ void Move::ir2asm(ASM::InstrList* ls) {
                     delete tmp;
                     auto imm1 = exp2op2(mut.sh);
                     ls->push_back(new ASM::Oper(std::string("smmul `d0, `s0, `s1"),
-                                                Temp_TempList({rtemp}),
+                                                Temp_TempList({ttmp}),
                                                 Temp_TempList({ttmp, rtemp}), ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({ttmp}),
                                                 ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1, lsr #31"),
                                                 Temp_TempList({lexp}),
@@ -373,14 +376,14 @@ void Move::ir2asm(ASM::InstrList* ls) {
                     delete tmp;
                     auto imm1 = exp2op2(mut.sh);
                     ls->push_back(new ASM::Oper(
-                        std::string("smmla `d0, `s0, `s1, `s2"), Temp_TempList({rtemp}),
+                        std::string("smmla `d0, `s0, `s1, `s2"), Temp_TempList({ttmp}),
                         Temp_TempList({rtemp, ttmp, rtemp}), ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({ttmp}),
                                                 ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1, lsr #31"),
-                                                Temp_TempList({lexp}),
-                                                Temp_TempList({lexp, rtemp}), ASM::Targets()));
+                                                Temp_TempList({lexp}), Temp_TempList({lexp, ttmp}),
+                                                ASM::Targets()));
                 }
                 if (cons < 0) {
                     ls->push_back(new ASM::Oper(std::string("rsb `d0, `s0, #0"),
@@ -393,6 +396,25 @@ void Move::ir2asm(ASM::InstrList* ls) {
                 auto rtemp = opsexp->ir2asm(ls);
                 assert(cons != 0);
                 assert(lexp != rtemp);
+
+                if (check2pow(cons)) {
+                    int t = ceil(log2(cons));
+                    auto imm1 = exp2op2(t), imm2 = exp2op2(N - t);
+                    ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, #31"),
+                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(
+                        std::string("add `d0, `s0, `s1, lsr") + imm2.second, Temp_TempList({lexp}),
+                        Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("bfc `d0, #0, ") + imm1.second,
+                                                Temp_TempList({lexp}), Temp_TempList(),
+                                                ASM::Targets()));
+                    ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"),
+                                                Temp_TempList({lexp}),
+                                                Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                    return;
+                }
+
                 auto tmp = Temp_newtemp();
                 auto s1 = new Move(new Temp(tmp),
                                    new Binop(binop::T_div, new Temp(rtemp), new Const(cons)));
@@ -475,8 +497,13 @@ void Move::ir2asm(ASM::InstrList* ls) {
                && this->src->kind == IR::expType::mem)  // Move(temp,Mem(e))
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
-        src.push_back(static_cast<IR::Mem*>(this->src)->ir2asm(ls));
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
+        assert(static_cast<IR::Mem*>(this->src)->mem->kind == expType::temp
+               || static_cast<IR::Mem*>(this->src)->mem->kind == expType::name);
+        auto mempos = static_cast<IR::Mem*>(this->src)->mem->ir2asm(ls);
+        src.push_back(mempos);
+        ls->push_back(new ASM::Oper(std::string("ldr `d0, [`s0]"), dst, src, ASM::Targets()));
+        // src.push_back(static_cast<IR::Mem*>(this->src)->ir2asm(ls));
+        // ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), dst, src));
     } else if (this->dst->kind == IR::expType::temp)  // Move(temp, e1)
     {
         dst.push_back(static_cast<IR::Temp*>(this->dst)->tempid);
@@ -510,16 +537,25 @@ Temp_Temp Const::ir2asm(ASM::InstrList* ls) {
     Temp_Temp tmp[4];
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
     dst.push_back(Temp_newtemp());
-    if (int_const > 256 || int_const < -128) {
+    if (int_const > 65535 || int_const < -257) {
         ls->push_back(
             new ASM::Oper(std::string("movw `d0, #:lower16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));
         ls->push_back(
             new ASM::Oper(std::string("movt `d0, #:upper16:") + std::to_string(int_const), dst,
                           src, ASM::Targets()));
-    } else
-        ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
-                                    src, ASM::Targets()));
+    } else {
+        if (int_const < 0) {
+            ls->push_back(new ASM::Oper(std::string("mvn `d0, #") + std::to_string(-int_const - 1),
+                                        dst, src, ASM::Targets()));
+        } else if (int_const < 257) {
+            ls->push_back(new ASM::Oper(std::string("mov `d0, #") + std::to_string(int_const), dst,
+                                        src, ASM::Targets()));
+        } else {
+            ls->push_back(new ASM::Oper(std::string("movw `d0, #") + std::to_string(int_const),
+                                        dst, src, ASM::Targets()));
+        }
+    }
     return dst[0];
 }
 Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {

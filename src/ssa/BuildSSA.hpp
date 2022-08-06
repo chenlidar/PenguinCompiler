@@ -16,11 +16,15 @@ public:
     void deadCodeElimilation();
     void constantPropagation();
     void PRE();
+    void combExp();
+    void CME();
 
     SSA::SSAIR* ir;
 
 private:
     bool isNecessaryStm(IR::Stm* stm);
+    std::pair<IR::StmList*, IR::StmList*> handelexp(IR::StmList* begin, IR::StmList* end);
+    std::unordered_map<int, std::vector<IR::StmList*>> usemap;
     void buildTable();
     void insertPRE(int node);
     void insertPRE();
@@ -53,6 +57,24 @@ private:
             }
         }
         Uexp() {}
+        IR::Exp* toExp() {
+            switch (kind) {
+            case IR::expType::name: {
+                return new IR::Name(name);
+            } break;
+            case IR::expType::temp: {
+                return new IR::Temp(val);
+            } break;
+            case IR::expType::constx: {
+                return new IR::Const(val);
+            } break;
+            default: assert(0);
+            }
+            return nullptr;
+        }
+        bool operator==(const Uexp& e2) const {
+            return kind == e2.kind && val == e2.val && name == e2.name;
+        }
     };
     struct Biexp {
         IR::binop op;
@@ -91,6 +113,12 @@ private:
                    ^ std::hash<int>()(static_cast<int>(p.l.kind))
                    ^ std::hash<int>()(static_cast<int>(p.r.kind)) ^ std::hash<int>()(p.l.val)
                    ^ std::hash<int>()(p.r.val);
+        }
+    };
+    struct hash_name2 {
+        size_t operator()(const Uexp& p) const {
+            return std::hash<int>()(static_cast<int>(p.kind)) ^ std::hash<std::string>()(p.name)
+                   ^ std::hash<int>()(p.val);
         }
     };
     typedef std::unordered_map<Biexp, int, hash_name> Vtb;

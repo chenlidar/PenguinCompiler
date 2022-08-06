@@ -143,7 +143,14 @@ int main(int argc, char** argv) {
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
         ssa->opt.deadCodeElimilation();
         ssa->opt.constantPropagation();
+        ssa->opt.combExp();
+        ssa->opt.deadCodeElimilation();
+        ssa->opt.constantPropagation();
+        // ssa->showmark();
         ssa->opt.PRE();
+        ssa->opt.constantPropagation();
+        ssa->opt.deadCodeElimilation();
+        ssa->opt.CME();
         ssa->opt.constantPropagation();
         ssa->opt.deadCodeElimilation();
         blocks = ssa->ssa2ir();

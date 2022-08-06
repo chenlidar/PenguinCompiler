@@ -36,20 +36,22 @@ void ConfGraph::Create_ig(LIVENESS::Liveness* live) {
             assert(useList->size() == 1);
             ASM::Instr* instr = (ASM::Instr*)it->nodeInfo();
             ASM::Move* insmove = static_cast<ASM::Move*>(instr);
+            // NOTE: may have bug
             if (defList->at(0) == 11 || defList->at(0) == 13 || useList->at(0) == 11
                 || useList->at(0) == 13)
                 ;
             else {
-                // NOTE: may have bug
                 WorklistMove.insert(insmove);
                 Movelist[Look_ig(defList->at(0))].insert(insmove);
                 Movelist[Look_ig(useList->at(0))].insert(insmove);
-                for (auto ite2 : *outList) {
-                    if (useList->at(0) != ite2) {
-                        if (defList->at(0) != ite2) {
-                            Enter_ig(defList->at(0), ite2);
-                            Enter_ig(ite2, defList->at(0));
-                        }
+            }
+            assert(defList->size() == 1);
+            assert(useList->size() == 1);
+            for (auto ite2 : *outList) {
+                if (useList->at(0) != ite2) {
+                    if (defList->at(0) != ite2) {
+                        Enter_ig(defList->at(0), ite2);
+                        Enter_ig(ite2, defList->at(0));
                     }
                 }
             }
