@@ -352,8 +352,8 @@ void Move::ir2asm(ASM::InstrList* ls) {
                                                 Temp_TempList({lexp}), Temp_TempList({rtemp}),
                                                 ASM::Targets()));
                     ls->push_back(new ASM::Oper(
-                        std::string("add `d0, `s0, `s1, lsr") + imm2.second,
-                        Temp_TempList({t}), Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                        std::string("add `d0, `s0, `s1, lsr") + imm2.second, Temp_TempList({t}),
+                        Temp_TempList({rtemp, lexp}), ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm3.second,
                                                 Temp_TempList({lexp}), Temp_TempList({t}),
                                                 ASM::Targets()));
@@ -774,8 +774,8 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                 if (m1->src->kind == expType::binop && m1->dst->kind == expType::temp
                     && m2->src->kind == expType::mem && m2->dst->kind == expType::temp) {
                     auto memexp = static_cast<IR::Mem*>(m2->src);
-                    if (memexp->kind == expType::temp) {
-                        auto dtid = static_cast<IR::Temp*>(m2->src)->tempid;
+                    if (memexp->mem->kind == expType::temp) {
+                        auto dtid = static_cast<IR::Temp*>(m2->dst)->tempid;
                         auto tid1 = static_cast<IR::Temp*>(memexp->mem)->tempid;
                         auto tid2 = static_cast<IR::Temp*>(m1->dst)->tempid;
                         if (tid1 == tid2 && tempcur[tid1] == 1) {
@@ -786,19 +786,25 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                 auto opsexp = (num1.first) ? bop->right : bop->left;
                                 auto cons = (num1.first) ? num1.second : num2.second;
                                 auto imm = exp2offset(cons);
-                                if (imm.first) {
+                                int flag = 0;
+                                if (imm.first && opsexp->kind == expType::temp) {
+                                    auto tid3 = static_cast<IR::Temp*>(opsexp)->tempid;
                                     switch (bop->op) {
                                     case IR::binop::T_plus: {
                                         proc->body.push_back(new ASM::Oper(
                                             std::string("ldr `d0, [`s0, " + imm.second + "]"),
-                                            Temp_TempList({dtid}), Temp_TempList({tid1}),
+                                            Temp_TempList({dtid}), Temp_TempList({tid3}),
                                             ASM::Targets()));
+                                        s1->stm = nopStm();
+                                        s2->stm = nopStm();
                                         s1 = s3;
-                                        continue;
+                                        flag = 1;
+                                        break;
                                     }
                                     default: break;
                                     }
                                 }
+                                if (flag) continue;
                             }
                         }
                     }
@@ -809,7 +815,7 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
         s1->stm->ir2asm(&proc->body);
         s1 = s1->tail;
     }
-// for(auto it:proc->body)it->print();
+    // for (auto it : proc->body) it->print();
     return proc;
 }
 
