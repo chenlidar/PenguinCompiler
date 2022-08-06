@@ -347,14 +347,15 @@ void Move::ir2asm(ASM::InstrList* ls) {
                 } else if (check2pow(abs(cons))) {
                     auto imm1 = exp2op2(mut.l - 1), imm2 = exp2op2(N - mut.l),
                          imm3 = exp2op2(mut.l);
+                    auto t = Temp_newtemp();
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm1.second,
                                                 Temp_TempList({lexp}), Temp_TempList({rtemp}),
                                                 ASM::Targets()));
                     ls->push_back(new ASM::Oper(
                         std::string("add `d0, `s0, `s1, lsr") + imm2.second,
-                        Temp_TempList({rtemp}), Temp_TempList({rtemp, lexp}), ASM::Targets()));
+                        Temp_TempList({t}), Temp_TempList({rtemp, lexp}), ASM::Targets()));
                     ls->push_back(new ASM::Oper(std::string("asr `d0, `s0, ") + imm3.second,
-                                                Temp_TempList({lexp}), Temp_TempList({rtemp}),
+                                                Temp_TempList({lexp}), Temp_TempList({t}),
                                                 ASM::Targets()));
                 } else if (mut.m < (1ll << (N - 1))) {
                     auto tmp = new IR::Const(mut.m);
@@ -808,7 +809,7 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
         s1->stm->ir2asm(&proc->body);
         s1 = s1->tail;
     }
-
+// for(auto it:proc->body)it->print();
     return proc;
 }
 

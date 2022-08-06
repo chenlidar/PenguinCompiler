@@ -50,7 +50,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                         emit(new ASM::Oper("movw `d0,#:lower16:" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
-                        emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
+                        if(offset>65535)emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
                         Temp_TempList ll = Temp_TempList(1, 11);
@@ -85,7 +85,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                         emit(new ASM::Oper("movw `d0,#:lower16:" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
-                        emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
+                        if(offset>65535)emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
                         Temp_TempList ll = Temp_TempList(1, 11);
