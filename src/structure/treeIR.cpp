@@ -809,6 +809,45 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                         }
                     }
                 }
+
+                if (m1->src->kind == expType::binop && m1->dst->kind == expType::temp
+                    && m2->dst->kind == expType::mem) {
+                    auto memexp = static_cast<IR::Mem*>(m2->dst);
+                    if (memexp->mem->kind == expType::temp) {
+                        auto tid1 = static_cast<IR::Temp*>(memexp->mem)->tempid;
+                        auto tid2 = static_cast<IR::Temp*>(m1->dst)->tempid;
+                        if (tid1 == tid2 && tempcur[tid1] == 1) {
+                            auto bop = static_cast<IR::Binop*>(m1->src);
+                            auto num1 = exp2int(bop->left), num2 = exp2int(bop->right);
+                            if (num1.first && num2.first) { assert(0); }
+                            if (num1.first || num2.first) {
+                                auto opsexp = (num1.first) ? bop->right : bop->left;
+                                auto cons = (num1.first) ? num1.second : num2.second;
+                                auto imm = exp2offset(cons);
+                                int flag = 0;
+                                if (imm.first && opsexp->kind == expType::temp) {
+                                    auto tid3 = static_cast<IR::Temp*>(opsexp)->tempid;
+                                    switch (bop->op) {
+                                    case IR::binop::T_plus: {
+                                        auto dtid = (m2->src)->ir2asm(&proc->body);
+                                        proc->body.push_back(new ASM::Oper(
+                                            std::string("str `s0, [`s1, " + imm.second + "]"),
+                                            Temp_TempList(), Temp_TempList({dtid, tid3}),
+                                            ASM::Targets()));
+                                        s1->stm = nopStm();
+                                        s2->stm = nopStm();
+                                        s1 = s3;
+                                        flag = 1;
+                                        break;
+                                    }
+                                    default: break;
+                                    }
+                                }
+                                if (flag) continue;
+                            }
+                        }
+                    }
+                }
             }
         }
 
