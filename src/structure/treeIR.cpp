@@ -787,10 +787,12 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                 auto cons = (num1.first) ? num1.second : num2.second;
                                 auto imm = exp2offset(cons);
                                 int flag = 0;
-                                if (imm.first && opsexp->kind == expType::temp) {
-                                    auto tid3 = static_cast<IR::Temp*>(opsexp)->tempid;
+                                if (imm.first
+                                    && (opsexp->kind == expType::temp
+                                        || opsexp->kind == expType::name)) {
                                     switch (bop->op) {
                                     case IR::binop::T_plus: {
+                                        auto tid3 = (opsexp)->ir2asm(&proc->body);
                                         proc->body.push_back(new ASM::Oper(
                                             std::string("ldr `d0, [`s0, " + imm.second + "]"),
                                             Temp_TempList({dtid}), Temp_TempList({tid3}),
@@ -825,10 +827,13 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                 auto cons = (num1.first) ? num1.second : num2.second;
                                 auto imm = exp2offset(cons);
                                 int flag = 0;
-                                if (imm.first && opsexp->kind == expType::temp) {
-                                    auto tid3 = static_cast<IR::Temp*>(opsexp)->tempid;
+                                if (imm.first
+                                    && (opsexp->kind == expType::temp
+                                        || opsexp->kind == expType::name)) {
+
                                     switch (bop->op) {
                                     case IR::binop::T_plus: {
+                                        auto tid3 = (opsexp)->ir2asm(&proc->body);
                                         auto dtid = (m2->src)->ir2asm(&proc->body);
                                         proc->body.push_back(new ASM::Oper(
                                             std::string("str `s0, [`s1, " + imm.second + "]"),
