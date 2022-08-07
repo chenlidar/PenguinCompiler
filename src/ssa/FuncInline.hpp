@@ -20,15 +20,18 @@ public:
         int stksize;
         bool isrec;
         bool isvoid;
+        std::vector<std::pair<std::string,IR::StmList*>> callpos;
         Info() {}
     };
     std::unordered_map<std::string, Info> func_info;
 
 private:
+    const int maxstk=1e8;
     std::unordered_map<std::string, IR::StmList*> func_map;
     std::vector<std::string> func_name;
     Table::Stable<TY::Entry*>* venv;
     Table::Stable<TY::EnFunc*>* fenv;
     void analyse(std::string name);
+    std::vector<std::pair<std::string,IR::StmList*>> getInlinePos(std::string funcname);
 };
 }  // namespace INTERP
