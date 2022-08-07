@@ -820,6 +820,17 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                     s2->stm = nopStm();
                                     s1 = s3;
                                     continue;
+                                } else if (bop->op == binop::T_minus) {
+                                    assert(0);
+                                    auto tid3 = (bop->left)->ir2asm(&proc->body);
+                                    auto tid4 = (bop->right)->ir2asm(&proc->body);
+                                    proc->body.push_back(new ASM::Oper(
+                                        std::string("ldr `d0, [`s0, -`s1]"), Temp_TempList({dtid}),
+                                        Temp_TempList({tid3, tid4}), ASM::Targets()));
+                                    s1->stm = nopStm();
+                                    s2->stm = nopStm();
+                                    s1 = s3;
+                                    continue;
                                 }
                             }
                         }
@@ -869,6 +880,18 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                         auto tid4 = (bop->right)->ir2asm(&proc->body);
                                         proc->body.push_back(new ASM::Oper(
                                             std::string("str `s0, [`s1, `s2]"), Temp_TempList(),
+                                            Temp_TempList({dtid, tid3, tid4}), ASM::Targets()));
+                                        s1->stm = nopStm();
+                                        s2->stm = nopStm();
+                                        s1 = s3;
+                                        continue;
+                                    } else if (bop->op == binop::T_minus) {
+                                        assert(0);
+                                        auto dtid = (m2->src)->ir2asm(&proc->body);
+                                        auto tid3 = (bop->left)->ir2asm(&proc->body);
+                                        auto tid4 = (bop->right)->ir2asm(&proc->body);
+                                        proc->body.push_back(new ASM::Oper(
+                                            std::string("str `s0, [`s1, -`s2]"), Temp_TempList(),
                                             Temp_TempList({dtid, tid3, tid4}), ASM::Targets()));
                                         s1->stm = nopStm();
                                         s2->stm = nopStm();
