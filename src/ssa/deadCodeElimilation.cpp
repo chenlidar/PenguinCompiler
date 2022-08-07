@@ -53,7 +53,7 @@ void SSA::Optimizer::deadCodeElimilation() {
     unordered_map<IR::Stm*, int> stmBlockmap;
     unordered_set<IR::Stm*> ActivatedStm;
     unordered_set<int> ActivatedBlock;
-    unordered_map<int, IR::StmList*> blockJumpStm;
+    // unordered_map<int, IR::StmList*> blockJumpStm;
     queue<IR::Stm*> Curstm;
     auto nodesz = ir->nodes()->size();
     vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
@@ -82,10 +82,10 @@ void SSA::Optimizer::deadCodeElimilation() {
                     ActivatedBlock.insert(it->mykey);
                 }
                 // set up jump
-                if (!stml->tail
-                    && (stm->kind == IR::stmType::cjump || stm->kind == IR::stmType::jump)) {
-                    blockJumpStm[it->mykey] = stml;
-                }
+                // if (!stml->tail
+                //     && (stm->kind == IR::stmType::cjump || stm->kind == IR::stmType::jump)) {
+                //     blockJumpStm[it->mykey] = stml;
+                // }
                 stml = stml->tail;
             }
         }
@@ -112,7 +112,7 @@ void SSA::Optimizer::deadCodeElimilation() {
             if (!ActivatedStm.count(labelstm)) {
                 ActivatedStm.insert(labelstm);
                 for (auto it : gp.CDnode[block->mykey]) {
-                    auto jmp = blockJumpStm[it]->stm;
+                    auto jmp = ir->blockjump[it]->stm;
                     if (jmp->kind == IR::stmType::cjump) {
                         if (!ActivatedStm.count(jmp)) {
                             ActivatedBlock.insert(it);
@@ -129,7 +129,7 @@ void SSA::Optimizer::deadCodeElimilation() {
                     if (!ActivatedStm.count(predlabel)) {
                         ActivatedStm.insert(predlabel);
                         for (auto jt : gp.CDnode[it]) {
-                            auto jmp = blockJumpStm[jt]->stm;
+                            auto jmp = ir->blockjump[jt]->stm;
                             if (jmp->kind == IR::stmType::cjump) {
                                 if (!ActivatedStm.count(jmp)) {
                                     ActivatedBlock.insert(jt);
@@ -181,15 +181,9 @@ void SSA::Optimizer::deadCodeElimilation() {
             auto head = stml, tail = stml->tail;
             while (tail && tail->tail) {
                 if (!ActivatedStm.count(tail->stm)) {
-                    if (tail->stm->kind == IR::stmType::move) {
+                    if (isphifunc(tail->stm)) {
                         auto movestm = static_cast<IR::Move*>(tail->stm);
-                        if (movestm->src->kind == IR::expType::call) {
-                            auto callexp = static_cast<IR::Call*>(movestm->src);
-                            if (callexp->fun[0] == '$') {
-                                ir->Aphi[cur->mykey].erase(
-                                    static_cast<IR::Temp*>(movestm->dst)->tempid);
-                            }
-                        }
+                        ir->Aphi[cur->mykey].erase(static_cast<IR::Temp*>(movestm->dst)->tempid);
                     }
                     auto newtail = tail->tail;
                     tail->tail = 0;
@@ -202,12 +196,13 @@ void SSA::Optimizer::deadCodeElimilation() {
                 }
             }
             // the last stm
-            if (!tail) continue;  // the return block with no jump
+            if (!tail) {assert(cur->mykey==ir->exitnum);continue;}  // the return block with no jump
             if (ActivatedStm.count(tail->stm)) {  // means that a valid cjump
                 auto cjumpstm = static_cast<IR::Cjump*>(tail->stm);
                 GRAPH::Node *trueNode = 0, *falseNode = 0;
                 int trueoldkey = 0, falseoldkey = 0;
                 for (auto& it : (*cur->succ())) {
+                    assert(cur->outDegree()==2);
                     auto nodelabel = getNodeLabel(ir->mynodes[it]);
                     if (nodelabel == cjumpstm->trueLabel) {
                         oldParentKey = cur->mykey;
@@ -260,13 +255,21 @@ void SSA::Optimizer::deadCodeElimilation() {
                 newpred[nextNode->mykey].insert(oldkey);
                 CurNode.push(nextNode);
                 newsucc[oldkey].insert(nextNode->mykey);
-                delete blockJumpStm[cur->mykey]->stm;
-                blockJumpStm[cur->mykey]->stm = new IR::Jump(nxlb);
+                // delete ir->blockjump[cur->mykey]->stm;
+                // ir->blockjump[cur->mykey]->stm = new IR::Jump(nxlb);
+
+             
+                assert(newsucc[cur->mykey].size() == 1);
+                assert(getNodeLabel(ir->mynodes[(*newsucc[cur->mykey].begin())]) == nxlb);
             }
         }
-        for (int i = 0; i < nodesz; i++) {
+        for (int i = 0; i < nodesz; i++) { 
+            if(newsucc[i].size()==1){
+                ir->blockjump[i]->stm = new IR::Jump(getNodeLabel(ir->mynodes[(*(newsucc[i].begin()))]));
+            }
             ir->nodes()->at(i)->preds = move(newpred[i]);
             ir->nodes()->at(i)->succs = move(newsucc[i]);
+           
         }
     };
     auto showmark = [&]() {  // func that can output ssa for debuging
@@ -303,7 +306,7 @@ void SSA::Optimizer::deadCodeElimilation() {
                 ir->Aphi[i].clear();
                 auto stml = static_cast<IR::StmList*>(nodes->at(i)->info);
                 // delete
-                stml->tail = blockJumpStm[i];
+                stml->tail = ir->blockjump[i];
                 ir->prednode[i].clear();
                 for (auto j : *(nodes->at(i)->pred())) { ir->prednode[i].push_back(j); }
             }
