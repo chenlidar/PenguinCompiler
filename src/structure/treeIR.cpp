@@ -771,6 +771,8 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                 //         s1->stm = nopStm();
                 //     }
                 // }
+
+                // ldr x,[y+z]
                 if (m1->src->kind == expType::binop && m1->dst->kind == expType::temp
                     && m2->src->kind == expType::mem && m2->dst->kind == expType::temp) {
                     auto memexp = static_cast<IR::Mem*>(m2->src);
@@ -812,6 +814,7 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                     }
                 }
 
+                // str x,[y+z]
                 if (m1->src->kind == expType::binop && m1->dst->kind == expType::temp
                     && m2->dst->kind == expType::mem) {
                     auto memexp = static_cast<IR::Mem*>(m2->dst);
@@ -849,6 +852,80 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                     }
                                 }
                                 if (flag) continue;
+                            }
+                        }
+                    }
+                }
+
+                // mla mls
+                if (m1->src->kind == expType::binop && m1->dst->kind == expType::temp
+                    && m2->src->kind == expType::binop && m2->dst->kind == expType::temp) {
+                    auto bi1 = static_cast<IR::Binop*>(m1->src),
+                         bi2 = static_cast<IR::Binop*>(m2->src);
+                    auto tid1 = static_cast<IR::Temp*>(m1->dst)->tempid;
+                    if (bi1->op == binop::T_mul
+                        && (bi2->op == binop::T_plus || bi2->op == binop::T_minus)
+                        && tempcur[tid1] == 1) {
+                        int flag = 0;
+                        auto uses = getUses(m2);
+                        for (auto it : uses) {
+                            if (static_cast<IR::Temp*>(*it)->tempid == tid1) {
+                                flag = 1;
+                                break;
+                            }
+                        }
+                        if (flag) {
+                            auto c1 = exp2int(bi1->left), c2 = exp2int(bi1->right);
+                            if (c1.first || c2.first) {
+                                auto opsexp = (c1.first) ? bi1->right : bi1->left;
+                                auto cons = (c1.first) ? c1.second : c2.second;
+                                auto conopt = MULoptTest(cons);
+                                if (conopt) flag = 0;
+                            }
+                        }
+                        if (flag) {
+                            auto tid2 = exp2tempid(bi2->left), tid3 = exp2tempid(bi2->right);
+                            if (tid2.first && tid2.second == tid1) {
+                                if (bi2->op == binop::T_plus) {
+                                    auto r1 = static_cast<IR::Temp*>(m2->dst)->tempid;
+                                    auto r2 = bi1->left->ir2asm(&proc->body);
+                                    auto r3 = bi1->right->ir2asm(&proc->body);
+                                    auto r4 = bi2->right->ir2asm(&proc->body);
+                                    proc->body.push_back(new ASM::Oper(
+                                        std::string("mla `d0, `s0, `s1, `s2"), Temp_TempList({r1}),
+                                        Temp_TempList({r2, r3, r4}), ASM::Targets()));
+                                    s1->stm = nopStm();
+                                    s2->stm = nopStm();
+                                    s1 = s3;
+                                    continue;
+                                }
+                            } else if (tid3.first && tid3.second == tid1) {
+                                if (bi2->op == binop::T_plus) {
+                                    auto r1 = static_cast<IR::Temp*>(m2->dst)->tempid;
+                                    auto r2 = bi1->left->ir2asm(&proc->body);
+                                    auto r3 = bi1->right->ir2asm(&proc->body);
+                                    auto r4 = bi2->left->ir2asm(&proc->body);
+                                    proc->body.push_back(new ASM::Oper(
+                                        std::string("mla `d0, `s0, `s1, `s2"), Temp_TempList({r1}),
+                                        Temp_TempList({r2, r3, r4}), ASM::Targets()));
+                                    s1->stm = nopStm();
+                                    s2->stm = nopStm();
+                                    s1 = s3;
+                                    continue;
+
+                                } else if (bi2->op == binop::T_minus) {
+                                    auto r1 = static_cast<IR::Temp*>(m2->dst)->tempid;
+                                    auto r2 = bi1->left->ir2asm(&proc->body);
+                                    auto r3 = bi1->right->ir2asm(&proc->body);
+                                    auto r4 = bi2->left->ir2asm(&proc->body);
+                                    proc->body.push_back(new ASM::Oper(
+                                        std::string("mls `d0, `s0, `s1, `s2"), Temp_TempList({r1}),
+                                        Temp_TempList({r2, r3, r4}), ASM::Targets()));
+                                    s1->stm = nopStm();
+                                    s2->stm = nopStm();
+                                    s1 = s3;
+                                    continue;
+                                }
                             }
                         }
                     }
