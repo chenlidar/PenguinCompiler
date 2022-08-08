@@ -50,9 +50,10 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                         emit(new ASM::Oper("movw `d0,#:lower16:" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
-                        if(offset>65535)emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
-                                           Temp_TempList(1, constTemp), Temp_TempList(),
-                                           Temp_LabelList()));
+                        if (offset > 65535)
+                            emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
+                                               Temp_TempList(1, constTemp), Temp_TempList(),
+                                               Temp_LabelList()));
                         Temp_TempList ll = Temp_TempList(1, 11);
                         ll.push_back(constTemp);
                         emit(new ASM::Oper("sub `d0,`s0,`s1", Temp_TempList(1, constTemp), ll,
@@ -85,9 +86,10 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                         emit(new ASM::Oper("movw `d0,#:lower16:" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
-                        if(offset>65535)emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
-                                           Temp_TempList(1, constTemp), Temp_TempList(),
-                                           Temp_LabelList()));
+                        if (offset > 65535)
+                            emit(new ASM::Oper("movt `d0,#:upper16:" + std::to_string(offset),
+                                               Temp_TempList(1, constTemp), Temp_TempList(),
+                                               Temp_LabelList()));
                         Temp_TempList ll = Temp_TempList(1, 11);
                         ll.push_back(constTemp);
                         emit(new ASM::Oper("sub `d0,`s0,`s1", Temp_TempList(1, constTemp), ll,

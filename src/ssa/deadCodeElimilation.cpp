@@ -196,13 +196,16 @@ void SSA::Optimizer::deadCodeElimilation() {
                 }
             }
             // the last stm
-            if (!tail) {assert(cur->mykey==ir->exitnum);continue;}  // the return block with no jump
+            if (!tail) {
+                assert(cur->mykey == ir->exitnum);
+                continue;
+            }  // the return block with no jump
             if (ActivatedStm.count(tail->stm)) {  // means that a valid cjump
                 auto cjumpstm = static_cast<IR::Cjump*>(tail->stm);
                 GRAPH::Node *trueNode = 0, *falseNode = 0;
                 int trueoldkey = 0, falseoldkey = 0;
                 for (auto& it : (*cur->succ())) {
-                    assert(cur->outDegree()==2);
+                    assert(cur->outDegree() == 2);
                     auto nodelabel = getNodeLabel(ir->mynodes[it]);
                     if (nodelabel == cjumpstm->trueLabel) {
                         oldParentKey = cur->mykey;
@@ -258,18 +261,17 @@ void SSA::Optimizer::deadCodeElimilation() {
                 // delete ir->blockjump[cur->mykey]->stm;
                 // ir->blockjump[cur->mykey]->stm = new IR::Jump(nxlb);
 
-             
                 assert(newsucc[cur->mykey].size() == 1);
                 assert(getNodeLabel(ir->mynodes[(*newsucc[cur->mykey].begin())]) == nxlb);
             }
         }
-        for (int i = 0; i < nodesz; i++) { 
-            if(newsucc[i].size()==1){
-                ir->blockjump[i]->stm = new IR::Jump(getNodeLabel(ir->mynodes[(*(newsucc[i].begin()))]));
+        for (int i = 0; i < nodesz; i++) {
+            if (newsucc[i].size() == 1) {
+                ir->blockjump[i]->stm
+                    = new IR::Jump(getNodeLabel(ir->mynodes[(*(newsucc[i].begin()))]));
             }
             ir->nodes()->at(i)->preds = move(newpred[i]);
             ir->nodes()->at(i)->succs = move(newsucc[i]);
-           
         }
     };
     auto showmark = [&]() {  // func that can output ssa for debuging

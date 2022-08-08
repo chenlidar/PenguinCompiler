@@ -291,8 +291,8 @@ static bool isCall(IR::Stm* stm) {
            || (stm->kind == IR::stmType::exp
                && static_cast<IR::ExpStm*>(stm)->exp->kind == IR::expType::call);
 }
-static std::string getCallName(IR::Exp* callexp){
-    assert(callexp->kind==IR::expType::call);
+static std::string getCallName(IR::Exp* callexp) {
+    assert(callexp->kind == IR::expType::call);
     return static_cast<IR::Call*>(callexp)->fun;
 }
 static std::pair<int, int> exp2int(IR::Exp* x) {

@@ -1057,11 +1057,11 @@ void Call::printIR() {
 // DEEPCOPY
 
 StmList* StmList::deepCopy(unordered_set<Temp_Label>& venv, int offset,
-                           unordered_map<Temp_Temp, Temp_Temp>& tpmp) {
-    unordered_map<string, string> lbmp;
+                           unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                           unordered_map<string, string>& lbmp) {
     vector<Stm*> ls;
     auto tt = Temp_newtemp();
-    tpmp[13] = tt;
+    tpmp[11] = tt;
     StmList* ret = 0;
     auto p = this;
     int flag = 0;
@@ -1070,7 +1070,7 @@ StmList* StmList::deepCopy(unordered_set<Temp_Label>& venv, int offset,
         p = p->tail;
         if (flag == 0) {
             ls.push_back(new IR::Move(new Temp(tt),
-                                      new Binop(binop::T_plus, new Temp(13), new Const(offset))));
+                                      new Binop(binop::T_plus, new Temp(11), new Const(offset))));
             flag = 1;
         }
     }
@@ -1159,8 +1159,8 @@ Exp* Binop::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
 Exp* Temp::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                     unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
     if (tpmp.count(tempid)) return new Temp(tpmp[tempid]);
-    if (isRealregister(tempid)) {
-        if (tempid == 13) { return new Temp(tpmp[13]); }
+    if (tempid == 11 || tempid == 13) {
+        if (tempid == 11) { return new Temp(tpmp[11]); }
         return new Temp(tempid);
     }
     auto nw = Temp_newtemp();

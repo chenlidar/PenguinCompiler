@@ -275,7 +275,8 @@ public:
         : stm(_stm)
         , tail(_tail) {}
     StmList* deepCopy(unordered_set<Temp_Label>& venv, int offset,
-                      unordered_map<Temp_Temp, Temp_Temp>& tpmp);
+                      unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                      unordered_map<string, string>& lbmp);
 };
 typedef std::vector<Exp*> ExpList;
 ASM::Proc* ir2asm(StmList* stmlist);

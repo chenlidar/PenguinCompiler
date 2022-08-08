@@ -31,7 +31,11 @@ public:
         bool isrec;
         bool isvoid;
         std::vector<std::pair<std::string, IR::StmList*>> callpos;
-        Info() {}
+        Info() {
+            ir = nullptr;
+            calledNum = callNum = length = stksize = 0;
+            isrec = isvoid = false;
+        }
     };
     std::unordered_map<std::string, Info> func_info;
 

@@ -7,7 +7,7 @@ void Optimizer::PRE() {
     // A. build table
     buildTable();
     // B. insert phi, computation
-    insertPRE();
+    // insertPRE(); //has bug
     // C. delete
     deletePRE();
 }
@@ -303,7 +303,7 @@ void SSA::Optimizer::insertPRE(int node) {
                     valv.push_back(newval);
                     expv.push_back(biexp);
                 } else {
-                    if (it.isTemp()) assert(avail_map[pred].count(oldval));
+                    if (it.isTemp()) assert(vG_map.count(oldval) || avail_map[pred].count(oldval));
                 }
             }
             if (onehas && !allhas) {  // PRE
