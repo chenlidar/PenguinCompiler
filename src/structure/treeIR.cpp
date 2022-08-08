@@ -1067,6 +1067,7 @@ StmList* StmList::deepCopy(unordered_set<Temp_Label>& venv) {
         cp = cp->tail;
         p = p->tail;
     }
+    return ret;
 }
 Stm* Seq::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                    unordered_set<Temp_Label>& venv) {

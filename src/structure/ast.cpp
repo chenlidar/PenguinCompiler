@@ -375,7 +375,7 @@ IR::Stm* AST::FuncDef::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
     }
     IR::Stm* stm = this->block->ast2ir(venv, fenv, brelabel, conlabel, name);
     venv->endScope();
-    return seq(cat_stm, stm);
+    return seq(cat_stm,seq(new IR::Label("BEGIN_"+name),stm));
 }
 IR::Stm* AST::Block::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                             Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {

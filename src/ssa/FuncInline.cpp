@@ -8,7 +8,15 @@ std::vector<std::string> FuncInline::functionInline() {
     for (auto funcname : func_name) {
         auto funcPos = getInlinePos(funcname);
         // do inline
-        
+        for (auto func : funcPos) {
+            IR::StmList* in_ir = func_info[func.first].ir->deepCopy(glabel);
+            for (; in_ir; in_ir = in_ir->tail) {
+                if (in_ir->stm->kind == IR::stmType::label
+                    && static_cast<IR::Label*>(in_ir->stm)->label == "BEING_" + funcname)
+                    break;
+            }
+            
+        }
     }
     for (auto funcname : func_name) {
         if (func_info[funcname].calledNum == 0) continue;
@@ -57,5 +65,6 @@ std::vector<std::pair<std::string, IR::StmList*>> FuncInline::getInlinePos(std::
             stksizesum += func_info[it.first].stksize;
         }
     }
+    return result;
 }
 }  // namespace INTERP

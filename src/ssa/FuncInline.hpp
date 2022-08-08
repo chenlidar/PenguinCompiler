@@ -10,6 +10,16 @@ public:
         fenv = _fenv;
         func_name = _func_name;
         func_map = _func_map;
+        for (auto it = venv->begin(); it != venv->end(); ++it) {
+            TY::Entry* entry = venv->look(it->first);
+            assert(entry && entry->kind == TY::tyEntry::Ty_global);
+            if (entry->ty->isconst) {
+                assert(entry->ty->kind != TY::tyType::Ty_array);
+                continue;  // const
+            }
+            Temp_Label name = static_cast<TY::GloVar*>(entry)->label;
+            glabel.insert(name);
+        }
         for (auto funcname : func_name) { func_info[funcname] = Info(); }
     }
     std::vector<std::string> functionInline();
@@ -20,18 +30,19 @@ public:
         int stksize;
         bool isrec;
         bool isvoid;
-        std::vector<std::pair<std::string,IR::StmList*>> callpos;
+        std::vector<std::pair<std::string, IR::StmList*>> callpos;
         Info() {}
     };
     std::unordered_map<std::string, Info> func_info;
 
 private:
-    const int maxstk=1e8;
+    const int maxstk = 1e8;
+    std::unordered_set<std::string> glabel;
     std::unordered_map<std::string, IR::StmList*> func_map;
     std::vector<std::string> func_name;
     Table::Stable<TY::Entry*>* venv;
     Table::Stable<TY::EnFunc*>* fenv;
     void analyse(std::string name);
-    std::vector<std::pair<std::string,IR::StmList*>> getInlinePos(std::string funcname);
+    std::vector<std::pair<std::string, IR::StmList*>> getInlinePos(std::string funcname);
 };
 }  // namespace INTERP
