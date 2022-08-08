@@ -265,11 +265,15 @@ private:
                 newpred[nextNode->mykey].insert(oldkey);
                 CurNode.push(nextNode);
                 newsucc[oldkey].insert(nextNode->mykey);
-                delete blockJumpStm[cur->mykey]->stm;
-                blockJumpStm[cur->mykey]->stm = new IR::Jump(nxlb);
+                // delete blockJumpStm[cur->mykey]->stm;
+                // blockJumpStm[cur->mykey]->stm = new IR::Jump(nxlb);
             }
         }
         for (int i = 0; i < nodesz; i++) {
+            if (newsucc[i].size() == 1) {
+                blockJumpStm[i]->stm
+                    = new IR::Jump(getNodeLabel(ir->nodes()->at(*(newsucc[i].begin()))));
+            }
             ir->nodes()->at(i)->preds = move(newpred[i]);
             ir->nodes()->at(i)->succs = move(newsucc[i]);
         }
