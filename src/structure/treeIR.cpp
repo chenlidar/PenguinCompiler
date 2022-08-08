@@ -34,7 +34,7 @@ string relop2string(RelOp op) {
     default: return "unknown";
     }
 }
-RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
+RelOp IR::commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
     case RelOp::T_eq: return RelOp::T_eq;
     case RelOp::T_ne: return RelOp::T_ne;
@@ -144,7 +144,7 @@ void Cjump::ir2asm(ASM::InstrList* ls) {
         if (num1.first && num2.first) { assert(0); }
         if (num1.first || num2.first) {
             if (num1.first) {
-                op = notRel(op);
+                op = commute(op);
                 std::swap(left, right);
                 std::swap(num1, num2);
             }
@@ -155,8 +155,10 @@ void Cjump::ir2asm(ASM::InstrList* ls) {
                 ls->push_back(new ASM::Oper(std::string("cmp `s0, " + imm2.second), dst, src,
                                             ASM::Targets()));
                 flag = 1;
+                // assert(0);
             }
         }
+
         if (!flag) {
             tmp[0] = this->left->ir2asm(ls);
             tmp[1] = this->right->ir2asm(ls);
