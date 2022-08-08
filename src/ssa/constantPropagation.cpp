@@ -67,24 +67,27 @@ public:
     }
     bool sameset(int x, int y) { return f(x) == f(y); }
 };
-void SSA::Optimizer::constantPropagation() {
-    unordered_map<Temp_Temp, TEMP_COND> tempCondition;
-    unordered_map<IR::StmList*, int> stmlBlockmap;
-    unordered_map<Temp_Temp, IR::StmList*> tempDef;
-    unordered_map<Temp_Temp, vector<IR::StmList*>> tempUse;
-    unordered_set<int> blockCondition;
-    queue<int> curBlock;
-    queue<Temp_Temp> curTemp;
-    queue<Temp_Temp> copyTemp;
-    DSU dsu;
+class CP {
+public:
+    CP(SSAIR* t) {
+        ir = t;
+        nodes = ir->nodes();
+        setup();
+        bfsMark();
+        replaceTemp();
+        cleanup();
+        // showmark();
+        checkCopy();
+        cleanCopy();
+    }
 
-    auto nodes = ir->nodes();
-    auto setup = [&]() {
+private:
+    void setup() {
         auto root = nodes->at(0)->mykey;
         blockCondition.insert(root);
         curBlock.push(root);
-    };
-    function<void(int, int)> cutEdge = [&](int from, int to) {
+    }
+    void cutEdge(int from, int to) {
         int cnt = 0;
         auto toNode = nodes->at(to);
         if (ir->Aphi[to].size()) {
@@ -107,8 +110,8 @@ void SSA::Optimizer::constantPropagation() {
         if (toNode->pred()->empty()) {
             while (!toNode->succ()->empty()) { cutEdge(to, *(toNode->succ()->begin())); }
         }
-    };
-    auto isTempIndefinite = [&](IR::Exp* exp) {
+    }
+    bool isTempIndefinite(IR::Exp* exp) {
         if (exp->kind == IR::expType::constx) return false;
         if (exp->kind == IR::expType::temp) {
             auto tmp = static_cast<IR::Temp*>(exp);
@@ -123,8 +126,8 @@ void SSA::Optimizer::constantPropagation() {
             return false;
         }
         return true;
-    };
-    auto isTempConst = [&](IR::Exp* exp) {
+    }
+    bool isTempConst(IR::Exp* exp) {
         if (exp->kind == IR::expType::constx) return true;
         if (exp->kind == IR::expType::temp) {
             auto tmp = static_cast<IR::Temp*>(exp);
@@ -134,8 +137,8 @@ void SSA::Optimizer::constantPropagation() {
             return false;
         }
         return false;
-    };
-    function<int(IR::Exp*)> tempEval = [&](IR::Exp* exp) {
+    }
+    int tempEval(IR::Exp* exp) {
         switch (exp->kind) {
         case IR::expType::binop: {
             auto binopexp = static_cast<IR::Binop*>(exp);
@@ -165,8 +168,8 @@ void SSA::Optimizer::constantPropagation() {
         }
         default: assert(0);
         }
-    };
-    auto doDef = [&](IR::StmList* stml) {
+    }
+    void doDef(IR::StmList* stml) {
         if (!stml) return;
         auto defid = static_cast<IR::Temp*>(static_cast<IR::Move*>(stml->stm)->dst)->tempid;
         auto src = static_cast<IR::Move*>(stml->stm)->src;
@@ -266,8 +269,8 @@ void SSA::Optimizer::constantPropagation() {
         default: assert(0);
         }
         if (static_cast<int>(tempCondition[defid].cond) > base) curTemp.push(defid);
-    };
-    auto doJump = [&](IR::StmList* stml) {
+    }
+    void doJump(IR::StmList* stml) {
         auto stm = stml->stm;
         auto curb = stmlBlockmap[stml];
         if (stm->kind == IR::stmType::jump) {
@@ -307,8 +310,8 @@ void SSA::Optimizer::constantPropagation() {
             }
             assert(0);
         }
-    };
-    auto bfsMark = [&]() {
+    }
+    void bfsMark() {
         while (!curBlock.empty() || !curTemp.empty()) {
             while (!curBlock.empty()) {
                 auto cur = curBlock.front();
@@ -353,8 +356,8 @@ void SSA::Optimizer::constantPropagation() {
                 }
             }
         }
-    };
-    auto replaceTemp = [&]() {
+    }
+    void replaceTemp() {
         auto nodes = ir->nodes();
         for (auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -421,9 +424,9 @@ void SSA::Optimizer::constantPropagation() {
                 }
             }
         }
-    };
+    }
 
-    auto cleanup = [&]() {
+    void cleanup() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             if (it->inDegree() == 1) {
@@ -437,7 +440,7 @@ void SSA::Optimizer::constantPropagation() {
             }
         }
     };
-    auto checkCopy = [&]() {
+    void checkCopy() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -457,8 +460,8 @@ void SSA::Optimizer::constantPropagation() {
                 stml = stml->tail;
             }
         }
-    };
-    auto cleanCopy = [&]() {
+    }
+    void cleanCopy() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -498,22 +501,29 @@ void SSA::Optimizer::constantPropagation() {
                 stml = stml->tail;
             }
         }
-    };
-    auto showtemptable = [&]() {
+    }
+    void showtemptable() {
         for (auto it : tempCondition) {
             std::cerr << "t" << it.first << ": type" << static_cast<int>(it.second.cond)
                       << "   val:" << it.second.val << std::endl;
         }
-    };
-    // ir->showmark();
-    setup();
-    bfsMark();
-    replaceTemp();
-    cleanup();
-    // showmark();
-    checkCopy();
-    cleanCopy();
-    // ir->showmark();
-    //  showtemptable();
+    }
+
+private:
+    SSAIR* ir;
+    unordered_map<Temp_Temp, TEMP_COND> tempCondition;
+    unordered_map<IR::StmList*, int> stmlBlockmap;
+    unordered_map<Temp_Temp, IR::StmList*> tempDef;
+    unordered_map<Temp_Temp, vector<IR::StmList*>> tempUse;
+    unordered_set<int> blockCondition;
+    queue<int> curBlock;
+    queue<Temp_Temp> curTemp;
+    queue<Temp_Temp> copyTemp;
+    DSU dsu;
+    vector<GRAPH::Node*>* nodes;
 };
+void SSA::Optimizer::constantPropagation() {
+    auto tt = CP(ir);
+    return;
+}
 }  // namespace SSA
