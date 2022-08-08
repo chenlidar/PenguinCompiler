@@ -138,11 +138,32 @@ void Cjump::ir2asm(ASM::InstrList* ls) {
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
 
     {  // Most naive tile method
-        tmp[0] = this->left->ir2asm(ls);
-        tmp[1] = this->right->ir2asm(ls);
-        src.push_back(tmp[0]);
-        src.push_back(tmp[1]);
-        ls->push_back(new ASM::Oper(std::string("cmp `s0, `s1"), dst, src, ASM::Targets()));
+
+        int flag = 0;
+        auto num1 = exp2int(left), num2 = exp2int(right);
+        if (num1.first && num2.first) { assert(0); }
+        if (num1.first || num2.first) {
+            if (num1.first) {
+                op = notRel(op);
+                std::swap(left, right);
+                std::swap(num1, num2);
+            }
+            auto imm2 = exp2op2(num2.second);
+            if (imm2.first) {
+                tmp[0] = this->left->ir2asm(ls);
+                src.push_back(tmp[0]);
+                ls->push_back(new ASM::Oper(std::string("cmp `s0, " + imm2.second), dst, src,
+                                            ASM::Targets()));
+                flag = 1;
+            }
+        }
+        if (!flag) {
+            tmp[0] = this->left->ir2asm(ls);
+            tmp[1] = this->right->ir2asm(ls);
+            src.push_back(tmp[0]);
+            src.push_back(tmp[1]);
+            ls->push_back(new ASM::Oper(std::string("cmp `s0, `s1"), dst, src, ASM::Targets()));
+        }
         std::string branch_type;
         if (this->op == RelOp::T_ne)
             branch_type = std::string("bne");
