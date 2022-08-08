@@ -383,6 +383,11 @@ static std::pair<int, std::string> exp2op2(int x) {
     if (x <= 256 && x >= -128) { return {1, "#" + std::to_string(x)}; }
     return {0, std::string()};
 }
+static std::pair<int, std::string> exp2offset(int x) {
+    if (x <= 4095 && x > 0) { return {1, "#+" + std::to_string(x)}; }
+    if (x >= -4095 && x < 0) { return {1, "#-" + std::to_string(x)}; }
+    return {0, std::string()};
+}
 static bool check2pow(int x) { return x == (-x & x); }
 static std::pair<int, std::string> exp2op2(IR::Binop* bop) { assert(0); }
 #endif
