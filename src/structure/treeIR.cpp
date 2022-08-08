@@ -36,7 +36,7 @@ string relop2string(RelOp op) {
     default: return "unknown";
     }
 }
-RelOp commute(RelOp op) {  // a op b    ==    b commute(op) a
+RelOp IR::commute(RelOp op) {  // a op b    ==    b commute(op) a
     switch (op) {
     case RelOp::T_eq: return RelOp::T_eq;
     case RelOp::T_ne: return RelOp::T_ne;
@@ -140,11 +140,34 @@ void Cjump::ir2asm(ASM::InstrList* ls) {
     Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
 
     {  // Most naive tile method
-        tmp[0] = this->left->ir2asm(ls);
-        tmp[1] = this->right->ir2asm(ls);
-        src.push_back(tmp[0]);
-        src.push_back(tmp[1]);
-        ls->push_back(new ASM::Oper(std::string("cmp `s0, `s1"), dst, src, ASM::Targets()));
+
+        int flag = 0;
+        auto num1 = exp2int(left), num2 = exp2int(right);
+        if (num1.first && num2.first) { assert(0); }
+        if (num1.first || num2.first) {
+            if (num1.first) {
+                op = commute(op);
+                std::swap(left, right);
+                std::swap(num1, num2);
+            }
+            auto imm2 = exp2op2(num2.second);
+            if (imm2.first) {
+                tmp[0] = this->left->ir2asm(ls);
+                src.push_back(tmp[0]);
+                ls->push_back(new ASM::Oper(std::string("cmp `s0, " + imm2.second), dst, src,
+                                            ASM::Targets()));
+                flag = 1;
+                // assert(0);
+            }
+        }
+
+        if (!flag) {
+            tmp[0] = this->left->ir2asm(ls);
+            tmp[1] = this->right->ir2asm(ls);
+            src.push_back(tmp[0]);
+            src.push_back(tmp[1]);
+            ls->push_back(new ASM::Oper(std::string("cmp `s0, `s1"), dst, src, ASM::Targets()));
+        }
         std::string branch_type;
         if (this->op == RelOp::T_ne)
             branch_type = std::string("bne");
@@ -822,6 +845,17 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                     s2->stm = nopStm();
                                     s1 = s3;
                                     continue;
+                                } else if (bop->op == binop::T_minus) {
+                                    assert(0);
+                                    auto tid3 = (bop->left)->ir2asm(&proc->body);
+                                    auto tid4 = (bop->right)->ir2asm(&proc->body);
+                                    proc->body.push_back(new ASM::Oper(
+                                        std::string("ldr `d0, [`s0, -`s1]"), Temp_TempList({dtid}),
+                                        Temp_TempList({tid3, tid4}), ASM::Targets()));
+                                    s1->stm = nopStm();
+                                    s2->stm = nopStm();
+                                    s1 = s3;
+                                    continue;
                                 }
                             }
                         }
@@ -871,6 +905,18 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                         auto tid4 = (bop->right)->ir2asm(&proc->body);
                                         proc->body.push_back(new ASM::Oper(
                                             std::string("str `s0, [`s1, `s2]"), Temp_TempList(),
+                                            Temp_TempList({dtid, tid3, tid4}), ASM::Targets()));
+                                        s1->stm = nopStm();
+                                        s2->stm = nopStm();
+                                        s1 = s3;
+                                        continue;
+                                    } else if (bop->op == binop::T_minus) {
+                                        assert(0);
+                                        auto dtid = (m2->src)->ir2asm(&proc->body);
+                                        auto tid3 = (bop->left)->ir2asm(&proc->body);
+                                        auto tid4 = (bop->right)->ir2asm(&proc->body);
+                                        proc->body.push_back(new ASM::Oper(
+                                            std::string("str `s0, [`s1, -`s2]"), Temp_TempList(),
                                             Temp_TempList({dtid, tid3, tid4}), ASM::Targets()));
                                         s1->stm = nopStm();
                                         s2->stm = nopStm();
