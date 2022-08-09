@@ -45,18 +45,4 @@ void Graph::rmEdge(Node* from, Node* to) {
     from->succs.erase(from->succs.find(to->mykey));
 }
 
-void GRAPH::Graph::rmNode(GRAPH::Node* node, GRAPH::Node* adjnode) {
-    assert(node && adjnode);
-    assert(adjnode->succs.count(node->mykey) && adjnode->preds.count(node->mykey));
-    adjnode->succs.erase(node->mykey);
-    adjnode->preds.erase(node->mykey);
-}
-void GRAPH::Graph::reverseNode(GRAPH::Node* node) {
-    assert(node);
-    for (auto adjnode : node->succs) {
-        node->mygraph->mynodes[adjnode]->succs.insert(node->mykey);
-        node->mygraph->mynodes[adjnode]->preds.insert(node->mykey);
-    }
-}
-
 bool Graph::goesTo(Node* from, Node* n) { return from->succs.count(n->mykey); }

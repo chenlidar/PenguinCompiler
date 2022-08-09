@@ -10,8 +10,8 @@ static void emit(ASM::Instr* inst) {
 // If return NULL, then it's a Spill
 using TempMap = std::unordered_map<Temp_Temp, Temp_Temp>;
 
-static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr, TempMap* stkmap,
-                                TempMap* stkuse) {
+static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,TempMap*  stkmap,
+                                std::unordered_set<Temp_Temp>* stkuse) {
     iList = new ASM::InstrList();
     assert(il);
     for (auto& inst : *il) {
@@ -30,7 +30,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
         }
         if (src)
             for (auto& temp : *src) {
-                if (cr->SpilledNode.count(temp)) {
+                if (cr->SpilledTemp.count(temp)) {
                     int offset;
                     if (stkmap->count(temp) == 0) {
                         stk_size += 4;
@@ -39,7 +39,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                     } else
                         offset = stkmap->at(temp);
                     Temp_Temp newtemp = Temp_newtemp();
-                    stkuse->insert(std::make_pair(newtemp, -2));
+                    stkuse->insert(newtemp);
                     temp = newtemp;  // change temp->newtemp
                     if (offset < 4096 && offset > -4096) {
                         std::string s = "ldr `d0,[fp,#-" + std::to_string(offset) + "]";
@@ -66,7 +66,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
         emit(inst);
         if (dst)
             for (auto& temp : *dst) {
-                if (cr->SpilledNode.count(temp)) {
+                if (cr->SpilledTemp.count(temp)) {
                     int offset;
                     if (stkmap->count(temp) == 0) {
                         stk_size += 4;
@@ -75,7 +75,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                     } else
                         offset = stkmap->at(temp);
                     Temp_Temp newtemp = Temp_newtemp();
-                    stkuse->insert(std::make_pair(newtemp, -2));
+                    stkuse->insert(newtemp);
                     temp = newtemp;  // change temp->newtemp
                     if (offset < 4096 && offset > -4096) {
                         std::string s = "str `s0,[fp,#-" + std::to_string(offset) + "]";
@@ -106,8 +106,7 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
     return iList;
 }
 
-static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,
-                                      std::set<ASM::Move*>* clearMove) {
+static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap) {
     assert(il);
     ASM::InstrList* out = new ASM::InstrList();
     out->push_back(il->at(0));  // label
@@ -128,7 +127,7 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,
         auto instrr = il->at(i);
         if (instrr->kind == ASM::InstrType::move) {
             ASM::Move* instr = static_cast<ASM::Move*>(instrr);
-            if (clearMove->count(instr)) continue;
+            if (colormap->at(instr->dst.at(0))==colormap->at(instr->src.at(0))) continue;
         }
         out->push_back(instrr);
     }
@@ -143,16 +142,16 @@ static ASM::InstrList* funcEntryExit3(ASM::InstrList* il, TempMap* colormap,
 ASM::InstrList* RA::RA_RegAlloc(ASM::InstrList* il, int stksize) {
     stk_size = stksize;
     TempMap* stkmap = new TempMap();
-    TempMap* stkuse = new TempMap();
+    std::unordered_set<Temp_Temp>* stkuse = new std::unordered_set<Temp_Temp>();
     while (1) {
         FLOW::FlowGraph* flowgraph = new FLOW::FlowGraph(il);
         LIVENESS::Liveness* live = new LIVENESS::Liveness(flowgraph);
         IG::ConfGraph* ig = new IG::ConfGraph(live);
         COLOR::COL_result* cr = new COLOR::COL_result(ig, stkuse);
-        if (!cr->SpilledNode.empty())
+        if (!cr->SpilledTemp.empty())
             il = RA_Spill(il, cr, stkmap, stkuse);
         else {
-            il = funcEntryExit3(il, &cr->ColorMap, &cr->UnionMove);  // add stack instr
+            il = funcEntryExit3(il, &cr->ColorMap);  // add stack instr
             for (auto it : *il) { it->print(&cr->ColorMap); }
             delete flowgraph;
             delete live;
