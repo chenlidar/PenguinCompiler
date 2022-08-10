@@ -17,7 +17,7 @@ using std::unordered_set;
 using std::vector;
 
 namespace SSA {
-bool SSA::Optimizer::isNecessaryStm(IR::Stm* stm) {
+bool isNecessaryStm(IR::Stm* stm, SSAIR* ir) {
     switch (stm->kind) {
     case IR::stmType::move: {
         auto movestm = static_cast<IR::Move*>(stm);
@@ -40,27 +40,33 @@ bool SSA::Optimizer::isNecessaryStm(IR::Stm* stm) {
         return false;
     }
     case IR::stmType::cjump: return false;
-    case IR::stmType::label: return static_cast<IR::Label*>(stm)->label == this->ir->endlabel;
+    case IR::stmType::label: return static_cast<IR::Label*>(stm)->label == ir->endlabel;
     case IR::stmType::seq: assert(0);
     case IR::stmType::jump: return false;
     default: assert(0);
     }
     return false;
 }
+class DCE {
+public:
+    DCE(SSAIR* t) {
+        ir = t;
+        nodesz = ir->nodes()->size();
+        newpred.resize(nodesz);
+        newsucc.resize(nodesz);
+        auto tmp = CDG::CDgraph(ir);
+        gp = &tmp;
+        setup();
+        bfsMark();
+        // showmark();
+        elimilation();
+        cleanup();
+        cleanNotActiveNode();
+        gp = 0;
+    }
 
-void SSA::Optimizer::deadCodeElimilation() {
-    unordered_map<Temp_Temp, IR::Stm*> tempDef;
-    unordered_map<IR::Stm*, int> stmBlockmap;
-    unordered_set<IR::Stm*> ActivatedStm;
-    unordered_set<int> ActivatedBlock;
-    // unordered_map<int, IR::StmList*> blockJumpStm;
-    queue<IR::Stm*> Curstm;
-    auto nodesz = ir->nodes()->size();
-    vector<GRAPH::NodeList> newpred(nodesz), newsucc(nodesz);
-    int oldParentKey;
-    CDG::CDgraph gp(ir);
-
-    auto setup = [&]() {
+private:
+    void setup() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -74,7 +80,7 @@ void SSA::Optimizer::deadCodeElimilation() {
                 if (df) tempDef[static_cast<IR::Temp*>(*df)->tempid] = stm;
 
                 // set up seed stm
-                bool necessary = isNecessaryStm(stm);
+                bool necessary = isNecessaryStm(stm, ir);
                 if (necessary) {
                     ActivatedStm.insert(stm);
                     Curstm.push(stm);
@@ -89,8 +95,8 @@ void SSA::Optimizer::deadCodeElimilation() {
                 stml = stml->tail;
             }
         }
-    };
-    auto bfsMark = [&]() {
+    }
+    void bfsMark() {
         while (!Curstm.empty()) {
             auto stm = Curstm.front();
             Curstm.pop();
@@ -111,7 +117,8 @@ void SSA::Optimizer::deadCodeElimilation() {
             auto labelstm = ((IR::StmList*)(block->info))->stm;
             if (!ActivatedStm.count(labelstm)) {
                 ActivatedStm.insert(labelstm);
-                for (auto it : gp.CDnode[block->mykey]) {
+                for (auto it : gp->CDnode[block->mykey]) {
+                    // auto jmp = blockJumpStm[it]->stm;
                     auto jmp = ir->blockjump[it]->stm;
                     if (jmp->kind == IR::stmType::cjump) {
                         if (!ActivatedStm.count(jmp)) {
@@ -128,7 +135,8 @@ void SSA::Optimizer::deadCodeElimilation() {
                     auto predlabel = getNodeLabelStm(ir->mynodes[it]);
                     if (!ActivatedStm.count(predlabel)) {
                         ActivatedStm.insert(predlabel);
-                        for (auto jt : gp.CDnode[it]) {
+                        for (auto jt : gp->CDnode[it]) {
+                            // auto jmp = blockJumpStm[jt]->stm;
                             auto jmp = ir->blockjump[jt]->stm;
                             if (jmp->kind == IR::stmType::cjump) {
                                 if (!ActivatedStm.count(jmp)) {
@@ -142,9 +150,8 @@ void SSA::Optimizer::deadCodeElimilation() {
                 }
             }
         }
-    };
-    // FIXME can we remember the block?
-    auto FindNextAcitveNode = [&](GRAPH::Node* node) {
+    }
+    GRAPH::Node* FindNextAcitveNode(GRAPH::Node* node) {
         if (ActivatedBlock.count(node->mykey)) return node;
         unordered_set<GRAPH::Node*> vis;
         vis.insert(node);
@@ -166,8 +173,8 @@ void SSA::Optimizer::deadCodeElimilation() {
         };
         dfs(node);
         return ans;
-    };
-    auto elimilation = [&]() {
+    }
+    void elimilation() {
         queue<GRAPH::Node*> CurNode;
         auto nodes = ir->nodes();
         CurNode.push((nodes->at(0)));  // push the first node
@@ -258,23 +265,20 @@ void SSA::Optimizer::deadCodeElimilation() {
                 newpred[nextNode->mykey].insert(oldkey);
                 CurNode.push(nextNode);
                 newsucc[oldkey].insert(nextNode->mykey);
-                // delete ir->blockjump[cur->mykey]->stm;
-                // ir->blockjump[cur->mykey]->stm = new IR::Jump(nxlb);
-
-                assert(newsucc[cur->mykey].size() == 1);
-                assert(getNodeLabel(ir->mynodes[(*newsucc[cur->mykey].begin())]) == nxlb);
+                // delete blockJumpStm[cur->mykey]->stm;
+                // blockJumpStm[cur->mykey]->stm = new IR::Jump(nxlb);
             }
         }
         for (int i = 0; i < nodesz; i++) {
             if (newsucc[i].size() == 1) {
                 ir->blockjump[i]->stm
-                    = new IR::Jump(getNodeLabel(ir->mynodes[(*(newsucc[i].begin()))]));
+                    = new IR::Jump(getNodeLabel(ir->nodes()->at(*(newsucc[i].begin()))));
             }
             ir->nodes()->at(i)->preds = move(newpred[i]);
             ir->nodes()->at(i)->succs = move(newsucc[i]);
         }
-    };
-    auto showmark = [&]() {  // func that can output ssa for debuging
+    }
+    void showmark() {  // func that can output ssa for debuging
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -286,7 +290,7 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
-    auto cleanup = [&]() {
+    void cleanup() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             if (it->inDegree() == 1) {
@@ -300,7 +304,7 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
-    auto cleanNotActiveNode = [&]() {
+    void cleanNotActiveNode() {
         auto nodes = ir->nodes();
         int len = nodes->size();
         for (int i = 0; i < len; i++) {
@@ -314,13 +318,24 @@ void SSA::Optimizer::deadCodeElimilation() {
             }
         }
     };
-    // showmark();
-    setup();
-    bfsMark();
-    // showmark();
-    elimilation();
-    cleanup();
-    cleanNotActiveNode();
-    // showmark();
+
+private:
+    SSAIR* ir;
+    unordered_map<Temp_Temp, IR::Stm*> tempDef;
+    unordered_map<IR::Stm*, int> stmBlockmap;
+    unordered_set<IR::Stm*> ActivatedStm;
+    unordered_set<int> ActivatedBlock;
+    // unordered_map<int, IR::StmList*> blockJumpStm;
+    queue<IR::Stm*> Curstm;
+
+    vector<GRAPH::NodeList> newpred, newsucc;
+    int oldParentKey;
+    CDG::CDgraph* gp;
+    int nodesz;
+};
+
+void SSA::Optimizer::deadCodeElimilation() {
+    auto t = DCE(ir);
+    return;
 }
 }  // namespace SSA
