@@ -147,7 +147,8 @@ void COL_result::assignColor() {
             }
         }
         if (okcolor.empty()) {
-            SpilledTemp.insert(ig->mynodes[node].nodeTemp());
+            Temp_Temp temp=ig->mynodes[node].nodeTemp();
+            for(auto tp:ig->mynodes[node].temp)SpilledTemp.insert({tp,temp});
         } else {
             int color = *okcolor.begin();
             for (int temp : ig->mynodes[node].temp) ColorMap[temp] = color;

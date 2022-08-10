@@ -14,13 +14,13 @@ namespace COLOR {
 class COL_result {
 public:
     std::unordered_map<Temp_Temp, Temp_Temp> ColorMap;
-    std::set<Temp_Temp> SpilledTemp;
+    std::map<Temp_Temp,Temp_Temp> SpilledTemp;
     COL_result(IG::ConfGraph* _ig, std::unordered_set<Temp_Temp>* _stkuse) {
         SpillWorklist = std::set<int>();
         SimplifyWorklist = std::set<int>();
         CombineWorklist= std::set<int>();
         FreezeWorklist= std::set<int>();
-        SpilledTemp = std::set<Temp_Temp>();
+        SpilledTemp = std::map<Temp_Temp,Temp_Temp>();
         SelectStack = std::stack<int>();
         ColorMap = std::unordered_map<Temp_Temp, Temp_Temp>();
         for (int i = 0; i < 15; i++) ColorMap[i] = i;
