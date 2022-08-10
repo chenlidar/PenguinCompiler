@@ -19,9 +19,16 @@ void Optimizer::CME() {  // behind PRE
                     avail_mem.insert({addr, dst});
                 }
             } else if (isStr(stm)) {  // kill all,gen one
-                avail_mem.clear();
-                Uexp src = Uexp(static_cast<IR::Move*>(stm)->src);
                 Uexp addr = Uexp(static_cast<IR::Mem*>(static_cast<IR::Move*>(stm)->dst)->mem);
+                Uexp src = Uexp(static_cast<IR::Move*>(stm)->src);
+                if (avail_mem.count(addr)) {
+                    Uexp exp = avail_mem.at(addr);
+                    if (exp == src) {
+                        stmlist->stm = nopStm();
+                        continue;
+                    }
+                }
+                avail_mem.clear();
                 avail_mem.insert({addr, src});
             } else if (isCall(stm)) {  // kill all
                 avail_mem.clear();
