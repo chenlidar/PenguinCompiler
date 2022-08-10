@@ -7,7 +7,7 @@ void Optimizer::PRE() {
     // A. build table
     buildTable();
     // B. insert phi, computation
-    insertPRE();  // has bug
+    insertPRE();
     // C. delete
     deletePRE();
 }
@@ -314,7 +314,6 @@ void SSA::Optimizer::insertPRE(int node) {
                 for (auto pred : ir->prednode[node]) {
                     cnt++;
                     Temp_Temp dsttemp;
-                    assert(valv[cnt] != 1243);
                     if (avail_map[pred].count(valv[cnt])) {  // already has
                         dsttemp = avail_map[pred].at(valv[cnt]);
                     } else {
@@ -323,20 +322,20 @@ void SSA::Optimizer::insertPRE(int node) {
                         if (avail_map[pred].count(expv[cnt].l.val))
                             lf = new IR::Temp(avail_map[pred].at(expv[cnt].l.val));
                         else {
-                            Biexp bp = vG_map.at(expv[cnt].l.val);
-                            assert(bp.l.kind == IR::expType::constx
-                                   || bp.l.kind == IR::expType::name
-                                   || (bp.l.kind == IR::expType::temp && bp.l.val < 15));
-                            lf = bp.l.toExp();
+                            Uexp constv = vG_map.at(expv[cnt].l.val);
+                            assert(constv.kind == IR::expType::constx
+                                   || constv.kind == IR::expType::name
+                                   || (constv.kind == IR::expType::temp && constv.val < 15));
+                            lf = constv.toExp();
                         }
                         if (avail_map[pred].count(expv[cnt].r.val))
                             rt = new IR::Temp(avail_map[pred].at(expv[cnt].r.val));
                         else {
-                            Biexp bp = vG_map.at(expv[cnt].r.val);
-                            assert(bp.r.kind == IR::expType::constx
-                                   || bp.r.kind == IR::expType::name
-                                   || (bp.r.kind == IR::expType::temp && bp.r.val < 15));
-                            rt = bp.r.toExp();
+                            Uexp constv = vG_map.at(expv[cnt].r.val);
+                            assert(constv.kind == IR::expType::constx
+                                   || constv.kind == IR::expType::name
+                                   || (constv.kind == IR::expType::temp && constv.val < 15));
+                            rt = constv.toExp();
                         }
                         IR::Temp* dtmp = new IR::Temp(dsttemp);
                         ir->blockjump[pred]->tail
@@ -353,6 +352,10 @@ void SSA::Optimizer::insertPRE(int node) {
                 int phi_temp = Temp_newtemp();
                 IR::Temp* dtmp = new IR::Temp(phi_temp);
                 G_map.insert({U2Biexp(dtmp), oldval});
+                if (avail_map[node].count(oldval)) {
+                    avail_out[node].erase(avail_map[node].at(oldval));
+                    avail_map[node].erase(oldval);
+                }
                 avail_map[node].insert({oldval, phi_temp});
                 avail_out[node].insert(phi_temp);
                 IR::Move* phifunc = new IR::Move(dtmp, new IR::Call("$", param));
@@ -367,12 +370,12 @@ void SSA::Optimizer::insertPRE(int node) {
 void SSA::Optimizer::insertPRE() {
     for (auto it : G_map) {
         if (it.first.l.kind == IR::expType::constx || it.first.l.kind == IR::expType::name) {
-            vG_map[it.second] = it.first;
+            vG_map[it.second] = it.first.l;
             // std::cerr << "@@@" << it.second << "\n";
         }
     }
-    vG_map.insert({findGV(U2Biexp(new IR::Temp(11))), U2Biexp(new IR::Temp(11))});
-    vG_map.insert({findGV(U2Biexp(new IR::Temp(13))), U2Biexp(new IR::Temp(13))});
+    vG_map.insert({findGV(U2Biexp(new IR::Temp(11))), Uexp(new IR::Temp(11))});
+    vG_map.insert({findGV(U2Biexp(new IR::Temp(13))), Uexp(new IR::Temp(13))});
     insertPRE(0);
 }
 void SSA::Optimizer::deletenode(int node, int fa) {
