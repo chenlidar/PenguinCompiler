@@ -88,10 +88,10 @@ private:
                     ActivatedBlock.insert(it->mykey);
                 }
                 // set up jump
-                if (!stml->tail
-                    && (stm->kind == IR::stmType::cjump || stm->kind == IR::stmType::jump)) {
-                    blockJumpStm[it->mykey] = stml;
-                }
+                // if (!stml->tail
+                //     && (stm->kind == IR::stmType::cjump || stm->kind == IR::stmType::jump)) {
+                //     blockJumpStm[it->mykey] = stml;
+                // }
                 stml = stml->tail;
             }
         }
@@ -118,7 +118,8 @@ private:
             if (!ActivatedStm.count(labelstm)) {
                 ActivatedStm.insert(labelstm);
                 for (auto it : gp->CDnode[block->mykey]) {
-                    auto jmp = blockJumpStm[it]->stm;
+                    // auto jmp = blockJumpStm[it]->stm;
+                    auto jmp = ir->blockjump[it]->stm;
                     if (jmp->kind == IR::stmType::cjump) {
                         if (!ActivatedStm.count(jmp)) {
                             ActivatedBlock.insert(it);
@@ -135,7 +136,8 @@ private:
                     if (!ActivatedStm.count(predlabel)) {
                         ActivatedStm.insert(predlabel);
                         for (auto jt : gp->CDnode[it]) {
-                            auto jmp = blockJumpStm[jt]->stm;
+                            // auto jmp = blockJumpStm[jt]->stm;
+                            auto jmp = ir->blockjump[jt]->stm;
                             if (jmp->kind == IR::stmType::cjump) {
                                 if (!ActivatedStm.count(jmp)) {
                                     ActivatedBlock.insert(jt);
@@ -271,7 +273,7 @@ private:
         }
         for (int i = 0; i < nodesz; i++) {
             if (newsucc[i].size() == 1) {
-                blockJumpStm[i]->stm
+                ir->blockjump[i]->stm
                     = new IR::Jump(getNodeLabel(ir->nodes()->at(*(newsucc[i].begin()))));
             }
             ir->nodes()->at(i)->preds = move(newpred[i]);
@@ -312,7 +314,7 @@ private:
                 ir->Aphi[i].clear();
                 auto stml = static_cast<IR::StmList*>(nodes->at(i)->info);
                 // delete
-                stml->tail = blockJumpStm[i];
+                stml->tail = ir->blockjump[i];
                 ir->prednode[i].clear();
                 for (auto j : *(nodes->at(i)->pred())) { ir->prednode[i].push_back(j); }
             }
@@ -325,7 +327,7 @@ private:
     unordered_map<IR::Stm*, int> stmBlockmap;
     unordered_set<IR::Stm*> ActivatedStm;
     unordered_set<int> ActivatedBlock;
-    unordered_map<int, IR::StmList*> blockJumpStm;
+    // unordered_map<int, IR::StmList*> blockJumpStm;
     queue<IR::Stm*> Curstm;
 
     vector<GRAPH::NodeList> newpred, newsucc;
