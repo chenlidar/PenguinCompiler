@@ -419,14 +419,21 @@ IR::Stm* AST::IfStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::
 }
 IR::Stm* AST::WhileStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
-    IR::Cx ct = this->exp->ast2ir(venv, fenv, name).exp->unCx();
-    Temp_Label begin = Temp_newlabel(), test = Temp_newlabel(), done = Temp_newlabel();
-    doPatch(ct.trues, begin);
-    doPatch(ct.falses, done);
-    return seq(
-        new IR::Label(test),
-        seq(ct.stm, seq(new IR::Label(begin), seq(this->loop->ast2ir(venv, fenv, done, test, name),
-                                                  seq(new IR::Jump(test), new IR::Label(done))))));
+    // while -> repeat until
+    IR::Cx ct1 = this->exp->ast2ir(venv, fenv, name).exp->unCx();
+    IR::Cx ct2 = this->exp->ast2ir(venv, fenv, name).exp->unCx();
+    Temp_Label begin = Temp_newlabel(), test1 = Temp_newlabel(), test2 = Temp_newlabel(),
+               done = Temp_newlabel();
+    doPatch(ct1.trues, begin);
+    doPatch(ct1.falses, done);
+    doPatch(ct2.trues, begin);
+    doPatch(ct2.falses, done);
+    IR::Stm* teststm1 = seq(new IR::Label(test1), ct1.stm);
+    IR::Stm* teststm2 = seq(new IR::Label(test2), ct2.stm);
+    IR::Stm* loopstm
+        = seq(new IR::Label(begin), this->loop->ast2ir(venv, fenv, done, test2, name));
+    IR::Stm* donestm = new IR::Label(done);
+    return seq(seq(teststm1, seq(loopstm, teststm2)), donestm);
 }
 IR::Stm* AST::BreakStmt::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                                 Temp_Label brelabel, Temp_Label conlabel, Temp_Label name) {
