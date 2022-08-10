@@ -112,8 +112,10 @@ void Optimizer::buildAvail(int node, int fa) {
         } else {  // temp <- *
             isphi = false;
             assert(mvstm->src->kind != IR::expType::constx);
-            // tmp_gen[node].insert(static_cast<IR::Temp*>(*dst)->tempid);
             dstval = findGV(U2Biexp(*dst));
+            G_map.insert({Biexp(IR::binop::T_plus, new IR::Temp(dstval),
+                                new IR::Temp(findGV(U2Biexp(new IR::Const(0))))),
+                          dstval});
         }
         if (!avail_map[node].count(dstval)) {
             avail_map[node][dstval] = tempid;
