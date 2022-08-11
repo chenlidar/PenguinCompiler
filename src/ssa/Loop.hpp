@@ -25,7 +25,7 @@ class Loop_Nesting_Tree{
         ~Loop_Nesting_Tree();//Delete Loop of loops
     private:
         CFG::CFGraph* graph_attached;
-        std::unordered_set<Loop*> loops;
+        std::unordered_set<Loop*> loops;//seems to be useless
         std::unordered_set<GRAPH::Node*> heads;
         std::unordered_map<GRAPH::Node*,Loop*> loop_of_head;
         std::unordered_map<GRAPH::Node*,GRAPH::Node*> parent;
@@ -42,6 +42,7 @@ class Loop_Nesting_Tree{
         void buildTree();
         void initHead();
         void dfsHead(GRAPH::Node* n,std::unordered_set <GRAPH::Node*> &instk,int &dfn);
+        void dfsBuild(GRAPH::Node* n,GRAPH::Node* head);
         
 };
 
