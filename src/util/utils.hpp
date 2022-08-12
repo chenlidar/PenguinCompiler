@@ -3,9 +3,11 @@
 #include "../structure/treeIR.hpp"
 #include "../structure/ty.hpp"
 #include "../structure/ast.h"
+#include "../backend/graph.hpp"
 #include <memory>
 #include <vector>
 #include <assert.h>
+#include <string>
 static inline IR::Stm* nopStm() { return (new IR::ExpStm(new IR::Const(0))); }
 static bool isNop(IR::Stm* x) {
     return x->kind == IR::stmType::exp
@@ -189,7 +191,7 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
         if (isRealregister(tempexp->tempid)) return;
         uses.push_back(exp);
     };
-    auto processExpInMove = [&](IR::Exp* &exp) {
+    auto processExpInMove = [&](IR::Exp*& exp) {
         switch (exp->kind) {
         case IR::expType::binop: {
             auto binopexp = static_cast<IR::Binop*>(exp);
@@ -221,8 +223,8 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
     case IR::stmType::move: {
         auto movstm = static_cast<IR::Move*>(stm);
         processExpInMove(movstm->src);
-        if(movstm->dst->kind==IR::expType::mem){
-            auto memexp=static_cast<IR::Mem*>(movstm->dst);
+        if (movstm->dst->kind == IR::expType::mem) {
+            auto memexp = static_cast<IR::Mem*>(movstm->dst);
             processTempExp(&(memexp->mem));
         }
         break;
@@ -246,10 +248,141 @@ static std::vector<IR::Exp**> getUses(IR::Stm* stm) {
     case IR::stmType::jump: break;
     default: assert(0);
     }
-    return std::move(uses);
+    return (uses);
 }
 
 static Temp_Label getNodeLabel(GRAPH::Node* node) {
     return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm)->label;
 }
+static IR::Label* getNodeLabelStm(GRAPH::Node* node) {
+    return static_cast<IR::Label*>(((IR::StmList*)(node->info))->stm);
+}
+static bool isphifunc(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::call
+           && static_cast<IR::Call*>(static_cast<IR::Move*>(stm)->src)->fun[0] == '$';
+}
+static bool ismovebi(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::binop;
+}
+static void cleanExpStm(IR::StmList* stmlist) {
+    IR::StmList* last = nullptr;
+    for (auto list = stmlist; list; list = list->tail) {
+        if (list->stm->kind == IR::stmType::exp
+            && static_cast<IR::ExpStm*>(list->stm)->exp->kind == IR::expType::constx) {
+            last->tail = list->tail;
+            continue;
+        }
+        last = list;
+    }
+}
+static bool isLdr(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::mem;
+}
+static bool isStr(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->dst->kind == IR::expType::mem;
+}
+static bool isCall(IR::Stm* stm) {
+    return (stm->kind == IR::stmType::move
+            && static_cast<IR::Move*>(stm)->src->kind == IR::expType::call)
+           || (stm->kind == IR::stmType::exp
+               && static_cast<IR::ExpStm*>(stm)->exp->kind == IR::expType::call);
+}
+static std::pair<int, int> exp2int(IR::Exp* x) {
+    if (x->kind == IR::expType::constx) return {1, static_cast<IR::Const*>(x)->val};
+    if (x->kind == IR::expType::binop) {
+        auto bi = static_cast<IR::Binop*>(x);
+        auto t1 = exp2int(bi->left), t2 = exp2int(bi->right);
+        if (t1.first && t2.first) {
+            switch (bi->op) {
+            case IR::binop::T_plus: return {1, t1.second + t2.second};
+            case IR::binop::T_mul: return {1, t1.second * t2.second};
+            case IR::binop::T_mod: return {1, t1.second % t2.second};
+            case IR::binop::T_minus: return {1, t1.second - t2.second};
+            case IR::binop::T_div: return {1, t1.second / t2.second};
+            default: return {0, 0};
+            }
+        }
+    }
+    return {0, 0};
+}
+static std::pair<int, int> exp2tempid(IR::Exp* x) {
+    if (x->kind == IR::expType::temp) return {1, static_cast<IR::Temp*>(x)->tempid};
+    if (x->kind == IR::expType::binop) {
+        auto bi = static_cast<IR::Binop*>(x);
+        auto t1 = exp2tempid(bi->left);
+        auto t2 = exp2int(bi->right);
+        if (t1.first && t2.first) {
+            switch (bi->op) {
+            case IR::binop::T_plus:
+                if (t2.second == 0) return {1, t1.second};
+            case IR::binop::T_mul:
+                if (t2.second == 1) return {1, t1.second};
+            case IR::binop::T_mod: return {0, 0};
+            case IR::binop::T_minus:
+                if (t2.second == 0) return {1, t1.second};
+            case IR::binop::T_div:
+                if (t2.second == 1) return {1, t1.second};
+            default: return {0, 0};
+            }
+        }
+        t1 = exp2tempid(bi->right);
+        t2 = exp2int(bi->left);
+        if (t1.first && t2.first) {
+            switch (bi->op) {
+            case IR::binop::T_plus:
+                if (t2.second == 0) return {1, t1.second};
+            case IR::binop::T_mul:
+                if (t2.second == 1) return {1, t1.second};
+            case IR::binop::T_mod: return {0, 0};
+            case IR::binop::T_minus: return {0, 0};
+            case IR::binop::T_div: return {0, 0};
+            default: return {0, 0};
+            }
+        }
+    }
+    return {0, 0};
+}
+static bool expEqual(IR::Exp* a, IR::Exp* b) {
+    if (a->kind == IR::expType::constx && b->kind == IR::expType::constx) {
+        auto aa = static_cast<IR::Const*>(a), bb = static_cast<IR::Const*>(b);
+        return aa->val == bb->val;
+    }
+    if (a->kind == IR::expType::temp && b->kind == IR::expType::temp) {
+        auto aa = static_cast<IR::Temp*>(a), bb = static_cast<IR::Temp*>(b);
+        return aa->tempid == bb->tempid;
+    }
+    if (a->kind == IR::expType::mem && b->kind == IR::expType::mem) {
+        auto aa = static_cast<IR::Mem*>(a), bb = static_cast<IR::Mem*>(b);
+        return expEqual(aa->mem, bb->mem);
+    }
+    if (a->kind == IR::expType::name && b->kind == IR::expType::name) {
+        auto aa = static_cast<IR::Name*>(a), bb = static_cast<IR::Name*>(b);
+        return aa->name == bb->name;
+    }
+    if (a->kind == IR::expType::binop && b->kind == IR::expType::binop) {
+        auto aa = static_cast<IR::Binop*>(a), bb = static_cast<IR::Binop*>(b);
+        if (aa->op != bb->op) return false;
+        if ((aa->op == IR::binop::T_minus || aa->op == IR::binop::T_plus)
+            && (expEqual(aa->left, bb->right) && expEqual(aa->right, bb->right))) {
+            return true;
+        }
+        return (expEqual(aa->left, bb->left) && expEqual(aa->right, bb->right));
+    }
+    auto t1 = exp2int(a), t2 = exp2int(b);
+    if (t1.first && t2.first) return t1.second == t2.second;
+    t1 = exp2tempid(a), t2 = exp2tempid(b);
+    if (t1.first && t2.first) return t1.second == t2.second;
+    return false;
+}
+
+static std::pair<int, std::string> exp2op2(int x) {
+    if (x <= 256 && x >= -128) { return {1, "#" + std::to_string(x)}; }
+    return {0, std::string()};
+}
+static bool check2pow(int x) { return x == (-x & x); }
+static std::pair<int, std::string> exp2op2(IR::Binop* bop) { assert(0); }
 #endif

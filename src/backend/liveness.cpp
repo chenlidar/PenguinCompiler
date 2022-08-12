@@ -23,7 +23,7 @@ void Liveness::analysis() {
         // Now do out[n]=union_s in succ[n] (in[s])
         GRAPH::NodeList* s = n->succ();
         for (auto it : *s) {
-            InOut* succ = InOutTable.at(it);
+            InOut* succ = InOutTable.at(flowgraph->mynodes[it]);
             for (auto ite : *succ->in) { newOut->insert(ite); }
         }
         std::set_difference(newOut->begin(), newOut->end(), node->def->begin(), node->def->end(),
@@ -36,8 +36,8 @@ void Liveness::analysis() {
             assert(newIn->size() <= InOutTable.size());
             GRAPH::NodeList* pred = n->pred();
             for (auto it : *pred) {
-                assert(it != n);
-                workset.push(it);
+                assert(it != n->mykey);
+                workset.push(flowgraph->mynodes[it]);
             }
         }
         delete node->in;

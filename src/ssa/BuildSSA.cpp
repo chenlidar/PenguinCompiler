@@ -1,21 +1,25 @@
 #include <assert.h>
 #include "BuildSSA.hpp"
 #include "../util/utils.hpp"
-using namespace SSA;
-SSAIR::SSAIR(CANON::Block blocks)
+#include "Dtree.hpp"
+#include <queue>
+// using namespace SSA;
+SSA::SSAIR::SSAIR(CANON::Block blocks)
     : CFG::CFGraph(blocks) {
     // A. stmlist -> graph
     // B. Dominator tree
-    dtree = new DTREE::Dtree(this);
+    dtree = new DTREE::Dtree(this, 0);
     // C. Dominance frontiers
     dtree->computeDF();
     // D. insert phi function
     placePhi();
     // E. rename temp, output a graph
     rename();
+    endlabel = blocks.label;
+    opt.ir = this;
 }
-void SSAIR::placePhi() {
-    defsites = std::unordered_map<Temp_Temp, std::vector<int>>();
+void SSA::SSAIR::placePhi() {
+    defsites = std::map<Temp_Temp, std::vector<int>>();
     for (int i = 0; i < nodecount; i++) {
         for (auto dst : orig[i]) { defsites[dst].push_back(i); }
     }
@@ -44,8 +48,20 @@ void SSAIR::placePhi() {
         }
     }
 }
-void SSAIR::rename() { rename(0); }
-void SSAIR::rename(int node) {
+void SSA::SSAIR::rename() {
+    rename(0);
+    std::vector<std::pair<Temp_Temp, IR::StmList*>> v;
+    for (int i = 0; i < nodecount; i++) {
+        v.clear();
+        for (auto it : Aphi[i]) { v.push_back(it); }
+        Aphi[i].clear();
+        for (auto& it : v) {
+            it.first = static_cast<IR::Temp*>(*getDef(it.second->stm))->tempid;
+            Aphi[i].insert(it);
+        }
+    }
+}
+void SSA::SSAIR::rename(int node) {
     IR::StmList* stmlist = (IR::StmList*)mynodes[node]->nodeInfo();
     IR::vector<Temp_Temp> rev = IR::vector<Temp_Temp>();
     for (; stmlist; stmlist = stmlist->tail) {
@@ -75,8 +91,7 @@ void SSAIR::rename(int node) {
             static_cast<IR::Temp*>(*dst)->tempid = temp;
         }
     }
-    for (auto succn : *mynodes[node]->succ()) {
-        int succ = succn->mykey;
+    for (auto succ : *mynodes[node]->succ()) {
         for (auto it : Aphi[succ]) {
             IR::Move* phimove = static_cast<IR::Move*>(it.second->stm);
             IR::Call* phicall = static_cast<IR::Call*>(phimove->src);
@@ -98,49 +113,74 @@ void SSAIR::rename(int node) {
     for (auto var : rev) stk[var].pop();
 }
 
-CANON::Block SSAIR::ssa2ir() {
+CANON::Block SSA::SSAIR::ssa2ir() {
     for (int i = 0; i < nodecount; i++) {
         if (mynodes[i]->inDegree() <= 1) continue;  // one pred or no pred nodedont have phi
         if (Aphi[i].size() == 0) continue;  // exitnode must has 0 phi
+        assert(blocklabel[i]->stm->kind == IR::stmType::label);
         Temp_Label label = static_cast<IR::Label*>(blocklabel[i]->stm)->label;
         int cnt = 0;
         for (auto& pre : prednode[i]) {
-            if (blockjump[pre]->stm->kind == IR::stmType::cjump) {
-                Temp_Label prelabel;
-                int prenode = pre;
-                IR::Stm* cjmp = blockjump[pre]->stm;
-                IR::StmList* prelist;
-                if (static_cast<IR::Cjump*>(cjmp)->trueLabel == label) {  // truelabel
-                    prelabel = Temp_newlabel();
-                    static_cast<IR::Cjump*>(cjmp)->trueLabel = prelabel;
-                    prelist = new IR::StmList(new IR::Label(prelabel),
-                                              new IR::StmList(new IR::Jump(label), NULL));
-                    prenode = this->addNode(prelist)->mykey;
-                } else {  // falselabel
-                    prelabel = Temp_newlabel();
-                    static_cast<IR::Cjump*>(cjmp)->falseLabel = prelabel;
-                    prelist = new IR::StmList(new IR::Label(prelabel),
-                                              new IR::StmList(new IR::Jump(label), NULL));
-                    prenode = this->addNode(prelist)->mykey;
-                }
-                this->rmEdge(mynodes[pre], mynodes[i]);
-                this->addEdge(mynodes[pre], mynodes[prenode]);
-                this->addEdge(mynodes[prenode], mynodes[i]);
-                blocklabel.push_back(prelist);
-                blockjump.push_back(prelist->tail);
-                prednode.push_back(std::vector<int>({pre}));
-                pre=prenode;
-            }
+            assert(blockjump[pre]->stm->kind != IR::stmType::cjump);
+            std::unordered_map<int, int> indg;
+            std::unordered_map<int, IR::Move*> mvstms;
             for (auto it : Aphi[i]) {
                 auto movephi = static_cast<IR::Move*>(it.second->stm);
                 auto callphi = static_cast<IR::Call*>(movephi->src);
-                int tempid = static_cast<IR::Temp*>(callphi->args[cnt])->tempid;
-                int dsttemp = static_cast<IR::Temp*>(movephi->dst)->tempid;
-                blockjump[pre]->tail
-                    = new IR::StmList(blockjump[pre]->stm, nullptr);
-                blockjump[pre]->stm
-                    = new IR::Move(new IR::Temp(dsttemp), new IR::Temp(tempid));
-                blockjump[pre] = blockjump[pre]->tail;
+                IR::Exp* paramexp = callphi->args[cnt];
+                assert(static_cast<IR::Temp*>(movephi->dst)->tempid == it.first);
+                int dsttemp = it.first;
+                if (paramexp->kind == IR::expType::temp) {
+                    int srctemp = static_cast<IR::Temp*>(paramexp)->tempid;
+                    if (srctemp == dsttemp) continue;
+                    indg[srctemp] += 1;
+                }
+                IR::Move* mv = new IR::Move(new IR::Temp(dsttemp), paramexp);
+                mvstms.insert({dsttemp, mv});
+            }
+            std::queue<int> mvq;
+            std::unordered_set<int> addtmp;
+            for (auto it : mvstms) {
+                if (indg[it.first] == 0) mvq.push(it.first);
+            }
+            while (!mvstms.empty()) {
+                while (!mvq.empty()) {
+                    int dstmp = mvq.front();
+                    mvq.pop();
+                    IR::Move* mvn = mvstms.at(dstmp);
+                    blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
+                    blockjump[pre]->stm = mvn;
+                    blockjump[pre] = blockjump[pre]->tail;
+                    if (mvn->src->kind == IR::expType::temp) {
+                        int srctmp = static_cast<IR::Temp*>(mvn->src)->tempid;
+                        if (!addtmp.count(srctmp)) {
+                            indg.at(srctmp) -= 1;
+                            assert(indg.at(srctmp) >= 0);
+                            if (indg.at(srctmp) == 0) {
+                                if (mvstms.count(srctmp)) { mvq.push(srctmp); }
+                            }
+                        }
+                    }
+                    mvstms.erase(dstmp);
+                }
+                if (!mvstms.empty()) {  // has circle
+                    int dsttmp = mvstms.begin()->first;
+                    IR::Move* mvn = mvstms.begin()->second;
+                    assert(mvn->src->kind == IR::expType::temp);
+                    int srctmp = static_cast<IR::Temp*>(mvn->src)->tempid;
+                    assert(indg[dsttmp] == 1);
+                    assert(indg[srctmp] == 1);
+                    assert(mvstms.count(srctmp));
+                    int temp = Temp_newtemp();
+                    addtmp.insert(temp);
+                    static_cast<IR::Temp*>(mvn->src)->tempid = temp;
+                    IR::Move* insmv = new IR::Move(new IR::Temp(temp), new IR::Temp(srctmp));
+                    blockjump[pre]->tail = new IR::StmList(blockjump[pre]->stm, nullptr);
+                    blockjump[pre]->stm = insmv;
+                    blockjump[pre] = blockjump[pre]->tail;
+                    indg[srctmp] = 0;
+                    mvq.push(srctmp);
+                }
             }
             cnt++;
         }
@@ -152,9 +192,11 @@ CANON::Block SSAIR::ssa2ir() {
     for (int i = 0; i < nodecount; i++) {
         if (mynodes[i]->inDegree() == 0 && i != 0) continue;
         if (i == exitnum) continue;
-        tail = tail->tail = new CANON::StmListList((IR::StmList*)mynodes[i]->nodeInfo(), nullptr);
+        IR::StmList* stmlist=(IR::StmList*)mynodes[i]->nodeInfo();
+        cleanExpStm(stmlist);
+        tail = tail->tail = new CANON::StmListList(stmlist, nullptr);
     }
     b.llist = head->tail;
-    b.label = Temp_newlabel();
+    b.label = endlabel;
     return b;
 }

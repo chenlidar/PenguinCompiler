@@ -32,9 +32,8 @@ struct Block {
     Block() {}
 };
 StmList* linearize(Stm* stm);
-Block basicBlocks(StmList* stmList);
+Block basicBlocks(StmList* stmList, std::string funcname);
 StmList* traceSchedule(Block b);
-StmList* handle(Stm* stm);
 StmList* funcEntryExit1(StmList*);  // save caller save reg
 ASM::InstrList* funcEntryExit2(ASM::InstrList*, bool,
                                bool);  // sink r0 when return is not void and putint in main

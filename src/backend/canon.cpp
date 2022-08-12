@@ -175,15 +175,15 @@ static StmListList* mkBlocks(StmList* stms, Temp_Label done) {
     }
     if (state == IN) {
         state = OUT;
-        tail = tail->tail = new StmList(new Jump("RETURN"), nullptr);
+        tail = tail->tail = new StmList(new Jump(done), nullptr);
         ltail = ltail->tail = new StmListList(head->tail, nullptr);
     }
     return lhead->tail;
 }
 
-Block CANON::basicBlocks(StmList* stmList) {
+Block CANON::basicBlocks(StmList* stmList, std::string funcname) {
     Block b;
-    b.label = Temp_newlabel();
+    b.label = funcname + "_RETURN3124";
     b.llist = mkBlocks(stmList, b.label);
     return b;
 }
@@ -261,11 +261,6 @@ StmList* CANON::traceSchedule(Block b) {
     }
     tail->tail = new StmList(new Label(b.label), nullptr);
     return head->tail->tail;
-}
-StmList* CANON::handle(Stm* stm) {
-    IR::StmList* ll = CANON::linearize(stm);
-    CANON::Block b = CANON::basicBlocks(ll);
-    return CANON::traceSchedule(b);
 }
 
 //

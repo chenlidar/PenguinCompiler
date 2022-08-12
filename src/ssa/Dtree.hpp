@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __DTREE
+#define __DTREE
 #include "../backend/graph.hpp"
 #include <unordered_set>
 namespace DTREE {
@@ -6,11 +7,11 @@ class Dtree {
 public:
     std::vector<std::vector<int>> DF;
     std::vector<std::vector<int>> children;
-    Dtree(GRAPH::Graph* _g);
+    Dtree(GRAPH::Graph* _g, int entrynum);
     void computeDF();
 
 private:
-    int cnt;
+    int cnt, entrynum;
     GRAPH::Graph* g;
     std::vector<int> dfnum;
     std::vector<int> vertex;
@@ -28,3 +29,4 @@ private:
     int find(int node);
 };
 }  // namespace DTREE
+#endif

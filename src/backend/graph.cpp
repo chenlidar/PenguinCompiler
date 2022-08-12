@@ -36,27 +36,27 @@ void Graph::addEdge(Node* from, Node* to) {
     assert(to);
     assert(from->mygraph == to->mygraph);
     if (goesTo(from, to)) return;
-    to->preds.insert(from);
-    from->succs.insert(to);
+    to->preds.insert(from->mykey);
+    from->succs.insert(to->mykey);
 }
 void Graph::rmEdge(Node* from, Node* to) {
     assert(from && to);
-    to->preds.erase(to->preds.find(from));
-    from->succs.erase(from->succs.find(to));
+    to->preds.erase(to->preds.find(from->mykey));
+    from->succs.erase(from->succs.find(to->mykey));
 }
 
 void GRAPH::Graph::rmNode(GRAPH::Node* node, GRAPH::Node* adjnode) {
     assert(node && adjnode);
-    assert(adjnode->succs.count(node) && adjnode->preds.count(node));
-    adjnode->succs.erase(node);
-    adjnode->preds.erase(node);
+    assert(adjnode->succs.count(node->mykey) && adjnode->preds.count(node->mykey));
+    adjnode->succs.erase(node->mykey);
+    adjnode->preds.erase(node->mykey);
 }
 void GRAPH::Graph::reverseNode(GRAPH::Node* node) {
     assert(node);
     for (auto adjnode : node->succs) {
-        adjnode->succs.insert(node);
-        adjnode->preds.insert(node);
+        node->mygraph->mynodes[adjnode]->succs.insert(node->mykey);
+        node->mygraph->mynodes[adjnode]->preds.insert(node->mykey);
     }
 }
 
-bool Graph::goesTo(Node* from, Node* n) { return from->succs.count(n); }
+bool Graph::goesTo(Node* from, Node* n) { return from->succs.count(n->mykey); }

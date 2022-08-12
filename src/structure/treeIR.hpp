@@ -25,7 +25,7 @@ class Stm {
 public:
     stmType kind;
     virtual ~Stm() = default;
-    virtual void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) = 0;
+    virtual void ir2asm(ASM::InstrList* ls) = 0;
     // new sth
     virtual Stm* quad() { assert(0); }
     virtual void printIR() { assert(0); }
@@ -46,7 +46,7 @@ public:
         left = lf, right = rg;
         kind = stmType::seq;
     }
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel) { assert(0); }
+    void ir2asm(ASM::InstrList* ls) { assert(0); }
     Stm* quad() { assert(0); }
     void printIR() { assert(0); }
 };
@@ -57,7 +57,7 @@ public:
         label = lb;
         kind = stmType::label;
     }
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
 };
@@ -68,7 +68,7 @@ public:
         target = _target;
         kind = stmType::jump;
     }
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
 };
@@ -81,7 +81,7 @@ public:
         op = p, left = lf, right = rg, trueLabel = tr, falseLabel = fs;
         kind = stmType::cjump;
     }
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
 };
@@ -92,7 +92,7 @@ public:
         src = sr, dst = ds;
         kind = stmType::move;
     }
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
 };
@@ -103,7 +103,7 @@ public:
         exp = e;
         kind = stmType::exp;
     }
-    void ir2asm(ASM::InstrList* ls, Temp_Label exitlabel);
+    void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
 };

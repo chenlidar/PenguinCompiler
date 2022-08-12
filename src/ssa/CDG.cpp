@@ -11,7 +11,7 @@ CDgraph::CDgraph(CFG::CFGraph* g) {
     auto r = addNode(0);  // r node
     addEdge(mynodes[exitnum], r);
     addEdge(mynodes[0], r);
-    dtree = new DTREE::Dtree(this);
+    dtree = new DTREE::Dtree(this, exitnum);
     dtree->computeDF();
     CDnode = std::vector<std::vector<int>>(nodecount, std::vector<int>());
     for (int i = 0; i <= exitnum; i++) { bfs(i); }
@@ -24,7 +24,7 @@ void CDgraph::bfs(int node) {
         int n = q.front();
         q.pop();
         for (auto pre : dtree->DF[n]) {
-            CDnode[node].push_back(pre);
+            if (pre != nodecount - 1) CDnode[node].push_back(pre);
             if (!vis[pre]) {
                 vis[pre] = true;
                 q.push(pre);
