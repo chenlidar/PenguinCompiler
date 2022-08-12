@@ -69,7 +69,9 @@ private:
                 auto stm = stml->stm;
                 auto df = getDef(stm);
                 auto uses = getUses(stm);
-                for (auto jt : uses) { uselog[static_cast<IR::Temp*>(*jt)->tempid].push_back(jt); }
+                for (auto jt : uses) {
+                    uselog[static_cast<IR::Temp*>(*jt)->tempid].push_back(*jt);
+                }
                 if (df) {
                     auto tid = static_cast<IR::Temp*>(*df)->tempid;
                     tempDefMap[tid] = stml;
@@ -235,16 +237,33 @@ private:
         } else
             ClassifyIV(N);
     }
-    Temp_Temp Reduce(Temp_Temp x) {
-        auto df = (static_cast<IR::Move*>(tempDefMap[x]->stm))->src;
-        auto tmp = getIVentry(df);
+    Temp_Temp Reduce(IVentry tmp) {
+        // auto df = (static_cast<IR::Move*>(tempDefMap[x]->stm))->src;
+        // auto tmp = getIVentry(df);
         if (ivmp.count(tmp)) { return ivmp[tmp]; }
         auto nt = Temp_newtemp();
         ivmp[tmp] = nt;
         tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), new IR::Temp(tmp.iv)), 0);
         header[nt] = header[tmp.iv];
-        for (auto it : ssaEdge[x]) {
-            if (header[it] == header[tmp.iv]) { Replace(it); }
+        for (auto it : ssaEdge[nt]) {
+            if (header[it] == header[tmp.iv]) {
+                auto nx = Reduce({tmp.op, it, tmp.rc});
+                for (auto jt : uselog[it]) static_cast<IR::Temp*>(jt)->tempid = nx;
+            } else if (tmp.op == IR::binop::T_mul)  //?????
+            {
+                auto nx = Apply({tmp.op, it, tmp.rc});
+                for (auto jt : uselog[it]) static_cast<IR::Temp*>(jt)->tempid = nx;
+            }
+        }
+        return nt;
+    }
+    Temp_Temp Apply(IVentry x) {
+        if (ivmp.count(x)) return ivmp[x];
+        if () {
+
+        } else {
+            auto nx = Temp_newtemp();
+            ivmp[x] = nx;
         }
     }
     Temp_Temp getIV(Temp_Temp x) {
@@ -265,7 +284,7 @@ private:
     }
     void Replace(Temp_Temp x) {
         auto nx = Reduce(x);
-        for (auto it : uselog[x]) { static_cast<IR::Temp*>(*it)->tempid = nx; }
+        for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
         auto t = getIV(x);
         header[x] = header[t];
     }
@@ -313,7 +332,7 @@ private:
     vector<Temp_Temp> stk, ons;
     vector<Temp_Temp, IR::StmList*> tempDefMap;
     vector<Temp_Temp, int> tempDefBlockMap;
-    unordered_map<Temp_Temp, vector<IR::Exp**>> uselog;
+    unordered_map<Temp_Temp, vector<IR::Exp*>> uselog;
     unordered_map<Temp_Temp, vector<Temp_Temp>> ssaEdge;
     map<IVentry, Temp_Temp> ivmp;
     map<Temp_Temp, IVentry> ivrmp;
