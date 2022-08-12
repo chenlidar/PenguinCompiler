@@ -68,6 +68,7 @@ CFGraph::CFGraph(CANON::Block blocks) {
         for (auto pred : *mynodes[i]->pred()) prednode[i].push_back(pred);
     }
     cut_edge();
+    mergeNode();
 }
 void CFGraph::dfs(int node) {
     exist[node] = true;
@@ -109,6 +110,48 @@ void CFGraph::cut_edge() {
                 prednode.push_back(std::vector<int>({pre}));
                 pre = prenode;
             }
+        }
+    }
+}
+void CFGraph::mergeNode() {
+    int nodenum = nodecount;
+    bool flag = true;
+    while (flag) {
+        flag = false;
+        for (int i = 0; i < nodenum; i++) {
+            if (mynodes[i]->inDegree() == 0 && i != 0) continue;
+            if (mynodes[i]->outDegree() != 1) continue;
+            int succ = *mynodes[i]->succs.begin();
+            if (mynodes[succ]->inDegree() != 1 || succ == exitnum) continue;
+            // link off
+            mynodes[i]->succs.clear();
+            mynodes[succ]->preds.clear();
+            prednode[succ].clear();
+            // stmlist merge
+            blockjump[i]->tail = blocklabel[succ]->tail;
+            blockjump[i]->stm = nopStm();
+            blockjump[i] = blockjump[succ];
+            for(auto temp:orig[succ])orig[i].insert(temp);
+            IR::StmList* stml = new IR::StmList(new IR::Label("NOWHERE"),
+                                                new IR::StmList(new IR::Jump("ERROR"), nullptr));
+            blocklabel[succ] = stml;
+            blockjump[succ] = stml->tail;
+            mynodes[succ]->info = (void*)stml;
+            // succ succ_succ unlink
+            std::vector<int> succ_succs;
+            while (!mynodes[succ]->succs.empty()) {
+                int n = *mynodes[succ]->succs.begin();
+                succ_succs.push_back(n);
+                rmEdge(mynodes[succ], mynodes[n]);
+            }
+            // i,succ_succ link
+            for (auto succ_succ : succ_succs) {
+                addEdge(mynodes[i], mynodes[succ_succ]);
+                for (auto& pred : prednode[succ_succ])
+                    if (pred == succ) pred = i;
+            }
+            flag = true;
+            break;
         }
     }
 }

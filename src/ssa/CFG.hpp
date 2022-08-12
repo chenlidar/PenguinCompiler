@@ -15,6 +15,7 @@ public:
     std::vector<bool> exist;
     std::vector<std::vector<int>> prednode;
     void cut_edge();
+    void mergeNode();
 
 private:
     std::unordered_map<Temp_Label, GRAPH::Node*> LNTable;
