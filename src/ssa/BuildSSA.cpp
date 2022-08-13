@@ -17,6 +17,7 @@ SSA::SSAIR::SSAIR(CANON::Block blocks)
     rename();
     endlabel = blocks.label;
     opt.ir = this;
+    loops.ir = this;
 }
 void SSA::SSAIR::placePhi() {
     defsites = std::map<Temp_Temp, std::vector<int>>();
