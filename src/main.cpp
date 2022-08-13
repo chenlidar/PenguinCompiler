@@ -174,6 +174,7 @@ int main(int argc, char** argv) {
             ssa->opt.CME();
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
+            ssa->mergeNode();
             ssa->loops.findLoop();
         }
         blocks = ssa->ssa2ir();
