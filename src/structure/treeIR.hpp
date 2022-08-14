@@ -7,9 +7,14 @@
 #include "../util/templabel.hpp"
 #include "assem.h"
 #include "ty.hpp"
+#include <unordered_map>
+#include <unordered_set>
+#include "../util/table.hpp"
 namespace IR {
 using std::string;
 using std::unique_ptr;
+using std::unordered_map;
+using std::unordered_set;
 using std::vector;
 
 // use Binop::plus
@@ -29,6 +34,11 @@ public:
     // new sth
     virtual Stm* quad() { assert(0); }
     virtual void printIR() { assert(0); }
+    virtual void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                          unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                          vector<Stm*>& ls) {
+        assert(0);
+    }
 };
 class Exp {
 public:
@@ -38,6 +48,11 @@ public:
     // new sth
     virtual Exp* quad() { assert(0); }
     virtual void printIR() { assert(0); }
+    virtual Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                          unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                          vector<Stm*>& ls) {
+        assert(0);
+    }
 };
 class Seq : public Stm {
 public:
@@ -49,6 +64,8 @@ public:
     void ir2asm(ASM::InstrList* ls) { assert(0); }
     Stm* quad() { assert(0); }
     void printIR() { assert(0); }
+    void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Label : public Stm {
 public:
@@ -60,6 +77,8 @@ public:
     void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
+    void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Jump : public Stm {
 public:
@@ -71,6 +90,8 @@ public:
     void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
+    void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Cjump : public Stm {
 public:
@@ -84,6 +105,8 @@ public:
     void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
+    void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Move : public Stm {
 public:
@@ -95,6 +118,8 @@ public:
     void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
+    void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class ExpStm : public Stm {
 public:
@@ -106,6 +131,8 @@ public:
     void ir2asm(ASM::InstrList* ls);
     Stm* quad();
     void printIR();
+    void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 
 class Const : public Exp {
@@ -118,6 +145,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
     void printIR();
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 
 class Binop : public Exp {
@@ -128,6 +157,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
     void printIR();
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Temp : public Exp {
 public:
@@ -139,6 +170,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
     void printIR();
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Mem : public Exp {
 public:
@@ -150,6 +183,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
     void printIR();
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Eseq : public Exp {
 public:
@@ -162,6 +197,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad() { assert(0); }
     void printIR() { assert(0); }
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 // TBD TODO:
 class Name : public Exp {
@@ -174,6 +211,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
     void printIR();
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 class Call : public Exp {
 public:
@@ -186,6 +225,8 @@ public:
     Temp_Temp ir2asm(ASM::InstrList* ls);
     Exp* quad();
     void printIR();
+    Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                  unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
 };
 struct PatchList {
     Temp_Label* head;
@@ -233,6 +274,9 @@ public:
     StmList(Stm* _stm, StmList* _tail)
         : stm(_stm)
         , tail(_tail) {}
+    StmList* deepCopy(unordered_set<Temp_Label>& venv, int offset,
+                      unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                      unordered_map<string, string>& lbmp);
 };
 typedef std::vector<Exp*> ExpList;
 ASM::Proc* ir2asm(StmList* stmlist);

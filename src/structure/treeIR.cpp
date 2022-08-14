@@ -7,6 +7,8 @@
 #include "../backend/canon.hpp"
 #include "../util/utils.hpp"
 #include "../util/muldiv.hpp"
+#include "../util/templabel.hpp"
+#include "../util/temptemp.hpp"
 #include "assem.h"
 using std::endl;
 using std::string;
@@ -1105,4 +1107,141 @@ void Call::printIR() {
         std::cerr << ", ";
     }
     std::cerr << ") )";
+}
+
+// DEEPCOPY
+
+StmList* StmList::deepCopy(unordered_set<Temp_Label>& venv, int offset,
+                           unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                           unordered_map<string, string>& lbmp) {
+    vector<Stm*> ls;
+    auto tt = Temp_newtemp();
+    tpmp[11] = tt;
+    StmList* ret = 0;
+    auto p = this;
+    int flag = 0;
+    while (p) {
+        p->stm->deepCopy(tpmp, lbmp, venv, ls);
+        p = p->tail;
+        if (flag == 0) {
+            ls.push_back(new IR::Move(new Temp(tt),
+                                      new Binop(binop::T_plus, new Temp(11), new Const(offset))));
+            flag = 1;
+        }
+    }
+    int len = ls.size();
+    for (int i = len - 1; i >= 0; i--) { ret = new StmList(ls[i], ret); }
+    return ret;
+}
+void Seq::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    left->deepCopy(tpmp, lbmp, venv, ls);
+    right->deepCopy(tpmp, lbmp, venv, ls);
+}
+void Label::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                     unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                     vector<Stm*>& ls) {
+    if (venv.count(label)) {
+        ls.push_back(new Label(label));
+        return;
+    }
+    if (lbmp.count(label)) {
+        ls.push_back(new Label(lbmp[label]));
+        return;
+    }
+    auto nw = Temp_newlabel();
+    lbmp[label] = nw;
+    ls.push_back(new Label(nw));
+}
+void Jump::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                    unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    if (venv.count(target)) {
+        ls.push_back(new Jump(target));
+        return;
+    }
+    if (lbmp.count(target)) {
+        ls.push_back(new Jump(lbmp[target]));
+        return;
+    }
+    auto nw = Temp_newlabel();
+    lbmp[target] = nw;
+    ls.push_back(new Jump(nw));
+}
+void Cjump::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                     unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                     vector<Stm*>& ls) {
+    string ntl, nfl;
+    if (venv.count(trueLabel))
+        ntl = trueLabel;
+    else if (lbmp.count(trueLabel))
+        ntl = lbmp[trueLabel];
+    else {
+        ntl = Temp_newlabel();
+        lbmp[trueLabel] = ntl;
+    }
+    if (venv.count(falseLabel))
+        nfl = falseLabel;
+    else if (lbmp.count(falseLabel))
+        nfl = lbmp[falseLabel];
+    else {
+        nfl = Temp_newlabel();
+        lbmp[falseLabel] = nfl;
+    }
+    ls.push_back(new Cjump(op, left->deepCopy(tpmp, lbmp, venv, ls),
+                           right->deepCopy(tpmp, lbmp, venv, ls), ntl, nfl));
+}
+void Move::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                    unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    ls.push_back(
+        new Move(dst->deepCopy(tpmp, lbmp, venv, ls), src->deepCopy(tpmp, lbmp, venv, ls)));
+}
+void ExpStm::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                      unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                      vector<Stm*>& ls) {
+    ls.push_back(new ExpStm(exp->deepCopy(tpmp, lbmp, venv, ls)));
+}
+Exp* Const::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                     unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                     vector<Stm*>& ls) {
+    return new Const(val);
+}
+Exp* Binop::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp,
+                     unordered_map<string, string>& lbmp, unordered_set<Temp_Label>& venv,
+                     vector<Stm*>& ls) {
+    return new Binop(op, left->deepCopy(tpmp, lbmp, venv, ls),
+                     right->deepCopy(tpmp, lbmp, venv, ls));
+}
+Exp* Temp::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                    unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    if (tpmp.count(tempid)) return new Temp(tpmp[tempid]);
+    if (tempid == 11 || tempid == 13) {
+        if (tempid == 11) { return new Temp(tpmp[11]); }
+        return new Temp(tempid);
+    }
+    auto nw = Temp_newtemp();
+    tpmp[tempid] = nw;
+    return new Temp(nw);
+}
+Exp* Mem::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    return new Mem(mem->deepCopy(tpmp, lbmp, venv, ls));
+}
+Exp* Eseq::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                    unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    assert(0);
+    return 0;
+}
+Exp* Name::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                    unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    if (venv.count(name)) return new Name(name);
+    if (lbmp.count(name)) return new Name(lbmp[name]);
+    auto nw = Temp_newlabel();
+    lbmp[name] = nw;
+    return new Name(nw);
+}
+Exp* Call::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
+                    unordered_set<Temp_Label>& venv, vector<Stm*>& ls) {
+    vector<Exp*> nwa;
+    for (auto it : args) nwa.push_back(it->deepCopy(tpmp, lbmp, venv, ls));
+    return new Call(fun, nwa);
 }

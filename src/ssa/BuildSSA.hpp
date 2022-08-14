@@ -125,7 +125,7 @@ private:
     std::vector<std::unordered_set<int>> avail_out;
     std::vector<std::unordered_map<int, int>> avail_map;
     Vtb G_map;
-    std::unordered_map<int, Biexp> vG_map;
+    std::unordered_map<int, Uexp> vG_map;
     std::vector<std::list<Biexp>> anticIn;
     std::vector<std::unordered_map<int, Biexp>> anticIn_map;
     std::vector<std::list<Biexp>> exp_gen;

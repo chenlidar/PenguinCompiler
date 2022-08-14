@@ -49,6 +49,24 @@
         "streambuf": "cpp",
         "typeinfo": "cpp",
         "map": "cpp",
-        "cinttypes": "cpp"
+        "shared_mutex": "cpp",
+        "thread": "cpp",
+        "*.def": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp",
+        "any": "cpp",
+        "cfenv": "cpp",
+        "charconv": "cpp",
+        "codecvt": "cpp",
+        "csetjmp": "cpp",
+        "csignal": "cpp",
+        "cuchar": "cpp",
+        "forward_list": "cpp",
+        "regex": "cpp",
+        "future": "cpp",
+        "scoped_allocator": "cpp",
+        "typeindex": "cpp",
+        "valarray": "cpp",
+        "variant": "cpp"
     }
 }

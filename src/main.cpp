@@ -12,6 +12,7 @@
 #include <typeinfo>
 #include "util/showIR.hpp"
 #include "ssa/BuildSSA.hpp"
+#include "ssa/FuncInline.hpp"
 extern int yyparse();
 extern AST::CompUnitList* root;
 IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* globalArray,
@@ -118,9 +119,12 @@ int main(int argc, char** argv) {
     auto venv = new Table::Stable<TY::Entry*>();
     auto fenv = new Table::Stable<TY::EnFunc*>();
     initFenv(fenv);
-    std::cout << ".arch armv7ve\n.arm\n.global main\n.text\n";
+    std::cout << ".arch armv7ve\n.arm\n.global main\n";
     std::ostringstream* globalVar = new std::ostringstream();
     std::ostringstream* globalArray = new std::ostringstream();
+    std::unordered_map<std::string, IR::StmList*> func_ir;
+    std::vector<std::string> func_p;
+    // to ir
     for (const auto& ast_stm : root->list) {
         IR::Stm* stm = ast_stm->ast2ir(venv, fenv, "", "", "");
         if (typeid(*ast_stm) != typeid(AST::FuncDef)) continue;  // global var
@@ -138,33 +142,44 @@ int main(int argc, char** argv) {
         }
         IR::Stm* stmq = QUADRUPLE::handle(out);
         out = CANON::linearize(stmq);
-        CANON::Block blocks = CANON::basicBlocks(out, funcname);
-        // DONE:do ssa in this place
-        SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-        ssa->opt.deadCodeElimilation();
-        ssa->opt.constantPropagation();
-        ssa->opt.combExp();
-        ssa->opt.deadCodeElimilation();
-        ssa->opt.constantPropagation();
-        // ssa->showmark();
-        ssa->opt.PRE();
-        ssa->opt.constantPropagation();
-        ssa->opt.deadCodeElimilation();
-        ssa->opt.CME();
-        ssa->opt.constantPropagation();
-        ssa->opt.deadCodeElimilation();
-        blocks = ssa->ssa2ir();
-        out = CANON::traceSchedule(blocks);
-        //
-        // showir(out);
-        bool isvoid = fenv->look(funcname)->ty->tp->kind == TY::tyType::Ty_void;
-        int stksize = fenv->look(funcname)->stksize;
-        RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(out)->body, isvoid, ismain), stksize);
+        func_p.push_back(funcname);
+        func_ir.insert({funcname, out});
         if (ismain) {
             std::cout << globalVar->str();
             std::cout << globalArray->str();
             break;  // function, global var behind main will never used;
         }
+    }
+    std::cout << ".text\n";
+    // do function inline in this place
+    INTERP::FuncInline finline(venv, fenv, func_p, func_ir);
+    std::vector<std::string> procs = finline.functionInline();
+    for (auto funcname : procs) {
+        IR::StmList* ir = finline.func_info[funcname].ir;
+        CANON::Block blocks = CANON::basicBlocks(ir, funcname);
+        bool isvoid = finline.func_info[funcname].isvoid;
+        int stksize = finline.func_info[funcname].stksize;
+        bool ismain = funcname == "main";
+        // do ssa in this place
+        SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
+        for (int i = 0; i < 3; i++) {
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.constantPropagation();
+            ssa->opt.combExp();
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.constantPropagation();
+            ssa->opt.PRE();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.CME();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+        }
+        blocks = ssa->ssa2ir();
+        ir = CANON::traceSchedule(blocks);
+        //
+        // if (ismain) showir(ir);
+        RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(ir)->body, isvoid, ismain), stksize);
     }
 
     return 0;

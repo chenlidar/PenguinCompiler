@@ -38,7 +38,8 @@ void Loop_Nesting_Tree::buildTree(){//before this, make sure initHead have done
 void Loop_Nesting_Tree::dfsBuild(GRAPH::Node* n,GRAPH::Node* head){
     assert(n && head);
     this->visit.insert(n);
-    for(auto &pre: *n->pred()){
+    for(auto &pre_node: *n->pred()){
+        auto pre = this->graph_attached->mynodes[pre_node];
         if(visit.count(pre) ||  !is_ancestor(pre,head))continue;
         if(!parent.count(pre)){
             parent[pre] = head;
@@ -71,7 +72,8 @@ void Loop_Nesting_Tree::dfsHead(GRAPH::Node* n,std::unordered_set <GRAPH::Node*>
     this->dfsinfo[n]=(DfsInfo(++dfn,1));
     instk.insert(n);
     this->visit.insert(n);
-    for(auto &son: *n->succ()){
+    for(auto &son_node: *n->succ()){
+        auto son = this->graph_attached->mynodes[son_node];
         if(!visit.count(son)){
             dfsHead(son,instk,dfn);
             this->dfsinfo[n].size +=  this->dfsinfo[son].size;
