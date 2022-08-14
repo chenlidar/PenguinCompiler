@@ -75,7 +75,7 @@ private:
                 if (df) {
                     auto tid = static_cast<IR::Temp*>(*df)->tempid;
                     tempDefMap[tid] = stml;
-                    tempDefBlockMap[tid] = it;
+                    tempDefBlockMap[tid] = it->mykey;
                     for (auto jt : uses) {
                         ssaEdge[tid].push_back(static_cast<IR::Temp*>(*jt)->tempid);
                     }
@@ -89,15 +89,7 @@ private:
         for (auto nx : ssaEdge[x]) { rpodfs(nx); }
         rpomp[x] = ++rpoNum;
     }
-    void callRPO() {
-        rpomp.clear();
-        rpoNum = 0;
-        rpovis.clear();
-        for (auto& it : tempDefMap) {
-            if (!rpovis.count(it.first)) { rpodfs(it.first); }
-        }
-        for (auto& it : rpomp) { it.second = rpoNum + 1 - it.second; }
-    }
+    void callRPO() {}
     void push(int x) {
         stk.push_back(x);
         ons[x] = 1;
