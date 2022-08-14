@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
         bool ismain = funcname == "main";
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 6; i++) {
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
             ssa->opt.combExp();
