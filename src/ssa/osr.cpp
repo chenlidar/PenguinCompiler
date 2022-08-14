@@ -149,6 +149,10 @@ private:
         if (x->kind == IR::expType::temp) return isrc(static_cast<IR::Temp*>(x)->tempid, hder);
         return false;
     }
+    IR::Exp* rc2exp(RegionConst x) {
+        if (x.kind == RCT::C) return new IR::Const(x.val);
+        return new IR::Temp(x.val);
+    }
     bool IsCandidateOperation(IR::Exp* exp, int hder) {
         switch (exp->kind) {
         case IR::expType::binop: {
@@ -166,7 +170,7 @@ private:
             }
         }
         case IR::expType::temp: {
-            return true;
+            return isiv(exp);
         }
         default: return false;
         }
@@ -182,37 +186,34 @@ private:
         default: assert(0);
         }
     }
-    IVentry getIVentry(IR::Exp* exp) {
-        // switch (exp->kind) {
-        // case IR::expType::binop: {
-        //     auto bop = static_cast<IR::Binop*>(exp);
-        //     switch (bop->op) {
-        //     case IR::binop::T_mul:  // fall through
-        //     case IR::binop::T_plus: {
-        //         if (isiv(bop->left) && isrc(bop->right)) {
-        //             return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid,
-        //             getRC(bop->right)};
-        //         }
-        //         if (isiv(bop->right) && isrc(bop->left)) {
-        //             return {bop->op, static_cast<IR::Temp*>(bop->right)->tempid,
-        //             getRC(bop->left)};
-        //         }
-        //         assert(0);
-        //     }
-        //     case IR::binop::T_minus: {
-        //         if (isiv(bop->left) && isrc(bop->right)) {
-        //             return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid,
-        //             getRC(bop->right)};
-        //         }
-        //     }
-        //     default: assert(0);
-        //     }
-        // }
-        // case IR::expType::temp: {
-        //     return {IR::binop::T_plus, static_cast<IR::Temp*>(exp)->tempid, {RCT::C, 0}};
-        // }
-        // default: assert(0);
-        // }
+    IVentry getIVentry(IR::Exp* exp, int hder) {
+        switch (exp->kind) {
+        case IR::expType::binop: {
+            auto bop = static_cast<IR::Binop*>(exp);
+            switch (bop->op) {
+            case IR::binop::T_mul:  // fall through
+            case IR::binop::T_plus: {
+                if (isiv(bop->left) && isrc(bop->right, hder)) {
+                    return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid, getRC(bop->right)};
+                }
+                if (isiv(bop->right) && isrc(bop->left, hder)) {
+                    return {bop->op, static_cast<IR::Temp*>(bop->right)->tempid, getRC(bop->left)};
+                }
+                assert(0);
+            }
+            case IR::binop::T_minus: {
+                if (isiv(bop->left) && isrc(bop->right, hder)) {
+                    return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid, getRC(bop->right)};
+                }
+            }
+            default: assert(0);
+            }
+        }
+        case IR::expType::temp: {
+            return {IR::binop::T_plus, static_cast<IR::Temp*>(exp)->tempid, {RCT::C, 0}};
+        }
+        default: assert(0);
+        }
     }
     bool IsUpdateValid(IR::Stm* stm) {
         auto src = static_cast<IR::Move*>(stm)->src;
@@ -231,9 +232,9 @@ private:
             auto nb = *N.begin();
             auto src = static_cast<IR::Move*>(tempDefMap[nb]->stm)->src;
             if (IsCandidateOperation(src, tempDefBlockMap[nb])) {
-                Replace(nb);
+                Replace(nb, tempDefBlockMap[nb]);
             } else
-                header[nb] = 0;
+                header[nb] = -1;
         } else
             ClassifyIV(N);
     }
@@ -243,14 +244,15 @@ private:
         if (ivmp.count(tmp)) { return ivmp[tmp]; }
         auto nt = Temp_newtemp();
         ivmp[tmp] = nt;
-        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), new IR::Temp(tmp.iv)), 0);
+        tempDefMap[nt]
+            = new StmList(new IR::Move(new IR::Temp(nt), tempDefMap[tmp.iv]->stm->quad()), 0);
+        ssaEdge[nt] = ssaEdge[tmp.iv];
         header[nt] = header[tmp.iv];
         for (auto it : ssaEdge[nt]) {
             if (header[it] == header[tmp.iv]) {
                 auto nx = Reduce({tmp.op, it, tmp.rc});
                 for (auto jt : uselog[it]) static_cast<IR::Temp*>(jt)->tempid = nx;
-            } else if (tmp.op == IR::binop::T_mul)  //?????
-            {
+            } else if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
                 auto nx = Apply({tmp.op, it, tmp.rc});
                 for (auto jt : uselog[it]) static_cast<IR::Temp*>(jt)->tempid = nx;
             }
@@ -259,34 +261,63 @@ private:
     }
     Temp_Temp Apply(IVentry x) {
         if (ivmp.count(x)) return ivmp[x];
-        if () {
-
+        int res;
+        if (header[x.iv] != -1 && isrc(x.rc.val, header[x.iv])) {
+            res = Reduce(x);
+        } else if (x.rc.kind == RCT::T && header[x.rc.val] != -1 && isrc(x.iv, header[x.rc.val])) {
+            res = Reduce({x.op, x.rc.val, {RCT::T, x.iv}});
         } else {
-            auto nx = Temp_newtemp();
-            ivmp[x] = nx;
+            res = Temp_newtemp();
+            ivmp[x] = res;
+            if (x.rc.kind == RCT::T) {
+                int bl1 = tempDefBlockMap[x.iv];
+                int bl2 = tempDefBlockMap[x.rc.val];
+                int lb = bl2;
+                for (auto it : gp->CDnode[bl1]) {
+                    if (it == bl2) {
+                        lb = bl1;
+                        break;
+                    }
+                }
+                auto stml = (IR::StmList*)(ir->nodes()->at(lb)->info);
+                IR::StmList* tg = 0;
+                while (stml) {
+                    auto df = getDef(stml->stm);
+                    if (df) {
+                        auto tid = static_cast<IR::Temp*>(*df)->tempid;
+                        if (tid == x.iv) {
+                            tg = stml;
+                        } else if (tid == x.rc.val) {
+                            tg = stml;
+                        }
+                    }
+                }
+                assert(tg);
+                auto nt = new IR::StmList(
+                    new IR::Move(new IR::Temp(res),
+                                 new IR::Binop(x.op, new IR::Temp(x.iv), rc2exp(x.rc))),
+                    tg->tail);
+                tg->tail = nt;
+
+            } else {
+                auto tt = tempDefMap[x.iv];
+                auto nt = new IR::StmList(
+                    new IR::Move(new IR::Temp(res),
+                                 new IR::Binop(x.op, new IR::Temp(x.iv), rc2exp(x.rc))),
+                    tt->tail);
+                tt->tail = nt;
+            }
+            //????
         }
+
+        return res;
     }
-    Temp_Temp getIV(Temp_Temp x) {
-        auto exp = static_cast<IR::Move*>(tempDefMap[x])->src;
-        switch (exp->kind) {
-        case IR::expType::binop: {
-            auto bop = static_cast<IR::Binop*>(exp);
-            if (isiv(bop->left)) { return static_cast<IR::Temp*>(bop->left)->tempid; }
-            assert(isiv(bop->right));
-            return static_cast<IR::Temp*>(bop->right)->tempid;
-        }
-        case IR::expType::temp: {
-            assert(isiv(exp));
-            return static_cast<IR::Temp*>(exp)->tempid;
-        }
-        default: assert(0);
-        }
-    }
-    void Replace(Temp_Temp x) {
-        auto nx = Reduce(x);
+    void Replace(Temp_Temp x, int hder) {
+        auto df = static_cast<IR::Move*>(tempDefMap[x]->stm)->src;
+        auto iventry = getIVentry(df, hder);
+        auto nx = Reduce(iventry);
         for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
-        auto t = getIV(x);
-        header[x] = header[t];
+        header[x] = header[iventry.iv];
     }
     void ClassifyIV(unordered_set<int>& N) {
         bool IsIV = true;
@@ -315,9 +346,9 @@ private:
         } else {
             for (auto it : N) {
                 if (IsCandidateOperation(static_cast<IR::Move*>(tempDefMap[it]->stm)->src, hder)) {
-                    Replace(it);
+                    Replace(it, hder);
                 } else
-                    header[it] = 0;
+                    header[it] = -1;
             }
         }
     }
