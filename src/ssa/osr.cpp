@@ -11,6 +11,7 @@
 #include <functional>
 #include "../util/utils.hpp"
 #include "CDG.hpp"
+#include "DFSCFG.hpp"
 using std::function;
 using std::map;
 using std::min;
@@ -50,14 +51,16 @@ public:
     OSR(SSA::SSAIR* t) {
         ir = t;
         buildSSAGraph();
-        callRPO();
-        auto tmp = CDG::CDgraph(ir);
-        gp = &tmp;
+        auto ttmp = DFSCFG::Loop_Nesting_Tree(ir);
+        lnt = &ttmp;
+
         nextNum = 0;
         nodesz = tempDefMap.size();
         for (auto& i : tempDefMap) {
             if (!vis.count(i.first)) { DFS(i.first); }
         }
+
+        lnt = 0;
     }
 
 private:
@@ -83,13 +86,6 @@ private:
             }
         }
     }
-    void rpodfs(Temp_Temp x) {
-        if (rpovis.count(x)) return;
-        rpovis.insert(x);
-        for (auto nx : ssaEdge[x]) { rpodfs(nx); }
-        rpomp[x] = ++rpoNum;
-    }
-    void callRPO() {}
     void push(int x) {
         stk.push_back(x);
         ons[x] = 1;
@@ -124,17 +120,15 @@ private:
     }
     bool isiv(IR::Exp* exp) {
         if (exp->kind == IR::expType::temp) {
-            return ivrmp.count(static_cast<IR::Temp*>(exp)->tempid);
+            auto tid = static_cast<IR::Temp*>(exp)->tempid;
+            if (header.count(tid)) return false;
+            return header[tid] != -1;
         }
         return false;
     }
     bool isrc(Temp_Temp x, int hder) {
-
         auto db = tempDefBlockMap[x];
-        for (auto jt : gp->CDnode[hder]) {
-            if (jt == db) return true;
-        }
-        return false;
+        return lnt->is_StrictlyDominate(db, hder);
     }
     bool isrc(IR::Exp* x, int hder) {
         if (x->kind == IR::expType::constx) return true;
@@ -145,18 +139,31 @@ private:
         if (x.kind == RCT::C) return new IR::Const(x.val);
         return new IR::Temp(x.val);
     }
-    bool IsCandidateOperation(IR::Exp* exp, int hder) {
+    bool IsCandidateOperation(IR::Exp* exp) {
         switch (exp->kind) {
         case IR::expType::binop: {
             auto bop = static_cast<IR::Binop*>(exp);
             switch (bop->op) {
             case IR::binop::T_mul:  // fall through
             case IR::binop::T_plus: {
-                return (isiv(bop->left) && isrc(bop->right, hder))
-                       || (isiv(bop->right) && isrc(bop->left, hder));
+                int v1 = isiv(bop->left), v2 = isiv(bop->right);
+                int c1 = 0, c2 = 0;
+                if (v1) {
+                    c2 = isrc(bop->right, header[static_cast<IR::Temp*>(bop->left)->tempid]);
+                    return c2;
+                } else if (v2) {
+                    c1 = isrc(bop->right, header[static_cast<IR::Temp*>(bop->right)->tempid]);
+                    return c1;
+                }
+                return false;
             }
             case IR::binop::T_minus: {
-                return isiv(bop->left) && isrc(bop->right, hder);
+                int v1 = isiv(bop->left), c2;
+                if (v1) {
+                    c2 = isrc(bop->right, header[static_cast<IR::Temp*>(bop->left)->tempid]);
+                    return c2;
+                }
+                return false;
             }
             default: return false;
             }
@@ -178,34 +185,37 @@ private:
         default: assert(0);
         }
     }
-    IVentry getIVentry(IR::Exp* exp, int hder) {
-        switch (exp->kind) {
-        case IR::expType::binop: {
-            auto bop = static_cast<IR::Binop*>(exp);
-            switch (bop->op) {
-            case IR::binop::T_mul:  // fall through
-            case IR::binop::T_plus: {
-                if (isiv(bop->left) && isrc(bop->right, hder)) {
-                    return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid, getRC(bop->right)};
-                }
-                if (isiv(bop->right) && isrc(bop->left, hder)) {
-                    return {bop->op, static_cast<IR::Temp*>(bop->right)->tempid, getRC(bop->left)};
-                }
-                assert(0);
-            }
-            case IR::binop::T_minus: {
-                if (isiv(bop->left) && isrc(bop->right, hder)) {
-                    return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid, getRC(bop->right)};
-                }
-            }
-            default: assert(0);
-            }
-        }
-        case IR::expType::temp: {
-            return {IR::binop::T_plus, static_cast<IR::Temp*>(exp)->tempid, {RCT::C, 0}};
-        }
-        default: assert(0);
-        }
+    IVentry getIVentry(IR::Exp* exp) {
+        // switch (exp->kind) {
+        // case IR::expType::binop: {
+        //     auto bop = static_cast<IR::Binop*>(exp);
+        //     switch (bop->op) {
+        //     case IR::binop::T_mul:  // fall through
+        //     case IR::binop::T_plus: {
+        //         if (isiv(bop->left) && isrc(bop->right, hder)) {
+        //             return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid,
+        //             getRC(bop->right)};
+        //         }
+        //         if (isiv(bop->right) && isrc(bop->left, hder)) {
+        //             return {bop->op, static_cast<IR::Temp*>(bop->right)->tempid,
+        //             getRC(bop->left)};
+        //         }
+        //         assert(0);
+        //     }
+        //     case IR::binop::T_minus: {
+        //         if (isiv(bop->left) && isrc(bop->right, hder)) {
+        //             return {bop->op, static_cast<IR::Temp*>(bop->left)->tempid,
+        //             getRC(bop->right)};
+        //         }
+        //     }
+        //     default: assert(0);
+        //     }
+        // }
+        // case IR::expType::temp: {
+        //     return {IR::binop::T_plus, static_cast<IR::Temp*>(exp)->tempid, {RCT::C, 0}};
+        // }
+        // default: assert(0);
+        // }
     }
     bool IsUpdateValid(IR::Stm* stm) {
         auto src = static_cast<IR::Move*>(stm)->src;
@@ -214,7 +224,7 @@ private:
             auto bi = static_cast<IR::Binop*>(src);
             if (bi->op == IR::binop::T_plus || bi->op == IR::binop::T_minus) return true;
             return false;
-        case IR::expType::call: auto cl = static_cast<IR::Call*>(src); return cl->fun[0] == '$';
+        case IR::expType::call: return isphifunc(stm);
         case IR::expType::temp: return true;
         default: return false;
         }
@@ -223,8 +233,8 @@ private:
         if (N.size() == 1) {
             auto nb = *N.begin();
             auto src = static_cast<IR::Move*>(tempDefMap[nb]->stm)->src;
-            if (IsCandidateOperation(src, tempDefBlockMap[nb])) {
-                Replace(nb, tempDefBlockMap[nb]);
+            if (IsCandidateOperation(src)) {
+                Replace(nb);
             } else
                 header[nb] = -1;
         } else
@@ -265,12 +275,12 @@ private:
                 int bl1 = tempDefBlockMap[x.iv];
                 int bl2 = tempDefBlockMap[x.rc.val];
                 int lb = bl2;
-                for (auto it : gp->CDnode[bl1]) {
-                    if (it == bl2) {
-                        lb = bl1;
-                        break;
-                    }
-                }
+                // for (auto it : gp->CDnode[bl1]) {
+                //     if (it == bl2) {
+                //         lb = bl1;
+                //         break;
+                //     }
+                // }
                 auto stml = (IR::StmList*)(ir->nodes()->at(lb)->info);
                 IR::StmList* tg = 0;
                 while (stml) {
@@ -304,9 +314,9 @@ private:
 
         return res;
     }
-    void Replace(Temp_Temp x, int hder) {
+    void Replace(Temp_Temp x) {
         auto df = static_cast<IR::Move*>(tempDefMap[x]->stm)->src;
-        auto iventry = getIVentry(df, hder);
+        auto iventry = getIVentry(df);
         auto nx = Reduce(iventry);
         for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
         header[x] = header[iventry.iv];
@@ -314,10 +324,11 @@ private:
     void ClassifyIV(unordered_set<int>& N) {
         bool IsIV = true;
         int hder = *N.begin();
-        int lw = rpomp[hder];
+        int lw = lnt->Block_Dfsnum(tempDefBlockMap[hder]);
         for (auto it : N) {
-            if (rpomp[it] < lw) {
-                lw = rpomp[it];
+            auto nx = lnt->Block_Dfsnum(tempDefBlockMap[it]);
+            if (nx < lw) {
+                lw = nx;
                 hder = it;
             }
         }
@@ -337,8 +348,8 @@ private:
             for (auto it : N) { header[it] = hder; }
         } else {
             for (auto it : N) {
-                if (IsCandidateOperation(static_cast<IR::Move*>(tempDefMap[it]->stm)->src, hder)) {
-                    Replace(it, hder);
+                if (IsCandidateOperation(static_cast<IR::Move*>(tempDefMap[it]->stm)->src)) {
+                    Replace(it);
                 } else
                     header[it] = -1;
             }
@@ -359,7 +370,7 @@ private:
     unordered_map<Temp_Temp, vector<Temp_Temp>> ssaEdge;
     map<IVentry, Temp_Temp> ivmp;
     map<Temp_Temp, IVentry> ivrmp;
-    CDG::CDgraph* gp;
+    DFSCFG::Loop_Nesting_Tree* lnt;
 };
 void SSA::Optimizer::strengthReduction() {
     auto tt = OSR(ir);
