@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             ssa->mergeNode();
-            ssa->loops.findLoop();
+            ssa->loops.loopUnroll();
         }
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);

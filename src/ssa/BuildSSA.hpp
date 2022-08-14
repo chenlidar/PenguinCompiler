@@ -138,6 +138,14 @@ class Loop {
 public:
     Loop() {}
     void findLoop();
+    struct LoopInfo{
+        bool canUnroll;
+        int begin,end,step,times;
+        int inducetemp;
+    };
+    LoopInfo analyse(int loopHead);
+    void loopUnroll();
+    std::pair<bool,std::pair<int,int>> findCircle(int block,int temp);
     SSAIR* ir;
     std::map<int, std::set<int>> loops;
     std::vector<int> parent;
