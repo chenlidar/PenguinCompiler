@@ -39,6 +39,10 @@ public:
                           vector<Stm*>& ls) {
         assert(0);
     }
+    virtual Stm* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 class Exp {
 public:
@@ -53,6 +57,10 @@ public:
                           vector<Stm*>& ls) {
         assert(0);
     }
+    virtual Exp* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 class Seq : public Stm {
 public:
@@ -66,6 +74,10 @@ public:
     void printIR() { assert(0); }
     void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Stm* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 class Label : public Stm {
 public:
@@ -79,6 +91,10 @@ public:
     void printIR();
     void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Stm* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 class Jump : public Stm {
 public:
@@ -92,6 +108,10 @@ public:
     void printIR();
     void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Stm* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 class Cjump : public Stm {
 public:
@@ -107,6 +127,10 @@ public:
     void printIR();
     void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Stm* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 class Move : public Stm {
 public:
@@ -120,6 +144,7 @@ public:
     void printIR();
     void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Stm* dCopy();
 };
 class ExpStm : public Stm {
 public:
@@ -133,6 +158,7 @@ public:
     void printIR();
     void deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Stm* dCopy();
 };
 
 class Const : public Exp {
@@ -147,6 +173,7 @@ public:
     void printIR();
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy();
 };
 
 class Binop : public Exp {
@@ -159,6 +186,7 @@ public:
     void printIR();
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy();
 };
 class Temp : public Exp {
 public:
@@ -172,6 +200,7 @@ public:
     void printIR();
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy();
 };
 class Mem : public Exp {
 public:
@@ -185,6 +214,7 @@ public:
     void printIR();
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy();
 };
 class Eseq : public Exp {
 public:
@@ -199,6 +229,10 @@ public:
     void printIR() { assert(0); }
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy() {
+        assert(0);
+        return nullptr;
+    }
 };
 // TBD TODO:
 class Name : public Exp {
@@ -213,6 +247,7 @@ public:
     void printIR();
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy();
 };
 class Call : public Exp {
 public:
@@ -227,6 +262,7 @@ public:
     void printIR();
     Exp* deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<string, string>& lbmp,
                   unordered_set<Temp_Label>& venv, vector<Stm*>& ls);
+    Exp* dCopy();
 };
 struct PatchList {
     Temp_Label* head;

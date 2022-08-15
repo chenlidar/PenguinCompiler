@@ -42,6 +42,26 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";
             *globalArray << ".space " + std::to_string(entry->ty->arraysize * 4) << std::endl;
+            Temp_Label tl = Temp_newlabel(), fl = Temp_newlabel();
+            Temp_Temp itemp = Temp_newtemp();
+            tail->tail = new IR::StmList(
+                new IR::Move(new IR::Temp(itemp), new IR::Const(entry->ty->arraysize - 1)),
+                new IR::StmList(
+                    new IR::Label(tl),
+                    new IR::StmList(
+                        new IR::Move(new IR::Mem(new IR::Binop(
+                                         IR::binop::T_plus, new IR::Name(name),
+                                         new IR::Binop(IR::binop::T_mul, new IR::Const(4),
+                                                       new IR::Temp(itemp)))),
+                                     new IR::Const(0)),
+                        new IR::StmList(
+                            new IR::Move(new IR::Temp(itemp),
+                                         new IR::Binop(IR::binop::T_minus, new IR::Temp(itemp),
+                                                       new IR::Const(1))),
+                            new IR::StmList(new IR::Cjump(IR::RelOp::T_ge, new IR::Temp(itemp),
+                                                          new IR::Const(0), tl, fl),
+                                            new IR::StmList(new IR::Label(fl), nullptr))))));
+            tail = getEnd(tail);
             for (int i = 0; i < entry->ty->arraysize; i++) {
                 if (*(entry->ty->value + i) == 0) continue;
                 tail = tail->tail = new IR::StmList(
@@ -162,7 +182,7 @@ int main(int argc, char** argv) {
         bool ismain = funcname == "main";
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 6; i++) {
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
             ssa->opt.combExp();
@@ -174,6 +194,8 @@ int main(int argc, char** argv) {
             ssa->opt.CME();
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
+            ssa->mergeNode();
+            ssa->loops.loopUnroll();
         }
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);

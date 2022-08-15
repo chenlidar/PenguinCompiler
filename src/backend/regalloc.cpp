@@ -54,12 +54,12 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                         emit(new ASM::Oper("`mov `d0,#" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
-                        Temp_TempList ll = Temp_TempList(1, 11);
-                        ll.push_back(constTemp);
-                        emit(new ASM::Oper("sub `d0,`s0,`s1", Temp_TempList(1, constTemp), ll,
-                                           Temp_LabelList()));
-                        emit(new ASM::Oper("ldr `d0,[`s0]", Temp_TempList(1, newtemp),
-                                           Temp_TempList(1, constTemp), Temp_LabelList()));
+                        // Temp_TempList ll = Temp_TempList(1, 11);
+                        // ll.push_back(constTemp);
+                        // emit(new ASM::Oper("sub `d0,`s0,`s1", Temp_TempList(1, constTemp), ll,
+                        //                    Temp_LabelList()));
+                        emit(new ASM::Oper("ldr `d0,[`s0,-`s1]", Temp_TempList(1, newtemp),
+                                           Temp_TempList({11, constTemp}), Temp_LabelList()));
                     }
                 }
             }
@@ -86,15 +86,15 @@ static ASM::InstrList* RA_Spill(ASM::InstrList* il, const COLOR::COL_result* cr,
                         emit(new ASM::Oper("`mov `d0,#" + std::to_string(offset),
                                            Temp_TempList(1, constTemp), Temp_TempList(),
                                            Temp_LabelList()));
-                        Temp_TempList ll = Temp_TempList(1, 11);
-                        ll.push_back(constTemp);
-                        emit(new ASM::Oper("sub `d0,`s0,`s1", Temp_TempList(1, constTemp), ll,
-                                           Temp_LabelList()));
-                        ll.clear();
-                        ll.push_back(newtemp);
-                        ll.push_back(constTemp);
-                        emit(
-                            new ASM::Oper("str `s0,[`s1]", Temp_TempList(), ll, Temp_LabelList()));
+                        // Temp_TempList ll = Temp_TempList(1, 11);
+                        // ll.push_back(constTemp);
+                        // emit(new ASM::Oper("sub `d0,`s0,`s1", Temp_TempList(1, constTemp), ll,
+                        //                    Temp_LabelList()));
+                        // ll.clear();
+                        // ll.push_back(newtemp);
+                        // ll.push_back(constTemp);
+                        emit(new ASM::Oper("str `s0,[`s1, -`s2]", Temp_TempList(),
+                                           {newtemp, 11, constTemp}, Temp_LabelList()));
                     }
                 }
             }

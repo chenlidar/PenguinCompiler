@@ -1245,3 +1245,32 @@ Exp* Call::deepCopy(unordered_map<Temp_Temp, Temp_Temp>& tpmp, unordered_map<str
     for (auto it : args) nwa.push_back(it->deepCopy(tpmp, lbmp, venv, ls));
     return new Call(fun, nwa);
 }
+
+//
+Stm* Move::dCopy() {
+    return new Move(dst->dCopy(), src->dCopy());
+}
+Stm* ExpStm::dCopy() {
+    return new ExpStm(exp->dCopy());
+}
+Exp* Const::dCopy() {
+    return new Const(val);
+}
+Exp* Binop::dCopy() {
+    return new Binop(op, left->dCopy(),
+                     right->dCopy());
+}
+Exp* Temp::dCopy() {
+    return new Temp(tempid);
+}
+Exp* Mem::dCopy() {
+    return new Mem(mem->dCopy());
+}
+Exp* Name::dCopy() {
+    return new Name(name);
+}
+Exp* Call::dCopy() {
+    vector<Exp*> nwa;
+    for (auto it : args) nwa.push_back(it->dCopy());
+    return new Call(fun, nwa);
+}

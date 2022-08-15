@@ -135,6 +135,23 @@ private:
     int findGV(const Biexp& biexp);
     CDG::CDgraph* cdg;
 };
+class Loop {
+public:
+    Loop():loops(),doneloop(),parent(){}
+    void findLoop();
+    struct LoopInfo{
+        bool canUnroll,isConst;
+        int begin,end,step,times;
+        int inducetemp;
+    };
+    LoopInfo analyse(int loopHead);
+    void loopUnroll();
+    std::pair<bool,std::pair<int,int>> findCircle(int block,int temp);
+    SSAIR* ir;
+    std::map<int, std::set<int>> loops;
+    std::set<int> doneloop;
+    std::vector<int> parent;
+};
 class SSAIR : public CFG::CFGraph {
 public:
     SSAIR(CANON::Block blocks);
@@ -153,6 +170,7 @@ public:
     SSA::Optimizer opt;
     Temp_Label endlabel;
     DTREE::Dtree* dtree;
+    Loop loops;
 
 private:
     std::map<Temp_Temp, std::vector<int>> defsites;
