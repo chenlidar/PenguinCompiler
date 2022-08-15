@@ -183,6 +183,12 @@ int main(int argc, char** argv) {
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
         for (int i = 0; i < 6; i++) {
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+            // ssa->showmark();
+            ssa->opt.strengthReduction();
+            // ssa->showmark();
+
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
             ssa->opt.combExp();

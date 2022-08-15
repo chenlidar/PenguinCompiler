@@ -52,9 +52,9 @@ public:
     OSR(SSA::SSAIR* t) {
         ir = t;
         buildSSAGraph();
+        // ir->showmark();
         auto ttmp = DFSCFG::Loop_Nesting_Tree(ir);
         lnt = &ttmp;
-
         nextNum = 0;
         nodesz = tempDefMap.size();
         for (auto i : tempDefMap) {
@@ -84,6 +84,7 @@ private:
                         ssaEdge[tid].push_back({static_cast<IR::Temp*>(*jt)->tempid, *jt});
                     }
                 }
+                stml = stml->tail;
             }
         }
     }
@@ -108,7 +109,9 @@ private:
                 DFS(tid);
                 Low[x] = min(Low[x], Low[tid]);
             }
-            if (Num[tid] < Num[x] && ons[tid]) { Low[x] = min(Low[x], Num[tid]); }
+            if (Num[tid] < Num[x] && (ons.count(tid) && ons[tid])) {
+                Low[x] = min(Low[x], Num[tid]);
+            }
         }
         if (Low[x] == Num[x]) {
             unordered_set<int> SCC;
@@ -362,8 +365,8 @@ private:
     unordered_set<Temp_Temp> rpovis;
     int rpoNum;
     unordered_map<Temp_Temp, int> rpomp;
-    unordered_map<Temp_Temp, int> vis, Num, Low, header;
-    vector<Temp_Temp> stk, ons;
+    unordered_map<Temp_Temp, int> vis, Num, Low, header, ons;
+    vector<Temp_Temp> stk;
     unordered_map<Temp_Temp, IR::StmList*> tempDefMap;
     unordered_map<Temp_Temp, int> tempDefBlockMap;
     unordered_map<Temp_Temp, vector<IR::Exp*>> uselog;

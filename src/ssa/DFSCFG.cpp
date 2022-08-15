@@ -42,8 +42,8 @@ void Loop_Nesting_Tree::buildTree() {  // before this, make sure initHead have d
 
     for (auto& i : vec) { dfsBuild(i, i); }
 
-    std::cerr << "[Loop Nesting Tree]"
-              << "Build the tree, done." << std::endl;
+    // std::cerr << "[Loop Nesting Tree]"
+    //           << "Build the tree, done." << std::endl;
 }
 
 void Loop_Nesting_Tree::dfsBuild(GRAPH::Node* n, GRAPH::Node* head) {
@@ -75,8 +75,8 @@ void Loop_Nesting_Tree::initHead() {
     std::unordered_set<GRAPH::Node*> instk;
     int dfn = 0;
     dfsHead((*(graph_attached->nodes()))[0], instk, dfn);  // I think mynodes[0] is the root
-    std::cerr << "[Loop Nesting Tree]"
-              << "Initiate the loop-head, done." << std::endl;
+    // std::cerr << "[Loop Nesting Tree]"
+    //           << "Initiate the loop-head, done." << std::endl;
 }
 
 void Loop_Nesting_Tree::dfsHead(GRAPH::Node* n, std::unordered_set<GRAPH::Node*>& instk,
