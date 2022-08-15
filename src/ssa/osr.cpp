@@ -223,7 +223,7 @@ private:
         auto nt = Temp_newtemp();
         ivmp[tmp] = nt;
         IR::Exp* src = (static_cast<IR::Move*>(tempDefMap[tmp.iv]->stm)->src);
-        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->quad()), 0);
+        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->deepCopy()), 0);
         ssaEdge[nt] = ssaEdge[tmp.iv];
         header[nt] = header[tmp.iv];
         for (auto it : ssaEdge[nt]) {
