@@ -14,7 +14,7 @@ CDgraph::CDgraph(CFG::CFGraph* g) {
     dtree = new DTREE::Dtree(this, exitnum);
     dtree->computeDF();
     CDnode = std::vector<std::vector<int>>(nodecount, std::vector<int>());
-    for (int i = 0; i <= exitnum; i++) { bfs(i); }
+    for (int i = 0; i <nodecount; i++) { bfs(i); }
 }
 void CDgraph::bfs(int node) {
     std::vector<bool> vis(this->nodecount, false);
