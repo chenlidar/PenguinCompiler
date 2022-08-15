@@ -73,6 +73,7 @@
         "compare": "cpp",
         "concepts": "cpp",
         "ranges": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "*.sy": "cpp"
     }
 }
