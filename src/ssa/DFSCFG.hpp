@@ -47,6 +47,7 @@ private:
         DfsInfo(int _dfn, int _siz)
             : dfsnum(_dfn)
             , size(_siz) {}
+        DfsInfo() {}
     };
     std::unordered_set<GRAPH::Node*> visit;
     std::unordered_map<GRAPH::Node*, DfsInfo> dfsinfo;

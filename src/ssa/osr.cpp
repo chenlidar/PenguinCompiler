@@ -57,7 +57,7 @@ public:
 
         nextNum = 0;
         nodesz = tempDefMap.size();
-        for (auto& i : tempDefMap) {
+        for (auto i : tempDefMap) {
             if (!vis.count(i.first)) { DFS(i.first); }
         }
 
@@ -197,13 +197,20 @@ private:
     bool IsUpdateValid(IR::Stm* stm) {
         auto src = static_cast<IR::Move*>(stm)->src;
         switch (src->kind) {
-        case IR::expType::binop:
+        case IR::expType::binop: {
             auto bi = static_cast<IR::Binop*>(src);
             if (bi->op == IR::binop::T_plus || bi->op == IR::binop::T_minus) return true;
             return false;
-        case IR::expType::call: return isphifunc(stm);
-        case IR::expType::temp: return true;
-        default: return false;
+        }
+        case IR::expType::call: {
+            return isphifunc(stm);
+        }
+        case IR::expType::temp: {
+            return true;
+        }
+        default: {
+            return false;
+        }
         }
     }
     void Process(unordered_set<int>& N) {
@@ -357,8 +364,8 @@ private:
     unordered_map<Temp_Temp, int> rpomp;
     unordered_map<Temp_Temp, int> vis, Num, Low, header;
     vector<Temp_Temp> stk, ons;
-    vector<Temp_Temp, IR::StmList*> tempDefMap;
-    vector<Temp_Temp, int> tempDefBlockMap;
+    unordered_map<Temp_Temp, IR::StmList*> tempDefMap;
+    unordered_map<Temp_Temp, int> tempDefBlockMap;
     unordered_map<Temp_Temp, vector<IR::Exp*>> uselog;
     unordered_map<Temp_Temp, vector<pair<Temp_Temp, IR::Exp*>>> ssaEdge;
     map<IVentry, Temp_Temp> ivmp;
