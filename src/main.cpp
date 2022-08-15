@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);
         //
-        // if (ismain) showir(ir);
+        // if (funcname=="detect_item") showir(ir);
         RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(ir)->body, isvoid, ismain), stksize);
     }
 

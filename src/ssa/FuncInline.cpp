@@ -6,6 +6,55 @@ std::vector<std::string> FuncInline::functionInline() {
     for (auto funcname : func_name) { analyse(funcname); }
     // inline
     for (auto funcname : func_name) {
+        // do return callself
+        IR::StmList* in_ir = func_info[funcname].ir;
+        IR::StmList* head = new IR::StmList(nullptr, nullptr);
+        IR::StmList* tail = head;
+        std::vector<IR::StmList*> stmv;
+        for (auto list = in_ir; list; list = list->tail) {
+            IR::Stm* stm = list->stm;
+            if (isNop(stm)) continue;
+            stmv.push_back(list);
+        }
+        bool isrec = false;
+        for (int i = 0; i < stmv.size();) {
+            IR::Stm* stm = stmv[i]->stm;
+            bool isvalrtn = isCall(stm) && getCallName(stm) == funcname && i + 1 < stmv.size()
+                            && i + 2 < stmv.size()
+                            && isReturn(stm, stmv[i + 1]->stm, stmv[i + 2]->stm);
+            bool isvoidrtn = isCall(stm) && getCallName(stm) == funcname && i + 1 < stmv.size()
+                             && isReturn(stmv[i + 1]->stm);
+            if (isvalrtn || isvoidrtn) {  // do return replace
+                int cnt = 0;
+                IR::ExpList paramv = getCallParam(stm);
+                for (auto list = func_info[funcname].ir; list; list = list->tail) {
+                    IR::Stm* stmm = list->stm;
+                    if (stmm->kind == IR::stmType::label
+                        && static_cast<IR::Label*>(stmm)->label == "BEGIN_" + funcname)
+                        break;
+                    if (stmm->kind == IR::stmType::move
+                        && ((static_cast<IR::Move*>(stmm)->src->kind == IR::expType::temp
+                             && static_cast<IR::Temp*>(static_cast<IR::Move*>(stmm)->src)->tempid
+                                    < 4)
+                            || static_cast<IR::Move*>(stmm)->src->kind == IR::expType::mem)) {
+                        int dst
+                            = static_cast<IR::Temp*>(static_cast<IR::Move*>(stmm)->dst)->tempid;
+                        tail = tail->tail = new IR::StmList(
+                            new IR::Move(new IR::Temp(dst), paramv[cnt]), nullptr);
+                        cnt++;
+                    }
+                }
+                assert(cnt == paramv.size());
+                tail = tail->tail = new IR::StmList(new IR::Jump("BEGIN_" + funcname), nullptr);
+
+            } else {
+                if (isCall(stm) && getCallName(stm) == funcname) isrec = true;
+                tail = tail->tail = stmv[i];
+            }
+            i += isvalrtn ? 3 : (isvoidrtn ? 2 : 1);
+        }
+        func_info[funcname].ir = head->tail;
+        func_info[funcname].isrec = isrec;
         auto funcPos = getInlinePos(funcname);
         // do inline
         for (auto func : funcPos) {
@@ -18,19 +67,13 @@ std::vector<std::string> FuncInline::functionInline() {
             std::unordered_map<int, int> temp_map;
             std::unordered_map<std::string, std::string> label_map;
             assert(in_ir);
-            in_ir = in_ir->deepCopy(glabel, -func_info[funcname].stksize, temp_map,
+            in_ir = in_ir->deepCopy(glabel, -func_info[funcname].stksize + 64, temp_map,
                                     label_map);  // copy without param
             IR::StmList *param_in = new IR::StmList(nullptr, nullptr), *tail;
             tail = param_in;
-            int cnt = 0;
-            IR::ExpList paramv;
             IR::Stm* oldstm = func.second->stm;
-            if (oldstm->kind == IR::stmType::exp) {
-                paramv = static_cast<IR::Call*>(static_cast<IR::ExpStm*>(oldstm)->exp)->args;
-            } else {
-                paramv
-                    = static_cast<IR::Call*>(static_cast<IR::Move*>(func.second->stm)->src)->args;
-            }
+            int cnt = 0;
+            IR::ExpList paramv = getCallParam(oldstm);
             for (auto list = func_info[func.first].ir; list; list = list->tail) {
                 IR::Stm* stm = list->stm;
                 if (stm->kind == IR::stmType::label
@@ -63,7 +106,7 @@ std::vector<std::string> FuncInline::functionInline() {
             tail->tail = func.second->tail;
             func.second->tail = param_in->tail;
             func.second->stm = nopStm();
-            func_info[funcname].stksize += func_info[func.first].stksize;
+            func_info[funcname].stksize += func_info[func.first].stksize - 64;
         }
     }
     for (auto funcname : func_name) {
@@ -104,14 +147,15 @@ std::vector<std::pair<std::string, IR::StmList*>> FuncInline::getInlinePos(std::
     for (auto it : func_info[funcname].callpos) {
         std::string fn = it.first;
         if (func_info[it.first].isrec) continue;
-        if (!func_info[funcname].isrec && func_info[it.first].stksize + stksizesum < maxstk) {
+        if (!func_info[funcname].isrec && func_info[it.first].stksize - 64 + stksizesum < maxstk) {
             result.push_back(it);
-            stksizesum += func_info[it.first].stksize;
+            stksizesum += func_info[it.first].stksize - 64;
         } else if (func_info[funcname].isrec
-                   && func_info[it.first].stksize + stksizesum <= 2 * func_info[funcname].stksize
+                   && func_info[it.first].stksize - 64 + stksizesum
+                          <= 10 * func_info[funcname].stksize
                    && func_info[it.first].length < func_info[funcname].length) {
             result.push_back(it);
-            stksizesum += func_info[it.first].stksize;
+            stksizesum += func_info[it.first].stksize - 64;
         }
     }
     return result;

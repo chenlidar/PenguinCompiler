@@ -295,6 +295,45 @@ static std::string getCallName(IR::Exp* callexp) {
     assert(callexp->kind == IR::expType::call);
     return static_cast<IR::Call*>(callexp)->fun;
 }
+static std::string getCallName(IR::Stm* callstm) {
+    IR::Exp* exp = nullptr;
+    if (callstm->kind == IR::stmType::exp) {
+        exp = static_cast<IR::ExpStm*>(callstm)->exp;
+    } else if (callstm->kind == IR::stmType::move) {
+        exp = static_cast<IR::Move*>(callstm)->src;
+    } else
+        assert(0);
+    return getCallName(exp);
+}
+static IR::ExpList getCallParam(IR::Exp* callexp) {
+    assert(callexp->kind == IR::expType::call);
+    return static_cast<IR::Call*>(callexp)->args;
+}
+static IR::ExpList getCallParam(IR::Stm* callstm) {
+    IR::Exp* exp = nullptr;
+    if (callstm->kind == IR::stmType::exp) {
+        exp = static_cast<IR::ExpStm*>(callstm)->exp;
+    } else if (callstm->kind == IR::stmType::move) {
+        exp = static_cast<IR::Move*>(callstm)->src;
+    } else
+        assert(0);
+    return getCallParam(exp);
+}
+static bool isReturn(IR::Stm* stm){
+    return stm->kind==IR::stmType::jump&&static_cast<IR::Jump*>(stm)->target.find("RETURN3124")!=-1;
+}
+static bool isReturn(IR::Stm* stm1,IR::Stm* stm2,IR::Stm* stm3){
+    if(stm2->kind!=IR::stmType::move)return false;
+    IR::Move* mv=static_cast<IR::Move*>(stm2);
+    if(mv->src->kind!=IR::expType::temp||mv->dst->kind!=IR::expType::temp)return false;
+    int dst=static_cast<IR::Temp*>(mv->dst)->tempid;
+    int src=static_cast<IR::Temp*>(mv->src)->tempid;
+    if(dst!=0)return false;
+    if(stm1->kind!=IR::stmType::move)return false;
+    IR::Move* mv1=static_cast<IR::Move*>(stm1);
+    if(mv1->dst->kind!=IR::expType::temp||static_cast<IR::Temp*>(mv1->dst)->tempid!=src)return false;
+    return isReturn(stm3);
+}
 static std::pair<int, int> exp2int(IR::Exp* x) {
     if (x->kind == IR::expType::constx) return {1, static_cast<IR::Const*>(x)->val};
     if (x->kind == IR::expType::binop) {

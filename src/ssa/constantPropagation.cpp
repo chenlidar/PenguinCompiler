@@ -90,13 +90,13 @@ private:
     void cutEdge(int from, int to) {
         int cnt = 0;
         auto toNode = nodes->at(to);
+        for (auto jt : ir->prednode[to]) {
+            if (jt == from) { break; }
+            cnt++;
+        }
+        assert(cnt != ir->prednode[to].size());
+        ir->prednode[to].erase(ir->prednode[to].begin() + cnt);
         if (ir->Aphi[to].size()) {
-            for (auto jt : ir->prednode[to]) {
-                if (jt == from) { break; }
-                cnt++;
-            }
-            assert(cnt != ir->prednode[to].size());
-            ir->prednode[to].erase(ir->prednode[to].begin() + cnt);
             // jt to modify the phi func
             for (auto jt : ir->Aphi[to]) {
                 auto src = (static_cast<IR::Move*>(jt.second->stm))->src;
