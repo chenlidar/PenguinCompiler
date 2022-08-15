@@ -16,6 +16,7 @@ using std::function;
 using std::map;
 using std::min;
 using std::move;
+using std::pair;
 using std::queue;
 using std::unordered_map;
 using std::unordered_set;
@@ -80,7 +81,7 @@ private:
                     tempDefMap[tid] = stml;
                     tempDefBlockMap[tid] = it->mykey;
                     for (auto jt : uses) {
-                        ssaEdge[tid].push_back(static_cast<IR::Temp*>(*jt)->tempid);
+                        ssaEdge[tid].push_back({static_cast<IR::Temp*>(*jt)->tempid, *jt});
                     }
                 }
             }
@@ -102,11 +103,12 @@ private:
         Low[x] = Num[x];
         push(x);
         for (auto it : ssaEdge[x]) {
-            if (!vis[it]) {
-                DFS(it);
-                Low[x] = min(Low[x], Low[it]);
+            auto tid = it.first;
+            if (!vis[tid]) {
+                DFS(tid);
+                Low[x] = min(Low[x], Low[tid]);
             }
-            if (Num[it] < Num[x] && ons[it]) { Low[x] = min(Low[x], Num[it]); }
+            if (Num[tid] < Num[x] && ons[tid]) { Low[x] = min(Low[x], Num[tid]); }
         }
         if (Low[x] == Num[x]) {
             unordered_set<int> SCC;
@@ -223,60 +225,70 @@ private:
         auto nt = Temp_newtemp();
         ivmp[tmp] = nt;
         IR::Exp* src = (static_cast<IR::Move*>(tempDefMap[tmp.iv]->stm)->src);
-        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->deepCopy()), 0);
+        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->dCopy()), 0);
         ssaEdge[nt] = ssaEdge[tmp.iv];
         header[nt] = header[tmp.iv];
         for (auto it : ssaEdge[nt]) {
-            if (header[it] == header[tmp.iv]) {
-                auto nx = Reduce({tmp.op, it, tmp.rc});
-                for (auto jt : uselog[it]) static_cast<IR::Temp*>(jt)->tempid = nx;
+            auto tid = it.first;
+            if (header.count(tid) && header[tid] == header[tmp.iv]) {
+                auto nx = Reduce({tmp.op, tid, tmp.rc});
+                static_cast<IR::Temp*>(it.second)->tempid = nx;
             } else if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
-                auto nx = Apply({tmp.op, it, tmp.rc});
-                for (auto jt : uselog[it]) static_cast<IR::Temp*>(jt)->tempid = nx;
+                auto nx = Apply(tmp.op, {RCT::T, tid}, tmp.rc);
+                static_cast<IR::Temp*>(it.second)->tempid = nx;
             }
         }
         return nt;
     }
-    Temp_Temp Apply(IVentry x) {
+    Temp_Temp Apply(IR::binop op, RegionConst op1, RegionConst op2) {
+        IVentry x = {op, op1.val, op2};
         if (ivmp.count(x)) return ivmp[x];
         int res;
-        if (header[x.iv] != -1 && isrc(x.rc.val, header[x.iv])) {
+        if (header[op1.val] != -1
+            && (op2.kind == RCT::C
+                || (op2.kind == RCT::T && isrc(op2.val, header[op1.val]).kind != RCT::E))) {
             res = Reduce(x);
-        } else if (x.rc.kind == RCT::T && header[x.rc.val] != -1 && isrc(x.iv, header[x.rc.val])) {
+        } else if (x.rc.kind == RCT::T && header[x.rc.val] != -1
+                   && isrc(x.iv, header[x.rc.val]).kind != RCT::E) {
             res = Reduce({x.op, x.rc.val, {RCT::T, x.iv}});
         } else {
             res = Temp_newtemp();
             ivmp[x] = res;
             if (x.rc.kind == RCT::T) {
+
                 int bl1 = tempDefBlockMap[x.iv];
                 int bl2 = tempDefBlockMap[x.rc.val];
-                int lb = bl2;
-                // for (auto it : gp->CDnode[bl1]) {
-                //     if (it == bl2) {
-                //         lb = bl1;
-                //         break;
-                //     }
-                // }
+                int lb;
+                int flag = 0;
+                if (lnt->Block_Dfsnum(bl1) < lnt->Block_Dfsnum(bl2)) {
+                    lb = bl2;
+                    flag = 1;
+                } else if (lnt->Block_Dfsnum(bl1) > lnt->Block_Dfsnum(bl2)) {
+                    lb = bl1;
+                    flag = 1;
+                } else {
+                    lb = bl1;
+                    flag = 0;
+                }
                 auto stml = (IR::StmList*)(ir->nodes()->at(lb)->info);
-                IR::StmList* tg = 0;
                 while (stml) {
                     auto df = getDef(stml->stm);
                     if (df) {
                         auto tid = static_cast<IR::Temp*>(*df)->tempid;
-                        if (tid == x.iv) {
-                            tg = stml;
-                        } else if (tid == x.rc.val) {
-                            tg = stml;
+                        if (tid == x.rc.val || tid == x.iv) {
+                            if (!flag) {
+                                flag = 1;
+                                continue;
+                            }
+                            stml->tail = new IR::StmList(
+                                new IR::Move(new IR::Temp(res),
+                                             new IR::Binop(x.op, new IR::Temp(x.iv),
+                                                           new IR::Temp(x.rc.val))),
+                                stml->tail);
+                            break;
                         }
                     }
                 }
-                assert(tg);
-                auto nt = new IR::StmList(
-                    new IR::Move(new IR::Temp(res),
-                                 new IR::Binop(x.op, new IR::Temp(x.iv), rc2exp(x.rc))),
-                    tg->tail);
-                tg->tail = nt;
-
             } else {
                 auto tt = tempDefMap[x.iv];
                 auto nt = new IR::StmList(
@@ -285,7 +297,7 @@ private:
                     tt->tail);
                 tt->tail = nt;
             }
-            //????
+            header[res] = -1;
         }
 
         return res;
@@ -294,6 +306,11 @@ private:
         assert(ive.iv != -1);
         auto nx = Reduce(ive);
         for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
+        tempDefMap[x]->stm = tempDefMap[nx]->stm;
+        if (isphifunc(tempDefMap[x]->stm)) {
+            ir->Aphi[tempDefBlockMap[x]].erase(x);
+            ir->Aphi[tempDefBlockMap[x]].insert({nx, tempDefMap[x]});
+        }
         header[x] = header[ive.iv];
     }
     void ClassifyIV(unordered_set<int>& N) {
@@ -312,7 +329,7 @@ private:
                 IsIV = false;
             } else {
                 for (auto nx : ssaEdge[it]) {
-                    if (!N.count(nx) && isrc(nx, hder).kind != RCT::E) {
+                    if (!N.count(nx.first) && isrc(nx.first, hder).kind != RCT::E) {
                         IsIV = false;
                         break;
                     }
@@ -343,7 +360,7 @@ private:
     vector<Temp_Temp, IR::StmList*> tempDefMap;
     vector<Temp_Temp, int> tempDefBlockMap;
     unordered_map<Temp_Temp, vector<IR::Exp*>> uselog;
-    unordered_map<Temp_Temp, vector<Temp_Temp>> ssaEdge;
+    unordered_map<Temp_Temp, vector<pair<Temp_Temp, IR::Exp*>>> ssaEdge;
     map<IVentry, Temp_Temp> ivmp;
     map<Temp_Temp, IVentry> ivrmp;
     DFSCFG::Loop_Nesting_Tree* lnt;
