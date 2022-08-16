@@ -31,13 +31,13 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
         }
         Temp_Label name = static_cast<TY::GloVar*>(entry)->label;
         switch (entry->ty->kind) {
-        case TY::tyType::Ty_int: {
-            assert(entry->ty->value);
-            *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
-        } break;
+        case TY::tyType::Ty_int:
         case TY::tyType::Ty_float: {
             assert(entry->ty->value);
             *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
+            tail = tail->tail = new IR::StmList(
+                new IR::Move(new IR::Mem(new IR::Name(name)), new IR::Const(*entry->ty->value)),
+                nullptr);
         } break;
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);
         //
-        // if (funcname=="detect_item") showir(ir);
+        // if (ismain) showir(ir);
         RA::RA_RegAlloc(CANON::funcEntryExit2(&IR::ir2asm(ir)->body, isvoid, ismain), stksize);
     }
 

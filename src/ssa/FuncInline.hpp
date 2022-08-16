@@ -48,5 +48,6 @@ private:
     Table::Stable<TY::EnFunc*>* fenv;
     void analyse(std::string name);
     std::vector<std::pair<std::string, IR::StmList*>> getInlinePos(std::string funcname);
+    bool G2Lvar();
 };
 }  // namespace INTERP

@@ -109,10 +109,15 @@ std::vector<std::string> FuncInline::functionInline() {
             func_info[funcname].stksize += func_info[func.first].stksize - 64;
         }
     }
-    for (auto funcname : func_name) {
-        if (func_info[funcname].calledNum == 0) continue;
-        result.push_back(funcname);
-    }
+    // global var to local var
+    bool nocall = G2Lvar();
+    if (nocall)
+        result.push_back("main");
+    else
+        for (auto funcname : func_name) {
+            if (func_info[funcname].calledNum == 0) continue;
+            result.push_back(funcname);
+        }
     return result;
 }
 void FuncInline::analyse(std::string funcname) {
@@ -125,11 +130,7 @@ void FuncInline::analyse(std::string funcname) {
         func_info[funcname].length += 1;
         IR::Stm* stm = stmlist->stm;
         if (isCall(stm)) {
-            std::string calledfunc;
-            if (stm->kind == IR::stmType::exp)
-                calledfunc = getCallName(static_cast<IR::ExpStm*>(stm)->exp);
-            else
-                calledfunc = getCallName(static_cast<IR::Move*>(stm)->src);
+            std::string calledfunc = getCallName(stm);
             if (funcname == calledfunc)
                 func_info[funcname].isrec = true;
             else if (func_info.count(calledfunc)) {
@@ -159,5 +160,54 @@ std::vector<std::pair<std::string, IR::StmList*>> FuncInline::getInlinePos(std::
         }
     }
     return result;
+}
+bool FuncInline::G2Lvar() {
+    IR::StmList* stmlist = func_info["main"].ir;
+    bool nocall = true;
+    for (auto list = stmlist; list; list = list->tail) {
+        IR::Stm* stm = list->stm;
+        if (isCall(stm) && func_info.count(getCallName(stm))) {
+            nocall = false;
+            break;
+        }
+    }
+    if (!nocall) return false;
+    // replace Gvar
+    std::unordered_map<std::string, int> nameMap;
+    for (auto it = venv->begin(); it != venv->end(); ++it) {
+        TY::Entry* entry = venv->look(it->first);
+        assert(entry && entry->kind == TY::tyEntry::Ty_global);
+        if (entry->ty->isconst) {
+            assert(entry->ty->kind != TY::tyType::Ty_array);
+            continue;  // const
+        }
+        if (entry->ty->kind == TY::tyType::Ty_array) continue;
+        Temp_Label name = static_cast<TY::GloVar*>(entry)->label;
+        nameMap.insert({name, Temp_newtemp()});
+    }
+    for (auto list = stmlist; list; list = list->tail) {
+        IR::Stm* stm = list->stm;
+        if(stm->kind!=IR::stmType::move)continue;
+        IR::Move* mv=static_cast<IR::Move*>(stm);
+        if (isLdr(stm)) {
+            IR::Mem* mm=static_cast<IR::Mem*>(mv->src);
+            if(mm->mem->kind==IR::expType::name){
+                std::string name=static_cast<IR::Name*>(mm->mem)->name;
+                if(nameMap.count(name)){
+                    mv->src=new IR::Temp(nameMap[name]);
+                }
+            }
+        }
+        else if(isStr(stm)){
+            IR::Mem* mm=static_cast<IR::Mem*>(mv->dst);
+            if(mm->mem->kind==IR::expType::name){
+                std::string name=static_cast<IR::Name*>(mm->mem)->name;
+                if(nameMap.count(name)){
+                    mv->dst=new IR::Temp(nameMap[name]);
+                }
+            }
+        }
+    }
+    return true;
 }
 }  // namespace INTERP
