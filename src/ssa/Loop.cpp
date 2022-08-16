@@ -143,12 +143,16 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
     }
     info.begin = rtn.second.first;
     info.step = rtn.second.second;
-    if(info.begin.kind!=IR::expType::constx)info.isConst=false;
+    if (abs(info.step) > 1e7) {
+        info.canUnroll = false;
+        return info;
+    }
+    if (info.begin.kind != IR::expType::constx) info.isConst = false;
     if (!info.isConst) {
         info.canUnroll = true;
         return info;
     }
-    assert(info.begin.kind==IR::expType::constx&&info.end.kind==IR::expType::constx);
+    assert(info.begin.kind == IR::expType::constx && info.end.kind == IR::expType::constx);
     // cal times.loop until temp relop end
     int bd = info.end.val - info.begin.val;
     switch (rel) {
@@ -200,12 +204,12 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
 }
 bool Loop::loopUnroll() {
     findLoop();
-    bool done=false;
+    bool done = false;
     for (auto loop : loops) {
         if (doneloop.count(loop.first)) continue;
         LoopInfo info = analyse(loop.first);
         if (!info.canUnroll) continue;
-        done=true;
+        done = true;
         int precnt = 0;
         for (auto pred : ir->prednode[loop.first]) {
             if (!loop.second.count(pred)) break;
@@ -319,7 +323,7 @@ bool Loop::loopUnroll() {
              *      |
              *   loophead
              */
-            // std::cerr << info.begin.val << "!!!\n";
+            // std::cerr << static_cast<int>(info.begin.kind) << info.begin.val << "!!!\n";
             // std::cerr<<"VARLOOP\n";
             // unlink prenode node
             ir->rmEdge(ir->mynodes[prenode], ir->mynodes[loop.first]);
@@ -332,13 +336,12 @@ bool Loop::loopUnroll() {
             int tt = Temp_newtemp();
             IR::StmList* block1 = new IR::StmList(
                 new IR::Label(label1),
-                new IR::StmList(
-                    new IR::Move(new IR::Temp(tt),
-                                 new IR::Binop(IR::binop::T_plus, info.end.toExp(),
-                                               new IR::Const(-4 * info.step))),
-                    new IR::StmList(new IR::Cjump(cmp->op, info.begin.toExp(),
-                                                  new IR::Temp(tt), label3, label2),
-                                    nullptr)));
+                new IR::StmList(new IR::Move(new IR::Temp(tt),
+                                             new IR::Binop(IR::binop::T_plus, info.end.toExp(),
+                                                           new IR::Const(-4 * info.step))),
+                                new IR::StmList(new IR::Cjump(cmp->op, info.begin.toExp(),
+                                                              new IR::Temp(tt), label3, label2),
+                                                nullptr)));
             int block1num = ir->nodecount;
             ir->addNode(block1);
             ir->blocklabel.push_back(block1);
