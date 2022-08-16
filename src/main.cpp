@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
         bool ismain = funcname == "main";
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 5; i++) {
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
             ssa->opt.combExp();
@@ -195,7 +195,8 @@ int main(int argc, char** argv) {
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             ssa->mergeNode();
-            ssa->loops.loopUnroll();
+            bool cc = ssa->loops.loopUnroll();
+            if (cc) i -= 5;
         }
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);

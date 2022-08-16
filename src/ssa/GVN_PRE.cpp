@@ -24,12 +24,12 @@ void Optimizer::buildTable() {
     tmp_gen = std::vector<std::unordered_set<int>>(ir->nodecount, std::unordered_set<int>());
     buildAvail();
     anticIn = std::vector<std::list<Biexp>>(ir->nodecount, std::list<Biexp>());
-    anticIn_map = std::vector<std::unordered_map<int, SSA::Optimizer::Biexp>>(
-        ir->nodecount, std::unordered_map<int, SSA::Optimizer::Biexp>());
+    anticIn_map = std::vector<std::unordered_map<int, SSA::Biexp>>(
+        ir->nodecount, std::unordered_map<int, SSA::Biexp>());
     buildAntic();
 }
 void Optimizer::buildAvail() { buildAvail(0, -1); }
-Optimizer::Biexp Optimizer::U2Biexp(IR::Exp* e) {
+Biexp Optimizer::U2Biexp(IR::Exp* e) {
     IR::Const const_temp = IR::Const(0);
     return Biexp(IR::binop::T_plus, e, &const_temp);
 }
