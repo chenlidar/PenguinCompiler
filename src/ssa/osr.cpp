@@ -46,6 +46,47 @@ struct IVentry {
         return false;
     }
 };
+std::vector<pair<RegionConst, IR::Exp**>> getOps(IR::Stm* stm) {
+    std::vector<pair<RegionConst, IR::Exp**>> uses;
+    auto gexp = [&](IR::Exp*& x) {
+        switch (x->kind) {
+        case IR::expType::constx: {
+            uses.push_back({{RCT::C, static_cast<IR::Const*>(x)->val}, &x});
+            break;
+        }
+        case IR::expType::temp: {
+            uses.push_back({{RCT::C, static_cast<IR::Temp*>(x)->tempid}, &x});
+            break;
+        }
+        case IR::expType::name: {
+            assert(0);
+        }
+        default: assert(0);
+        }
+    };
+    switch (stm->kind) {
+    case IR::stmType::move: {
+        auto movsrc = static_cast<IR::Move*>(stm)->src;
+        switch (movsrc->kind) {
+        case IR::expType::binop: {
+            auto bop = static_cast<IR::Binop*>(movsrc);
+            gexp(bop->left);
+            gexp(bop->right);
+            break;
+        }
+        case IR::expType::call: {
+            auto cal = static_cast<IR::Call*>(movsrc);
+            for (auto& it : cal->args) { gexp(it); }
+            break;
+        }
+        default: assert(0);
+        }
+        break;
+    }
+    default: assert(0);
+    }
+    return (uses);
+}
 
 class OSR {
 public:
@@ -229,32 +270,62 @@ private:
             ClassifyIV(N);
     }
     Temp_Temp Reduce(IVentry tmp) {
+
+        // std::cerr << "REDUCE:" << (int)(tmp.op) << ' ' << tmp.iv << ' ' << (int)(tmp.rc.kind)
+        //           << ' ' << tmp.rc.val << '\n';
+
         // auto df = (static_cast<IR::Move*>(tempDefMap[x]->stm))->src;
         // auto tmp = getIVentry(df);
         if (ivmp.count(tmp)) { return ivmp[tmp]; }
         auto nt = Temp_newtemp();
+
         ivmp[tmp] = nt;
         IR::Exp* src = (static_cast<IR::Move*>(tempDefMap[tmp.iv]->stm)->src);
-        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->dCopy()), 0);
-        ssaEdge[nt] = ssaEdge[tmp.iv];
+        auto ivtail = tempDefMap[tmp.iv]->tail;
+        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->dCopy()), ivtail);
+        tempDefBlockMap[nt] = tempDefBlockMap[tmp.iv];
+        if (isphifunc(tempDefMap[nt]->stm)) { ir->Aphi[tempDefBlockMap[nt]][nt] = tempDefMap[nt]; }
+        tempDefMap[tmp.iv]->tail = tempDefMap[nt];
+
         header[nt] = header[tmp.iv];
-        for (auto it : ssaEdge[nt]) {
-            auto tid = it.first;
-            if (header.count(tid) && header[tid] == header[tmp.iv]) {
-                auto nx = Reduce({tmp.op, tid, tmp.rc});
-                static_cast<IR::Temp*>(it.second)->tempid = nx;
-            } else if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
-                auto nx = Apply(tmp.op, {RCT::T, tid}, tmp.rc);
-                static_cast<IR::Temp*>(it.second)->tempid = nx;
+
+        // tempDefMap[nt]->stm->printIR();
+        auto uses = getOps(tempDefMap[nt]->stm);
+
+        for (auto it : uses) {
+            if (it.first.kind == RCT::C) {
+                if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
+                    auto nx = Apply(tmp.op, it.first, tmp.rc);
+                    *(it.second) = new IR::Temp(nx);
+                }
+            } else if (it.first.kind == RCT::T) {
+                auto tid = it.first.val;
+                ssaEdge[nt].push_back({tid, *(it.second)});
+                if (header.count(tid) && header[tid] == header[tmp.iv]) {
+                    auto nx = Reduce({tmp.op, tid, tmp.rc});
+                    static_cast<IR::Temp*>(*(it.second))->tempid = nx;
+                } else if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
+                    auto nx = Apply(tmp.op, it.first, tmp.rc);
+                    static_cast<IR::Temp*>(*(it.second))->tempid = nx;
+                }
+            } else {
+                assert(0);
             }
         }
         return nt;
     }
     Temp_Temp Apply(IR::binop op, RegionConst op1, RegionConst op2) {
+        int res;
+        if (op1.kind == RCT::C && op2.kind == RCT::C) {
+            res = Temp_newtemp();
+
+            return res;
+        }
+        assert(op1.kind == RCT::T);
         IVentry x = {op, op1.val, op2};
         if (ivmp.count(x)) return ivmp[x];
-        int res;
-        if (header[op1.val] != -1
+
+        if (op1.kind == RCT::T && header[op1.val] != -1
             && (op2.kind == RCT::C
                 || (op2.kind == RCT::T && isrc(op2.val, header[op1.val]).kind != RCT::E))) {
             res = Reduce(x);
@@ -295,6 +366,9 @@ private:
                                              new IR::Binop(x.op, new IR::Temp(x.iv),
                                                            new IR::Temp(x.rc.val))),
                                 stml->tail);
+
+                            std::cerr << "ins\n";
+                            stml->tail->stm->printIR();
                             break;
                         }
                     }
@@ -305,6 +379,10 @@ private:
                     new IR::Move(new IR::Temp(res),
                                  new IR::Binop(x.op, new IR::Temp(x.iv), rc2exp(x.rc))),
                     tt->tail);
+
+                std::cerr << "ins\n";
+                nt->stm->printIR();
+
                 tt->tail = nt;
             }
             header[res] = -1;
@@ -315,13 +393,18 @@ private:
     void Replace(Temp_Temp x, IVentry ive) {
         assert(ive.iv != -1);
         auto nx = Reduce(ive);
+
+        // tempDefMap[x]->stm->printIR();
+        // tempDefMap[nx]->stm->printIR();
         for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
-        tempDefMap[x]->stm = tempDefMap[nx]->stm;
         if (isphifunc(tempDefMap[x]->stm)) {
             ir->Aphi[tempDefBlockMap[x]].erase(x);
-            ir->Aphi[tempDefBlockMap[x]].insert({nx, tempDefMap[x]});
+            std::cerr << "erase " << x << '\n';
         }
-        header[x] = header[ive.iv];
+        tempDefMap[x]->stm = nopStm();
+        tempDefBlockMap.erase(x);
+        tempDefMap.erase(x);
+        header[nx] = header[ive.iv];
     }
     void ClassifyIV(unordered_set<int>& N) {
         bool IsIV = true;
@@ -359,6 +442,26 @@ private:
         }
     }
 
+public:
+    void checkphi() {
+        auto nodes = ir->nodes();
+        for (const auto& it : (*nodes)) {
+            auto stml = static_cast<IR::StmList*>(it->info);
+            int cnt = 0;
+            while (stml) {
+                auto stm = stml->stm;
+                if (isphifunc(stm)) {
+                    cnt++;
+                    auto df = getDef(stm);
+                    auto tid = static_cast<IR::Temp*>(*df)->tempid;
+                    assert(ir->Aphi[it->mykey].count(tid));
+                }
+                stml = stml->tail;
+            }
+            assert(cnt >= ir->Aphi[it->mykey].size());
+        }
+    }
+
 private:
     SSA::SSAIR* ir;
     int nextNum, nodesz;
@@ -377,5 +480,6 @@ private:
 };
 void SSA::Optimizer::strengthReduction() {
     auto tt = OSR(ir);
+    // tt.checkphi();
     return;
 }

@@ -182,27 +182,29 @@ int main(int argc, char** argv) {
         bool ismain = funcname == "main";
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-        for (int i = 0; i < 6; i++) {
-            ssa->opt.constantPropagation();
-            ssa->opt.deadCodeElimilation();
-            // ssa->showmark();
-            ssa->opt.strengthReduction();
-            // ssa->showmark();
+        ssa->opt.constantPropagation();
+        ssa->opt.deadCodeElimilation();
+        ssa->showmark();
+        std::cerr << "-----------------\n";
+        ssa->opt.strengthReduction();
+        ssa->showmark();
+        std::cerr << "-----------------\n";
+        // for (int i = 0; i < 6; i++) {
 
-            ssa->opt.deadCodeElimilation();
-            ssa->opt.constantPropagation();
-            ssa->opt.combExp();
-            ssa->opt.deadCodeElimilation();
-            ssa->opt.constantPropagation();
-            ssa->opt.PRE();
-            ssa->opt.constantPropagation();
-            ssa->opt.deadCodeElimilation();
-            ssa->opt.CME();
-            ssa->opt.constantPropagation();
-            ssa->opt.deadCodeElimilation();
-            ssa->mergeNode();
-            ssa->loops.loopUnroll();
-        }
+        //     ssa->opt.deadCodeElimilation();
+        //     ssa->opt.constantPropagation();
+        //     ssa->opt.combExp();
+        //     ssa->opt.deadCodeElimilation();
+        //     ssa->opt.constantPropagation();
+        //     ssa->opt.PRE();
+        //     ssa->opt.constantPropagation();
+        //     ssa->opt.deadCodeElimilation();
+        //     ssa->opt.CME();
+        //     ssa->opt.constantPropagation();
+        //     ssa->opt.deadCodeElimilation();
+        //     ssa->mergeNode();
+        //     ssa->loops.loopUnroll();
+        // }
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);
         //
