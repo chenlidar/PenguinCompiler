@@ -137,7 +137,16 @@ void FuncInline::analyse(std::string funcname) {
                 func_info[funcname].callNum += 1;
                 func_info[calledfunc].calledNum += 1;
                 func_info[funcname].callpos.push_back({calledfunc, stmlist});
+                for(auto name:func_info[calledfunc].Gvar)func_info[funcname].Gvar.insert(name);
             }
+        }
+        if(isStr(stm)){
+            IR::Exp* exp=static_cast<IR::Mem*>(static_cast<IR::Move*>(stm)->dst)->mem;
+            if(exp->kind==IR::expType::name)func_info[funcname].Gvar.insert(static_cast<IR::Name*>(exp)->name);
+        }
+        else if(isLdr(stm)){
+            IR::Exp* exp=static_cast<IR::Mem*>(static_cast<IR::Move*>(stm)->src)->mem;
+            if(exp->kind==IR::expType::name)func_info[funcname].Gvar.insert(static_cast<IR::Name*>(exp)->name);
         }
     }
 }
@@ -162,17 +171,6 @@ std::vector<std::pair<std::string, IR::StmList*>> FuncInline::getInlinePos(std::
     return result;
 }
 bool FuncInline::G2Lvar() {
-    IR::StmList* stmlist = func_info["main"].ir;
-    bool nocall = true;
-    for (auto list = stmlist; list; list = list->tail) {
-        IR::Stm* stm = list->stm;
-        if (isCall(stm) && func_info.count(getCallName(stm))) {
-            nocall = false;
-            break;
-        }
-    }
-    if (!nocall) return false;
-    // replace Gvar
     std::unordered_map<std::string, int> nameMap;
     for (auto it = venv->begin(); it != venv->end(); ++it) {
         TY::Entry* entry = venv->look(it->first);
@@ -185,6 +183,18 @@ bool FuncInline::G2Lvar() {
         Temp_Label name = static_cast<TY::GloVar*>(entry)->label;
         nameMap.insert({name, Temp_newtemp()});
     }
+    IR::StmList* stmlist = func_info["main"].ir;
+    bool nocall = true;
+    for (auto list = stmlist; list; list = list->tail) {
+        IR::Stm* stm = list->stm;
+        if (isCall(stm) && func_info.count(getCallName(stm))) {
+            nocall = false;
+            std::string callname=getCallName(stm);
+            for(auto it:func_info[callname].Gvar)nameMap.erase(it);
+        }
+    }
+    // if (!nocall) return false;
+    // replace Gvar
     for (auto list = stmlist; list; list = list->tail) {
         IR::Stm* stm = list->stm;
         if(stm->kind!=IR::stmType::move)continue;
@@ -208,6 +218,6 @@ bool FuncInline::G2Lvar() {
             }
         }
     }
-    return true;
+    return nocall;
 }
 }  // namespace INTERP
