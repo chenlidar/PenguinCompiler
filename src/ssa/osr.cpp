@@ -100,10 +100,10 @@ public:
         lnt = &ttmp;
         nextNum = 0;
         nodesz = tempDefMap.size();
-        for (auto i : tempDefMap) {
-            if (!vis.count(i.first)) { DFS(i.first); }
-        }
-
+        vector<Temp_Temp> ns;
+        for (auto i : tempDefMap) { ns.push_back(i.first); }
+        for (auto it : ns)
+            if (!vis.count(it)) { DFS(it); }
         lnt = 0;
     }
 
@@ -287,17 +287,18 @@ private:
         ivmp[tmp] = nt;
         IR::Exp* src = (static_cast<IR::Move*>(tempDefMap[tmp.iv.val]->stm)->src);
         auto ivtail = tempDefMap[tmp.iv.val]->tail;
-        tempDefMap[nt] = new StmList(new IR::Move(new IR::Temp(nt), src->dCopy()), ivtail);
+        auto dfnt = new StmList(new IR::Move(new IR::Temp(nt), src->dCopy()), ivtail);
+        tempDefMap[nt] = dfnt;
         tempDefBlockMap[nt] = tempDefBlockMap[tmp.iv.val];
-        if (isphifunc(tempDefMap[nt]->stm)) { ir->Aphi[tempDefBlockMap[nt]][nt] = tempDefMap[nt]; }
-        tempDefMap[tmp.iv.val]->tail = tempDefMap[nt];
+        if (isphifunc(dfnt->stm)) { ir->Aphi[tempDefBlockMap[nt]][nt] = dfnt; }
+        tempDefMap[tmp.iv.val]->tail = dfnt;
         header[nt] = header[tmp.iv.val];
 
-        auto uses = getOps(tempDefMap[nt]->stm);
+        auto uses = getOps(dfnt->stm);
 
         for (auto it : uses) {
             if (it.first.kind == RCT::C) {
-                if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
+                if (tmp.op == IR::binop::T_mul || isphifunc(dfnt->stm)) {
                     auto nx = Apply(tmp.op, it.first, tmp.rc);
                     *(it.second) = new IR::Temp(nx);
                 }
@@ -307,7 +308,7 @@ private:
                 if (header.count(tid) && header[tid] == header[tmp.iv.val]) {
                     auto nx = Reduce({tmp.op, {RCT::T, tid}, tmp.rc});
                     static_cast<IR::Temp*>(*(it.second))->tempid = nx;
-                } else if (tmp.op == IR::binop::T_mul || isphifunc(tempDefMap[nt]->stm)) {
+                } else if (tmp.op == IR::binop::T_mul || isphifunc(dfnt->stm)) {
                     auto nx = Apply(tmp.op, it.first, tmp.rc);
                     static_cast<IR::Temp*>(*(it.second))->tempid = nx;
                 }
@@ -387,9 +388,9 @@ private:
             ir->Aphi[tempDefBlockMap[x]].erase(x);
             std::cerr << "erase " << x << '\n';
         }
-        tempDefMap[x]->stm = nopStm();
-        tempDefBlockMap.erase(x);
-        tempDefMap.erase(x);
+        // tempDefMap[x]->stm = nopStm();
+        // tempDefBlockMap.erase(x);
+        // tempDefMap.erase(x);
         header[nx] = header[ive.iv.val];
     }
     void ClassifyIV(unordered_set<int>& N) {

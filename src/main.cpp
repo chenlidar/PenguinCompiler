@@ -184,11 +184,13 @@ int main(int argc, char** argv) {
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
         ssa->opt.constantPropagation();
         ssa->opt.deadCodeElimilation();
-        ssa->showmark();
-        std::cerr << "-----------------\n";
+        // ssa->showmark();
+        // std::cerr << "-----------------\n";
         ssa->opt.strengthReduction();
-        ssa->showmark();
-        std::cerr << "-----------------\n";
+        // ssa->showmark();
+        // std::cerr << "-----------------\n";
+        ssa->opt.constantPropagation();
+        ssa->opt.deadCodeElimilation();
         // for (int i = 0; i < 6; i++) {
 
         //     ssa->opt.deadCodeElimilation();
