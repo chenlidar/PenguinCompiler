@@ -31,13 +31,13 @@ IR::StmList* handleGlobalVar(std::ostringstream* globalVar, std::ostringstream* 
         }
         Temp_Label name = static_cast<TY::GloVar*>(entry)->label;
         switch (entry->ty->kind) {
-        case TY::tyType::Ty_int: {
-            assert(entry->ty->value);
-            *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
-        } break;
+        case TY::tyType::Ty_int:
         case TY::tyType::Ty_float: {
             assert(entry->ty->value);
             *globalVar << name + ":\n" + ".word " + std::to_string(*entry->ty->value) << std::endl;
+            tail = tail->tail = new IR::StmList(
+                new IR::Move(new IR::Mem(new IR::Name(name)), new IR::Const(*entry->ty->value)),
+                nullptr);
         } break;
         case TY::tyType::Ty_array: {  // int
             *globalArray << name + ":\n";
@@ -182,9 +182,7 @@ int main(int argc, char** argv) {
         bool ismain = funcname == "main";
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-
-        for (int i = 0; i < 6; i++) {
-
+        for (int i = 0; i < 5; i++) {
             ssa->opt.deadCodeElimilation();
             ssa->opt.constantPropagation();
             ssa->opt.combExp();
@@ -197,7 +195,7 @@ int main(int argc, char** argv) {
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             ssa->mergeNode();
-            ssa->loops.loopUnroll();
+            bool cc = ssa->loops.loopUnroll();
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             // ssa->showmark();
@@ -207,6 +205,7 @@ int main(int argc, char** argv) {
             // std::cerr << "-----------------\n";
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
+            if (cc) i -= 5;
         }
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);

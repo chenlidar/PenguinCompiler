@@ -96,26 +96,26 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
     }
     IR::RelOp rel = cjump->op;
     if (cjump->left->kind == IR::expType::constx && cjump->right->kind == IR::expType::temp) {
-        info.end = static_cast<IR::Const*>(cjump->left)->val;
+        info.end = Uexp(cjump->left);
         info.inducetemp = static_cast<IR::Temp*>(cjump->right)->tempid;
         info.isConst = true;
         rel = notRel(rel);
         cjump->left = new IR::Temp(info.inducetemp);
-        cjump->right = new IR::Const(info.end);
+        cjump->right = info.end.toExp();
         cjump->op = rel;
     } else if (cjump->right->kind == IR::expType::constx
                && cjump->left->kind == IR::expType::temp) {
-        info.end = static_cast<IR::Const*>(cjump->right)->val;
+        info.end = Uexp(cjump->right);
         info.inducetemp = static_cast<IR::Temp*>(cjump->left)->tempid;
         info.isConst = true;
     } else if (cjump->left->kind == IR::expType::temp && cjump->right->kind == IR::expType::temp) {
         int ltmp = static_cast<IR::Temp*>(cjump->left)->tempid;
         int rtmp = static_cast<IR::Temp*>(cjump->right)->tempid;
         if (!defset.count(rtmp)) {
-            info.end = rtmp;
+            info.end = Uexp(cjump->right);
             info.inducetemp = ltmp;
         } else if (!defset.count(ltmp)) {
-            info.end = ltmp;
+            info.end = Uexp(cjump->left);
             info.inducetemp = rtmp;
             rel = notRel(rel);
             cjump->left = new IR::Temp(rtmp);
@@ -143,15 +143,21 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
     }
     info.begin = rtn.second.first;
     info.step = rtn.second.second;
+    if (abs(info.step) > 1e7) {
+        info.canUnroll = false;
+        return info;
+    }
+    if (info.begin.kind != IR::expType::constx) info.isConst = false;
     if (!info.isConst) {
         info.canUnroll = true;
         return info;
     }
+    assert(info.begin.kind == IR::expType::constx && info.end.kind == IR::expType::constx);
     // cal times.loop until temp relop end
-    int bd = info.end - info.begin;
+    int bd = info.end.val - info.begin.val;
     switch (rel) {
     case RelOp::T_ge: {
-        if (info.begin >= info.end || info.step <= 0) {
+        if (info.begin.val >= info.end.val || info.step <= 0) {
             info.canUnroll = false;
             return info;
         }
@@ -159,7 +165,7 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
         if (info.times * info.step < bd) info.times += 1;
     } break;
     case RelOp::T_gt: {
-        if (info.begin > info.end || info.step <= 0) {
+        if (info.begin.val > info.end.val || info.step <= 0) {
             info.canUnroll = false;
             return info;
         }
@@ -167,7 +173,7 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
         if (info.times * info.step <= bd) info.times += 1;
     } break;
     case RelOp::T_le: {
-        if (info.begin <= info.end || info.step >= 0) {
+        if (info.begin.val <= info.end.val || info.step >= 0) {
             info.canUnroll = false;
             return info;
         }
@@ -175,7 +181,7 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
         if (info.times * -info.step < -bd) info.times += 1;
     } break;
     case RelOp::T_lt: {
-        if (info.begin < info.end || info.step >= 0) {
+        if (info.begin.val < info.end.val || info.step >= 0) {
             info.canUnroll = false;
             return info;
         }
@@ -196,12 +202,14 @@ Loop::LoopInfo Loop::analyse(int loopHead) {
     info.canUnroll = true;
     return info;
 }
-void Loop::loopUnroll() {
+bool Loop::loopUnroll() {
     findLoop();
+    bool done = false;
     for (auto loop : loops) {
         if (doneloop.count(loop.first)) continue;
         LoopInfo info = analyse(loop.first);
         if (!info.canUnroll) continue;
+        done = true;
         int precnt = 0;
         for (auto pred : ir->prednode[loop.first]) {
             if (!loop.second.count(pred)) break;
@@ -214,6 +222,7 @@ void Loop::loopUnroll() {
         IR::StmList *head = new IR::StmList(nullptr, nullptr), *tail;
         tail = head;
         if (info.isConst) {
+            // std::cerr<<"CONSTLOOP\n";
             // delnode stm to loopnode
             for (auto list = ir->blocklabel[delnode]; list; list = list->tail) {
                 if (list->stm->kind == IR::stmType::label || list->stm->kind == IR::stmType::jump)
@@ -314,7 +323,8 @@ void Loop::loopUnroll() {
              *      |
              *   loophead
              */
-            // std::cerr << info.end << "!!!\n";
+            // std::cerr << static_cast<int>(info.begin.kind) << info.begin.val << "!!!\n";
+            // std::cerr<<"VARLOOP\n";
             // unlink prenode node
             ir->rmEdge(ir->mynodes[prenode], ir->mynodes[loop.first]);
             // add new node
@@ -323,24 +333,28 @@ void Loop::loopUnroll() {
             Temp_Label label3 = Temp_newlabel();
             Temp_Label looplabel = static_cast<IR::Label*>(ir->blocklabel[loop.first]->stm)->label;
             IR::Cjump* cmp = static_cast<IR::Cjump*>(ir->blockjump[loop.first]->stm);
+            int tt = Temp_newtemp();
             IR::StmList* block1 = new IR::StmList(
                 new IR::Label(label1),
-                new IR::StmList(new IR::Cjump(cmp->op, new IR::Const(info.begin + 4 * info.step),
-                                              new IR::Temp(info.end), label3, label2),
-                                nullptr));
+                new IR::StmList(new IR::Move(new IR::Temp(tt),
+                                             new IR::Binop(IR::binop::T_plus, info.end.toExp(),
+                                                           new IR::Const(-4 * info.step))),
+                                new IR::StmList(new IR::Cjump(cmp->op, info.begin.toExp(),
+                                                              new IR::Temp(tt), label3, label2),
+                                                nullptr)));
             int block1num = ir->nodecount;
             ir->addNode(block1);
             ir->blocklabel.push_back(block1);
-            ir->blockjump.push_back(block1->tail);
+            ir->blockjump.push_back(block1->tail->tail);
             ir->prednode.push_back({prenode});
             ir->orig.push_back(std::set<Temp_Temp>());
             ir->addEdge(ir->mynodes[prenode], ir->mynodes[block1num]);
-            int tt = Temp_newtemp();
+            tt = Temp_newtemp();
             IR::StmList* block2 = new IR::StmList(
                 new IR::Label(label2),
                 new IR::StmList(
                     new IR::Move(new IR::Temp(tt),
-                                 new IR::Binop(IR::binop::T_plus, new IR::Temp(info.end),
+                                 new IR::Binop(IR::binop::T_plus, info.end.toExp(),
                                                new IR::Const(-4 * info.step))),
                     new IR::StmList(new IR::Cjump(cmp->op, new IR::Temp(info.inducetemp),
                                                   new IR::Temp(tt), label3, label2),
@@ -452,8 +466,9 @@ void Loop::loopUnroll() {
             doneloop.insert(loop.first);
         }
     }
+    return done;
 }
-std::pair<bool, std::pair<int, int>> Loop::findCircle(int block, int ctemp) {
+std::pair<bool, std::pair<Uexp, int>> Loop::findCircle(int block, int ctemp) {
     int precnt = 0;
     for (auto pred : ir->prednode[block]) {
         if (!loops[block].count(pred)) break;
@@ -464,7 +479,8 @@ std::pair<bool, std::pair<int, int>> Loop::findCircle(int block, int ctemp) {
     std::vector<IR::Stm*> v;
     for (; stmlist; stmlist = stmlist->tail) { v.push_back(stmlist->stm); }
     int endtemp = -1, nwtemp = ctemp;
-    int step = 0, begin = 0;
+    int step = 0;
+    Uexp begin;
     for (int i = v.size() - 1; i >= 0; i--) {
         IR::Stm* stm = v[i];
         if (!isphifunc(stm) && !ismovebi(stm)) continue;
@@ -474,11 +490,10 @@ std::pair<bool, std::pair<int, int>> Loop::findCircle(int block, int ctemp) {
         if (dsttemp != nwtemp) continue;
         if (isphifunc(stm)) {
             ExpList& params = static_cast<IR::Call*>(static_cast<IR::Move*>(stm)->src)->args;
-            if (params[precnt]->kind == IR::expType::constx
-                && params[1 - precnt]->kind == IR::expType::temp
+            if (params[1 - precnt]->kind == IR::expType::temp
                 && static_cast<IR::Temp*>(params[1 - precnt])->tempid == ctemp) {
                 endtemp = dsttemp;
-                begin = static_cast<IR::Const*>(params[precnt])->val;
+                begin = Uexp(params[precnt]);
             }
             break;
         } else {

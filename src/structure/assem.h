@@ -49,26 +49,43 @@ struct Oper : public Instr {
                     p = i + 1;
                     break;
                 }
+                if (out[i] == '@') {
+                    p = i + 1;
+                    break;
+                }
             }
             assert(p != -1);
-            int x = std::stoi(out.substr(p, len - p));
             std::string s = "`mov";
-            if (x <= 256 && x >= 0) {
-                out = out.replace(out.find(s), s.size(), "mov");
-                std::cout << out << std::endl;
-            } else if (x < 0 && x >= -257) {
-                out = out.substr(0, p);
-                out = out.replace(out.find(s), s.size(), "mvn") + to_string(-x - 1);
-                std::cout << out << std::endl;
-            } else {
-                auto out1 = out.substr(0, p), out2 = out.substr(0, p);
-                out1 = out1.replace(out1.find(s), s.size(), "movw") + ":lower16:" + to_string(x);
-                std::cout << out1 << std::endl;
-                if (!(x >= 0 && x <= 65535)) {
-                    out2 = out2.replace(out2.find(s), s.size(), "movt")
-                           + ":upper16:" + to_string(x);
-                    std::cout << out2 << std::endl;
+            if (out[p - 1] == '#') {
+                int x = std::stoi(out.substr(p, len - p));
+
+                if (x <= 256 && x >= 0) {
+                    out = out.replace(out.find(s), s.size(), "mov");
+                    std::cout << out << std::endl;
+                } else if (x < 0 && x >= -257) {
+                    out = out.substr(0, p);
+                    out = out.replace(out.find(s), s.size(), "mvn") + to_string(-x - 1);
+                    std::cout << out << std::endl;
+                } else {
+                    auto out1 = out.substr(0, p), out2 = out.substr(0, p);
+                    out1 = out1.replace(out1.find(s), s.size(), "movw")
+                           + ":lower16:" + to_string(x);
+                    std::cout << out1 << std::endl;
+                    if (!(x >= 0 && x <= 65535)) {
+                        out2 = out2.replace(out2.find(s), s.size(), "movt")
+                               + ":upper16:" + to_string(x);
+                        std::cout << out2 << std::endl;
+                    }
                 }
+            } else {
+                out[p - 1] = '#';
+                auto out1 = out.substr(0, p), out2 = out.substr(0, p);
+                out1 = out1.replace(out1.find(s), s.size(), "movw")
+                       + ":lower16:" + out.substr(p, len - p);
+                std::cout << out1 << std::endl;
+                out2 = out2.replace(out2.find(s), s.size(), "movt")
+                       + ":upper16:" + out.substr(p, len - p);
+                std::cout << out2 << std::endl;
             }
             return;
         }

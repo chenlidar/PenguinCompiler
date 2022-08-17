@@ -1,5 +1,6 @@
 #include "../structure/treeIR.hpp"
 #include "../util/table.hpp"
+#include <set>
 namespace INTERP {
 class FuncInline {
 public:
@@ -31,7 +32,9 @@ public:
         bool isrec;
         bool isvoid;
         std::vector<std::pair<std::string, IR::StmList*>> callpos;
-        Info() {
+        std::set<std::string> Gvar;
+        Info()
+            : Gvar() {
             ir = nullptr;
             calledNum = callNum = length = stksize = 0;
             isrec = isvoid = false;
@@ -48,5 +51,6 @@ private:
     Table::Stable<TY::EnFunc*>* fenv;
     void analyse(std::string name);
     std::vector<std::pair<std::string, IR::StmList*>> getInlinePos(std::string funcname);
+    bool G2Lvar();
 };
 }  // namespace INTERP
