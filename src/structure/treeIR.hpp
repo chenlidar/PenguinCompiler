@@ -316,5 +316,6 @@ public:
 };
 typedef std::vector<Exp*> ExpList;
 ASM::Proc* ir2asm(StmList* stmlist);
+
 }  // namespace IR
 #endif
