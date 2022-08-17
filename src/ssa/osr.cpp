@@ -94,6 +94,7 @@ class OSR {
 public:
     OSR(SSA::SSAIR* t) {
         ir = t;
+        cleanNoDefTemp();
         buildSSAGraph();
         // ir->showmark();
         auto ttmp = DFSCFG::Loop_Nesting_Tree(ir);
@@ -108,6 +109,36 @@ public:
     }
 
 private:
+    void cleanNoDefTemp() {
+        unordered_set<Temp_Temp> tmp;
+        auto nodes = ir->nodes();
+        for (const auto& it : (*nodes)) {
+            auto stml = static_cast<IR::StmList*>(it->info);
+            while (stml) {
+                auto stm = stml->stm;
+                auto df = getDef(stm);
+                if (df) {
+                    auto tid = static_cast<IR::Temp*>(*df)->tempid;
+                    tmp.insert(tid);
+                }
+                stml = stml->tail;
+            }
+        }
+        for (const auto& it : (*nodes)) {
+            auto stml = static_cast<IR::StmList*>(it->info);
+            while (stml) {
+                auto stm = stml->stm;
+                auto uses = getUses(stm);
+                for (auto it : uses) {
+                    if (!tmp.count(static_cast<IR::Temp*>(*it)->tempid)) {
+                        delete (*it);
+                        *it = new IR::Const(0);
+                    }
+                }
+                stml = stml->tail;
+            }
+        }
+    }
     void buildSSAGraph() {
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
@@ -123,7 +154,9 @@ private:
                     auto tid = static_cast<IR::Temp*>(*df)->tempid;
                     tempDefMap[tid] = stml;
                     tempDefBlockMap[tid] = it->mykey;
+
                     for (auto jt : uses) {
+
                         ssaEdge[tid].push_back({static_cast<IR::Temp*>(*jt)->tempid, *jt});
                     }
                 }
@@ -262,6 +295,8 @@ private:
     void Process(unordered_set<int>& N) {
         if (N.size() == 1) {
             auto nb = *N.begin();
+            if (nb == 7839) std::cerr << "nb" << nb << '\n';
+
             auto src = static_cast<IR::Move*>(tempDefMap[nb]->stm)->src;
             auto tive = IsCandidateOperation(src);
             if (tive.iv.kind != RCT::E && tive.rc.kind != RCT::E) {
@@ -332,16 +367,20 @@ private:
             res = Reduce({op, op2, op1});
         } else {
             res = Temp_newtemp();
+
             ivmp[{op, op1, op2}] = res;
             if (op1.kind == RCT::C && op2.kind == RCT::C) {
+
                 auto stml = (IR::StmList*)(ir->mynodes[0]->info);
                 auto ns = new IR::StmList(
                     new IR::Move(new IR::Temp(res), new IR::Binop(op, new IR::Const(op1.val),
                                                                   new IR::Const(op2.val))),
                     stml->tail);
                 stml->tail = ns;
+                tempDefMap[res] = ns;
+                tempDefBlockMap[res] = 0;
             } else {
-                int lb;
+                int lb = -1;
                 if (op1.kind == RCT::T && op2.kind == RCT::T) {
                     int bl1 = tempDefBlockMap[op1.val];
                     int bl2 = tempDefBlockMap[op2.val];
@@ -353,11 +392,23 @@ private:
                         lb = bl1;
                     }
                 } else if (op1.kind == RCT::T) {
-                    lb = tempDefBlockMap[op2.val];
+                    lb = tempDefBlockMap[op1.val];
                 } else {
                     lb = tempDefBlockMap[op2.val];
                 }
+
+                // std::cerr << "search in " << lb << '\n';
+                // if (op1.kind == RCT::T) std::cerr << "op1" << op1.val << '\n';
+                // if (op2.kind == RCT::T) std::cerr << "op2" << op2.val << '\n';
                 auto stml = (IR::StmList*)(ir->nodes()->at(lb)->info);
+                if (op1.val == 3311) {
+                    auto tx = (IR::StmList*)(ir->nodes()->at(lb)->info);
+                    while (tx) {
+                        tx->stm->printIR();
+                        tx = tx->tail;
+                    }
+                }
+
                 IR::StmList* tg = 0;
                 while (stml) {
                     auto df = getDef(stml->stm);
@@ -369,28 +420,36 @@ private:
                     stml = stml->tail;
                 }
                 assert(tg);
-                tg->tail = new IR::StmList(
+                auto ns = new IR::StmList(
                     new IR::Move(new IR::Temp(res), new IR::Binop(op, rc2exp(op1), rc2exp(op2))),
                     tg->tail);
+                tg->tail = ns;
+                tempDefMap[res] = ns;
+                tempDefBlockMap[res] = lb;
             }
             header[res] = -1;
         }
+        // if (res == 3311) {
+        //     auto tx = (IR::StmList*)(ir->nodes()->at(21)->info);
+        //     while (tx) {
+        //         tx->stm->printIR();
+        //         tx = tx->tail;
+        //     }
+        // }
         return res;
     }
     void Replace(Temp_Temp x, IVentry ive) {
+
         assert(ive.iv.kind == RCT::T);
         auto nx = Reduce(ive);
 
         // tempDefMap[x]->stm->printIR();
         // tempDefMap[nx]->stm->printIR();
         for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
-        if (isphifunc(tempDefMap[x]->stm)) {
-            ir->Aphi[tempDefBlockMap[x]].erase(x);
-            std::cerr << "erase " << x << '\n';
-        }
-        // tempDefMap[x]->stm = nopStm();
-        // tempDefBlockMap.erase(x);
-        // tempDefMap.erase(x);
+        if (isphifunc(tempDefMap[x]->stm)) { ir->Aphi[tempDefBlockMap[x]].erase(x); }
+        tempDefMap[x]->stm = nopStm();
+        tempDefBlockMap.erase(x);
+        tempDefMap.erase(x);
         header[nx] = header[ive.iv.val];
     }
     void ClassifyIV(unordered_set<int>& N) {
@@ -421,7 +480,7 @@ private:
         } else {
             for (auto it : N) {
                 auto tive = IsCandidateOperation(static_cast<IR::Move*>(tempDefMap[it]->stm)->src);
-                if (tive.iv.kind != RCT::T) {
+                if (tive.iv.kind == RCT::T) {
                     Replace(it, tive);
                 } else
                     header[it] = -1;

@@ -182,31 +182,32 @@ int main(int argc, char** argv) {
         bool ismain = funcname == "main";
         // do ssa in this place
         SSA::SSAIR* ssa = new SSA::SSAIR(blocks);
-        ssa->opt.constantPropagation();
-        ssa->opt.deadCodeElimilation();
-        // ssa->showmark();
-        // std::cerr << "-----------------\n";
-        ssa->opt.strengthReduction();
-        // ssa->showmark();
-        // std::cerr << "-----------------\n";
-        ssa->opt.constantPropagation();
-        ssa->opt.deadCodeElimilation();
-        // for (int i = 0; i < 6; i++) {
 
-        //     ssa->opt.deadCodeElimilation();
-        //     ssa->opt.constantPropagation();
-        //     ssa->opt.combExp();
-        //     ssa->opt.deadCodeElimilation();
-        //     ssa->opt.constantPropagation();
-        //     ssa->opt.PRE();
-        //     ssa->opt.constantPropagation();
-        //     ssa->opt.deadCodeElimilation();
-        //     ssa->opt.CME();
-        //     ssa->opt.constantPropagation();
-        //     ssa->opt.deadCodeElimilation();
-        //     ssa->mergeNode();
-        //     ssa->loops.loopUnroll();
-        // }
+        for (int i = 0; i < 6; i++) {
+
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.constantPropagation();
+            ssa->opt.combExp();
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.constantPropagation();
+            ssa->opt.PRE();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.CME();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+            ssa->mergeNode();
+            ssa->loops.loopUnroll();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+            // ssa->showmark();
+            // std::cerr << "-----------------\n";
+            ssa->opt.strengthReduction();
+            // ssa->showmark();
+            // std::cerr << "-----------------\n";
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+        }
         blocks = ssa->ssa2ir();
         ir = CANON::traceSchedule(blocks);
         //
