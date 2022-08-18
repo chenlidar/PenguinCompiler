@@ -287,6 +287,12 @@ void SSA::Optimizer::insertPRE(int node) {
                             ->args.at(cnt));
                     newval = G_map.at(biexp);
                     if (oldval != newval) phi_trans[cnt].insert({oldval, newval});
+                    if (vG_map.count(newval) || avail_map[pred].count(newval))
+                        ;
+                    else {
+                        std::cerr << biexp.l.val << getNodeLabel(ir->mynodes[pred])
+                                  << getNodeLabel(ir->mynodes[node]) << "\n";
+                    }
                     assert(vG_map.count(newval) || avail_map[pred].count(newval));
                 } else if (it.isExp()) {
                     biexp = it;
@@ -306,6 +312,13 @@ void SSA::Optimizer::insertPRE(int node) {
                     expv.push_back(biexp);
                 } else {
                     if (it.isTemp() && it.l.val > 15) {
+                        if (vG_map.count(oldval) || avail_map[pred].count(oldval))
+                            ;
+                        else {
+                            ir->showmark();
+                            std::cerr << it.l.val << getNodeLabel(ir->mynodes[pred])
+                                      << getNodeLabel(ir->mynodes[node]) << "\n";
+                        }
                         assert(vG_map.count(oldval) || avail_map[pred].count(oldval));
                     }
                 }

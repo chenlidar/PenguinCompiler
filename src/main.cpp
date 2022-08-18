@@ -198,11 +198,7 @@ int main(int argc, char** argv) {
             bool cc = ssa->loops.loopUnroll();
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
-            // ssa->showmark();
-            // std::cerr << "-----------------\n";
             ssa->opt.strengthReduction();
-            // ssa->showmark();
-            // std::cerr << "-----------------\n";
             ssa->opt.constantPropagation();
             ssa->opt.deadCodeElimilation();
             if (cc) i -= 5;

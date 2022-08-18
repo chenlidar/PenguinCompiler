@@ -79,6 +79,9 @@ public:
         // showmark();
         checkCopy();
         cleanCopy();
+        cleanSpPhi();
+        checkCopy();
+        cleanCopy();
     }
 
 private:
@@ -506,6 +509,54 @@ private:
         for (auto it : tempCondition) {
             std::cerr << "t" << it.first << ": type" << static_cast<int>(it.second.cond)
                       << "   val:" << it.second.val << std::endl;
+        }
+    }
+    void cleanSpPhi() {
+        auto nodes = ir->nodes();
+        unordered_map<Temp_Temp, IR::Exp*> mv;
+        for (const auto& it : (*nodes)) {
+            auto stml = static_cast<IR::StmList*>(it->info)->tail;
+            auto fh = static_cast<IR::StmList*>(it->info);
+            while (stml) {
+                auto stm = stml->stm;
+                if (isphifunc(stm)) {
+                    auto mvs = static_cast<IR::Move*>(stm);
+                    auto tid = static_cast<IR::Temp*>(mvs->dst)->tempid;
+                    auto cl = static_cast<IR::Call*>(mvs->src);
+                    IR::Exp* gs = 0;
+                    int flag = 1, cnt = 0;
+                    for (auto ar : cl->args) {
+                        if (ar->kind == IR::expType::temp
+                            && static_cast<IR::Temp*>(ar)->tempid == tid) {
+                            cnt++;
+                            continue;
+                        }
+                        if (gs == 0)
+                            gs = ar;
+                        else {
+                            flag = 0;
+                            break;
+                        }
+                    }
+                    if (flag && gs) {
+                        // std::cerr << "!!!" << tid << '\n';
+                        assert(cnt == cl->args.size() - 1);
+                        mv[tid] = gs->dCopy();
+                        ir->Aphi[it->mykey].erase(tid);
+                        stml->stm = nopStm();
+                    }
+                } else if (!isNop(stm)) {
+                    for (auto mvit : mv) {
+                        auto nstml = new IR::StmList(
+                            new IR::Move(new IR::Temp(mvit.first), mvit.second), fh->tail);
+                        fh->tail = nstml;
+                    }
+                    mv.clear();
+                    break;
+                }
+                fh = stml;
+                stml = stml->tail;
+            }
         }
     }
 

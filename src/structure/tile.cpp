@@ -754,5 +754,6 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
         s1->stm->ir2asm(&proc->body);
         s1 = s1->tail;
     }
+    // for (auto it : proc->body) it->print();
     return proc;
 }

@@ -18,6 +18,7 @@ using std::min;
 using std::move;
 using std::pair;
 using std::queue;
+using std::set;
 using std::unordered_map;
 using std::unordered_set;
 using std::vector;
@@ -96,7 +97,6 @@ public:
         ir = t;
         cleanNoDefTemp();
         buildSSAGraph();
-        // ir->showmark();
         auto ttmp = DFSCFG::Loop_Nesting_Tree(ir);
         lnt = &ttmp;
         nextNum = 0;
@@ -110,7 +110,7 @@ public:
 
 private:
     void cleanNoDefTemp() {
-        unordered_set<Temp_Temp> tmp;
+        set<Temp_Temp> tmp;
         auto nodes = ir->nodes();
         for (const auto& it : (*nodes)) {
             auto stml = static_cast<IR::StmList*>(it->info);
@@ -190,7 +190,7 @@ private:
             }
         }
         if (Low[x] == Num[x]) {
-            unordered_set<int> SCC;
+            set<int> SCC;
             int t;
             do {
                 t = pop();
@@ -235,7 +235,7 @@ private:
                     if (c2.kind != RCT::E) { return {bop->op, v1, c2}; }
                     return {bop->op, eopr(), eopr()};
                 } else if (v2.kind != RCT::E) {
-                    c1 = isrc(bop->right, header[static_cast<IR::Temp*>(bop->right)->tempid]);
+                    c1 = isrc(bop->left, header[static_cast<IR::Temp*>(bop->right)->tempid]);
                     if (c1.kind != RCT::E) { return {bop->op, v2, c1}; }
                     return {bop->op, eopr(), eopr()};
                 }
@@ -292,12 +292,11 @@ private:
         }
         }
     }
-    void Process(unordered_set<int>& N) {
+    void Process(set<int>& N) {
         if (N.size() == 1) {
             auto nb = *N.begin();
-            if (nb == 7839) std::cerr << "nb" << nb << '\n';
-
             auto src = static_cast<IR::Move*>(tempDefMap[nb]->stm)->src;
+
             auto tive = IsCandidateOperation(src);
             if (tive.iv.kind != RCT::E && tive.rc.kind != RCT::E) {
                 Replace(nb, tive);
@@ -307,12 +306,6 @@ private:
             ClassifyIV(N);
     }
     Temp_Temp Reduce(IVentry tmp) {
-
-        // std::cerr << "REDUCE:" << (int)(tmp.op) << ' ' << tmp.iv << ' ' << (int)(tmp.rc.kind)
-        //           << ' ' << tmp.rc.val << '\n';
-
-        // auto df = (static_cast<IR::Move*>(tempDefMap[x]->stm))->src;
-        // auto tmp = getIVentry(df);
         if (ivmp.count(tmp)) { return ivmp[tmp]; }
 
         assert(tmp.iv.kind == RCT::T);
@@ -396,19 +389,7 @@ private:
                 } else {
                     lb = tempDefBlockMap[op2.val];
                 }
-
-                // std::cerr << "search in " << lb << '\n';
-                // if (op1.kind == RCT::T) std::cerr << "op1" << op1.val << '\n';
-                // if (op2.kind == RCT::T) std::cerr << "op2" << op2.val << '\n';
                 auto stml = (IR::StmList*)(ir->nodes()->at(lb)->info);
-                if (op1.val == 3311) {
-                    auto tx = (IR::StmList*)(ir->nodes()->at(lb)->info);
-                    while (tx) {
-                        tx->stm->printIR();
-                        tx = tx->tail;
-                    }
-                }
-
                 IR::StmList* tg = 0;
                 while (stml) {
                     auto df = getDef(stml->stm);
@@ -420,6 +401,7 @@ private:
                     stml = stml->tail;
                 }
                 assert(tg);
+                while (tg && tg->tail && isphifunc(tg->tail->stm)) tg = tg->tail;
                 auto ns = new IR::StmList(
                     new IR::Move(new IR::Temp(res), new IR::Binop(op, rc2exp(op1), rc2exp(op2))),
                     tg->tail);
@@ -429,13 +411,6 @@ private:
             }
             header[res] = -1;
         }
-        // if (res == 3311) {
-        //     auto tx = (IR::StmList*)(ir->nodes()->at(21)->info);
-        //     while (tx) {
-        //         tx->stm->printIR();
-        //         tx = tx->tail;
-        //     }
-        // }
         return res;
     }
     void Replace(Temp_Temp x, IVentry ive) {
@@ -443,8 +418,6 @@ private:
         assert(ive.iv.kind == RCT::T);
         auto nx = Reduce(ive);
 
-        // tempDefMap[x]->stm->printIR();
-        // tempDefMap[nx]->stm->printIR();
         for (auto it : uselog[x]) { static_cast<IR::Temp*>(it)->tempid = nx; }
         if (isphifunc(tempDefMap[x]->stm)) { ir->Aphi[tempDefBlockMap[x]].erase(x); }
         tempDefMap[x]->stm = nopStm();
@@ -452,7 +425,7 @@ private:
         tempDefMap.erase(x);
         header[nx] = header[ive.iv.val];
     }
-    void ClassifyIV(unordered_set<int>& N) {
+    void ClassifyIV(set<int>& N) {
         bool IsIV = true;
         int hder = *N.begin();
         int lw = lnt->Block_Dfsnum(tempDefBlockMap[hder]);
@@ -501,27 +474,29 @@ public:
                     auto df = getDef(stm);
                     auto tid = static_cast<IR::Temp*>(*df)->tempid;
                     assert(ir->Aphi[it->mykey].count(tid));
+                    // if (ir->Aphi[it->mykey][tid] != stml) {
+                    //     ir->Aphi[it->mykey][tid]->stm->printIR();
+                    //     stml->stm->printIR();
+                    // }
                 }
                 stml = stml->tail;
             }
-            assert(cnt >= ir->Aphi[it->mykey].size());
+            assert(cnt == ir->Aphi[it->mykey].size());
         }
     }
 
 private:
     SSA::SSAIR* ir;
     int nextNum, nodesz;
-    unordered_set<Temp_Temp> rpovis;
-    int rpoNum;
-    unordered_map<Temp_Temp, int> rpomp;
-    unordered_map<Temp_Temp, int> vis, Num, Low, header, ons;
+
+    map<Temp_Temp, int> vis, Num, Low, header, ons;
     vector<Temp_Temp> stk;
-    unordered_map<Temp_Temp, IR::StmList*> tempDefMap;
-    unordered_map<Temp_Temp, int> tempDefBlockMap;
-    unordered_map<Temp_Temp, vector<IR::Exp*>> uselog;
-    unordered_map<Temp_Temp, vector<pair<Temp_Temp, IR::Exp*>>> ssaEdge;
+    map<Temp_Temp, IR::StmList*> tempDefMap;
+    map<Temp_Temp, int> tempDefBlockMap;
+    map<Temp_Temp, vector<IR::Exp*>> uselog;
+    map<Temp_Temp, vector<pair<Temp_Temp, IR::Exp*>>> ssaEdge;
     map<IVentry, Temp_Temp> ivmp;
-    map<Temp_Temp, IVentry> ivrmp;
+
     DFSCFG::Loop_Nesting_Tree* lnt;
 };
 void SSA::Optimizer::strengthReduction() {
