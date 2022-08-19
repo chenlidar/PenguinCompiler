@@ -49,16 +49,14 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
     for (auto list = begin; list != end; list = list->tail) {
         IR::Stm* stm = list->stm;
         if (!ismovebi(stm)
-            || (static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)->op != IR::binop::T_plus
-                && static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)->op
-                       != IR::binop::T_mul)) {  // can not use other,can not be used by other
+            || !opCommutable(static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)
+                                 ->op)) {  // can not use other,can not be used by other
             emit(stm);
             continue;
         }
         IR::Move* mv = static_cast<IR::Move*>(stm);
         IR::Binop* biexp = static_cast<IR::Binop*>(mv->src);
         IR::binop bop = biexp->op;
-        assert(bop == IR::binop::T_plus || bop == IR::binop::T_mul);
         int dsttmp = static_cast<IR::Temp*>(mv->dst)->tempid;
         if (usemap.at(dsttmp).size() == 1 && bset.count(usemap.at(dsttmp)[0])
             && static_cast<IR::Binop*>(static_cast<IR::Move*>(usemap.at(dsttmp)[0]->stm)->src)->op
@@ -98,12 +96,12 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
                 }
             }
             // cal
-            int lnum = bop == IR::binop::T_plus ? 0 : 1;
             int ltemp = -1;
             std::string lname = "";
             // const ford
-            for (auto it : valv) lnum = bop == IR::binop::T_plus ? lnum + it : lnum * it;
             if (bop == IR::binop::T_plus) {
+                int lnum = 0;
+                for (auto it : valv) lnum = lnum + it;
                 std::queue<int> tempq;
                 // name
                 for (auto it : namev) {
@@ -177,6 +175,8 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
                 else
                     assert(0);
             } else if (bop == IR::binop::T_mul) {
+                int lnum = 1;
+                for (auto it : valv) lnum = lnum * it;
                 if (lnum == 0) {
                     emit(t_C(dsttmp, 0));
                 } else {
@@ -242,6 +242,89 @@ std::pair<IR::StmList*, IR::StmList*> Optimizer::handelexp(IR::StmList* begin, I
                         emit(t_T(dsttmp, ltemp));
                     else if (lname != "")
                         emit(t_N(dsttmp, lname));
+                    else
+                        assert(0);
+                }
+            } else if (bop == IR::binop::F_plus) {
+                int lnum = digit_i2f(0);
+                for (auto it : valv) lnum = encode(decode(lnum) + decode(it));
+                std::queue<int> tempq;
+                // name
+                assert(namev.size()==0);
+                // temp
+                for (auto it : tempv) {
+                    if (it.second > 1) {
+                        int nwtmp = Temp_newtemp();
+                        emit(t_CT(nwtmp, IR::binop::F_mul, digit_i2f(it.second), it.first));
+                        tempq.push(nwtmp);
+                    } else
+                        tempq.push(it.first);
+                }
+                while (!tempq.empty()) {
+                    int tp = tempq.front();
+                    tempq.pop();
+                    if (lnum!=digit_i2f(0)) {
+                        ltemp = Temp_newtemp();
+                        emit(t_CT(ltemp, IR::binop::F_plus, lnum, tp));
+                        lnum = 0;
+                    } else if (ltemp != -1) {
+                        int tt = Temp_newtemp();
+                        emit(t_TT(tt, IR::binop::F_plus, ltemp, tp));
+                        ltemp = tt;
+                    } else if (ltemp == -1) {
+                        ltemp = tp;
+                    } else
+                        assert(0);
+                }
+                if (ltemp != -1)
+                    emit(t_T(dsttmp, ltemp));
+                else
+                    assert(0);
+            } else if (bop == IR::binop::F_mul) {
+                int lnum = digit_i2f(1);
+                for (auto it : valv) lnum = encode(decode(lnum) * decode(it));
+                if (lnum == digit_i2f(0)) {
+                    emit(t_C(dsttmp, digit_i2f(0)));
+                } else {
+                    std::queue<int> tempq;
+                    // name
+                    assert(namev.size()==0);
+                    // temp
+                    for (auto it : tempv) {
+                        int sz = it.second;
+                        int btmp, etmp;
+                        btmp = -1;
+                        etmp = it.first;
+                        int nwtmp;
+                        while (sz != 0) {
+                            if (sz & 1) {
+                                nwtmp = Temp_newtemp();
+                                if (btmp == -1)
+                                    emit(t_T(nwtmp, etmp));
+                                else
+                                    emit(t_TT(nwtmp, IR::binop::F_mul, btmp, etmp));
+                                btmp = nwtmp;
+                            }
+                            nwtmp = Temp_newtemp();
+                            emit(t_TT(nwtmp, IR::binop::F_mul, etmp, etmp));
+                            etmp = nwtmp;
+                            sz >>= 1;
+                        }
+                        if (lnum != digit_i2f(1)) {
+                            ltemp = Temp_newtemp();
+                            emit(t_CT(ltemp, IR::binop::F_mul, lnum, btmp));
+                            lnum = digit_i2f(1);
+                        } else if (ltemp != -1) {
+                            int tt = Temp_newtemp();
+                            emit(t_TT(tt, IR::binop::F_mul, ltemp, btmp));
+                            ltemp = tt;
+                        } else {
+                            ltemp = btmp;
+                        }
+                    }
+                    assert(ltemp != -1);
+                    if (ltemp != -1)
+                        emit(t_T(dsttmp, ltemp));
                     else
                         assert(0);
                 }

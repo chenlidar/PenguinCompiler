@@ -479,4 +479,8 @@ static string relop2string(IR::RelOp op) {
     default: return "unknown";
     }
 }
+static bool opCommutable(IR::binop bop) {
+    return bop == IR::binop::T_plus || bop == IR::binop::T_mul || bop == IR::binop::F_plus
+           || bop == IR::binop::F_mul;
+}
 #endif
