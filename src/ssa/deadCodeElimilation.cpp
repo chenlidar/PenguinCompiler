@@ -26,6 +26,8 @@ bool isNecessaryStm(IR::Stm* stm, SSAIR* ir) {
         if (movestm->src->kind == IR::expType::call) {
             auto callexp = static_cast<IR::Call*>(movestm->src);
             if (callexp->fun[0] == '$') return false;
+            if (callexp->fun == "i2f") return false;
+            if (callexp->fun == "f2i") return false;
             return true;
         }
         if (movestm->dst->kind == IR::expType::temp
