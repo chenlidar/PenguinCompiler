@@ -101,6 +101,7 @@ class Optimizer {
 public:
     void deadCodeElimilation();
     void constantPropagation();
+    void strengthReduction();
     void PRE();
     void combExp();
     void CME();

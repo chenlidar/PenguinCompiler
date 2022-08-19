@@ -196,6 +196,11 @@ int main(int argc, char** argv) {
             ssa->opt.deadCodeElimilation();
             ssa->mergeNode();
             bool cc = ssa->loops.loopUnroll();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
+            ssa->opt.strengthReduction();
+            ssa->opt.constantPropagation();
+            ssa->opt.deadCodeElimilation();
             if (cc) i -= 5;
         }
         blocks = ssa->ssa2ir();
