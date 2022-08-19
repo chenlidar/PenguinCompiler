@@ -14,28 +14,35 @@ namespace COLOR {
 class COL_result {
 public:
     std::unordered_map<Temp_Temp, Temp_Temp> ColorMap;
-    std::map<Temp_Temp,Temp_Temp> SpilledTemp;
+    std::map<Temp_Temp, Temp_Temp> SpilledTemp;
     COL_result(IG::ConfGraph* _ig, std::unordered_set<Temp_Temp>* _stkuse) {
+        ig = _ig;
+        if (ig->isf) {
+            REGNUM = 32;
+            Precolored.clear();
+            for (int i = 0; i < 32; i++) Precolored.insert(~i);
+        } else {
+            REGNUM = 13;
+            Precolored = std::set<Temp_Temp>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14});
+        }
         SpillWorklist = std::set<int>();
         SimplifyWorklist = std::set<int>();
-        CombineWorklist= std::set<int>();
-        FreezeWorklist= std::set<int>();
-        SpilledTemp = std::map<Temp_Temp,Temp_Temp>();
+        CombineWorklist = std::set<int>();
+        FreezeWorklist = std::set<int>();
+        SpilledTemp = std::map<Temp_Temp, Temp_Temp>();
         SelectStack = std::stack<int>();
         ColorMap = std::unordered_map<Temp_Temp, Temp_Temp>();
         for (int i = 0; i < 15; i++) ColorMap[i] = i;
-        ig = _ig;
         stkuse = _stkuse;
         COL_Color();
     }
 
 private:
-    const int REGNUM = 13;
-    const std::set<Temp_Temp> Precolored
-        = std::set<Temp_Temp>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14});
+    int REGNUM;
+    std::set<Temp_Temp> Precolored;
     std::set<int> SpillWorklist;
     std::set<int> SimplifyWorklist;
-    std::set<int> CombineWorklist,FreezeWorklist;
+    std::set<int> CombineWorklist, FreezeWorklist;
     std::stack<int> SelectStack;
     IG::ConfGraph* ig;
     std::unordered_set<Temp_Temp>* stkuse;

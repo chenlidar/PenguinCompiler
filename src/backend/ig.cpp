@@ -3,7 +3,8 @@
 using namespace IG;
 void ConfGraph::addNode(Temp_Temp t) {
     if (TempNodeMap.count(t)) return;
-    if(t==11||t==13)return;
+    if (t == 11 || t == 13) return;
+    if (t < 0 && !isf || t >= 0 && isf) return;
     Node node(nodecount);
     mynodes.push_back(node);
     TempNodeMap[t] = nodecount;

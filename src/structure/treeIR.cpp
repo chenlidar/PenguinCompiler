@@ -22,6 +22,12 @@ RelOp IR::commute(RelOp op) {  // a op b    ==    b commute(op) a
     case RelOp::T_ge: return RelOp::T_le;
     case RelOp::T_gt: return RelOp::T_lt;
     case RelOp::T_le: return RelOp::T_ge;
+    case RelOp::F_eq: return RelOp::F_eq;
+    case RelOp::F_ne: return RelOp::F_ne;
+    case RelOp::F_lt: return RelOp::F_gt;
+    case RelOp::F_ge: return RelOp::F_le;
+    case RelOp::F_gt: return RelOp::F_lt;
+    case RelOp::F_le: return RelOp::F_ge;
     }
 }
 RelOp IR::notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
@@ -32,6 +38,12 @@ RelOp IR::notRel(RelOp op) {  // a op b    ==     not(a notRel(op) b)
     case RelOp::T_ge: return RelOp::T_lt;
     case RelOp::T_gt: return RelOp::T_le;
     case RelOp::T_le: return RelOp::T_gt;
+    case RelOp::F_eq: return RelOp::F_ne;
+    case RelOp::F_ne: return RelOp::F_eq;
+    case RelOp::F_lt: return RelOp::F_ge;
+    case RelOp::F_ge: return RelOp::F_lt;
+    case RelOp::F_gt: return RelOp::F_le;
+    case RelOp::F_le: return RelOp::F_gt;
     }
 }
 Cx IR::Tr_Exp::unCx() {

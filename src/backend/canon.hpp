@@ -37,4 +37,5 @@ StmList* traceSchedule(Block b);
 StmList* funcEntryExit1(StmList*);  // save caller save reg
 ASM::InstrList* funcEntryExit2(ASM::InstrList*, bool,
                                bool);  // sink r0 when return is not void and putint in main
+IR::StmList* transIR(IR::StmList* stmlist);
 }  // namespace CANON

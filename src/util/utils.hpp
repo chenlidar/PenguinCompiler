@@ -64,8 +64,18 @@ static TY::tyType getArrayType(TY::Type* ty) {
     while (ty->kind == TY::tyType::Ty_array) ty = ty->tp;
     return ty->kind;
 }
-static IR::Exp* ir_i2f(IR::Exp* exp) { return new IR::Call("__aeabi_i2f", IR::ExpList(1, exp)); }
-static IR::Exp* ir_f2i(IR::Exp* exp) { return new IR::Call("__aeabi_f2iz", IR::ExpList(1, exp)); }
+static IR::Exp* ir_i2f(IR::Exp* exp) {
+    if (exp->kind == IR::expType::constx)
+        return new IR::Const(digit_i2f(static_cast<IR::Const*>(exp)->val));
+    else
+        return new IR::Call("i2f", IR::ExpList(1, exp));
+}
+static IR::Exp* ir_f2i(IR::Exp* exp) {
+    if (exp->kind == IR::expType::constx)
+        return new IR::Const(digit_f2i(static_cast<IR::Const*>(exp)->val));
+    else
+        return new IR::Call("f2i", IR::ExpList(1, exp));
+}
 template <typename T> static T cal(IR::binop op, T l, T r) {
     switch (op) {
     case IR::binop::T_plus: return l + r;
@@ -121,14 +131,11 @@ static IR::Exp* TyIRAssign(IR::Exp* rexp, TY::tyType lty, TY::tyType rty) {
         return rexp;
 }
 static IR::Exp* calIRfloat(IR::binop bop, IR::Exp* lexp, IR::Exp* rexp) {
-    IR::ExpList param;
-    param.push_back(lexp);
-    param.push_back(rexp);
     switch (bop) {
-    case IR::binop::T_plus: return new IR::Call("__aeabi_fadd", param);
-    case IR::binop::T_minus: return new IR::Call("__aeabi_fsub", param);
-    case IR::binop::T_mul: return new IR::Call("__aeabi_fmul", param);
-    case IR::binop::T_div: return new IR::Call("__aeabi_fdiv", param);
+    case IR::binop::T_plus: return new IR::Binop(IR::binop::F_plus, lexp, rexp);
+    case IR::binop::T_minus: return new IR::Binop(IR::binop::F_minus, lexp, rexp);
+    case IR::binop::T_mul: return new IR::Binop(IR::binop::F_mul, lexp, rexp);
+    case IR::binop::T_div: return new IR::Binop(IR::binop::F_div, lexp, rexp);
     default: assert(0);
     }
     return nullptr;
@@ -264,6 +271,11 @@ static bool isphifunc(IR::Stm* stm) {
 static bool ismovebi(IR::Stm* stm) {
     return stm->kind == IR::stmType::move
            && static_cast<IR::Move*>(stm)->src->kind == IR::expType::binop;
+}
+static bool isttmove(IR::Stm* stm) {
+    return stm->kind == IR::stmType::move
+           && static_cast<IR::Move*>(stm)->dst->kind == IR::expType::temp
+           && static_cast<IR::Move*>(stm)->src->kind == IR::expType::temp;
 }
 static void cleanExpStm(IR::StmList* stmlist) {
     IR::StmList* last = nullptr;
@@ -437,11 +449,15 @@ static std::pair<int, std::string> exp2op2(IR::Binop* bop) { assert(0); }
 
 static string binop2string(IR::binop op) {
     switch (op) {
-    case IR::binop::T_div: return "div";
-    case IR::binop::T_minus: return "minus";
+    case IR::binop::T_div: return "sdiv";
+    case IR::binop::T_minus: return "sub";
     case IR::binop::T_mod: return "mod";
     case IR::binop::T_mul: return "mul";
-    case IR::binop::T_plus: return "plus";
+    case IR::binop::T_plus: return "add";
+    case IR::binop::F_div: return "vdiv.f32";
+    case IR::binop::F_minus: return "vsub.f32";
+    case IR::binop::F_mul: return "vmul.f32";
+    case IR::binop::F_plus: return "vadd.f32";
     default: return "unknown";
     }
 }
@@ -454,6 +470,12 @@ static string relop2string(IR::RelOp op) {
     case IR::RelOp::T_ge: return "ge";
     case IR::RelOp::T_gt: return "gt";
     case IR::RelOp::T_le: return "le";
+    case IR::RelOp::F_eq: return "eq";
+    case IR::RelOp::F_ne: return "ne";
+    case IR::RelOp::F_lt: return "lt";
+    case IR::RelOp::F_ge: return "pl";
+    case IR::RelOp::F_gt: return "hi";
+    case IR::RelOp::F_le: return "le";
     default: return "unknown";
     }
 }

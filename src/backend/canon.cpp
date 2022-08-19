@@ -5,6 +5,7 @@
 #include <vector>
 #include "../util/utils.hpp"
 #include <unordered_map>
+#include <queue>
 using namespace IR;
 using namespace CANON;
 /**
@@ -315,4 +316,73 @@ ASM::InstrList* CANON::funcEntryExit2(ASM::InstrList* list, bool isvoid, bool is
                                       Temp_LabelList())); */
     }
     return list;
+}
+IR::StmList* CANON::transIR(IR::StmList* stmlist) {
+    // find temp must use float reg
+    std::set<int> fset;
+    std::unordered_map<int, std::set<int>> mvmap;
+    for (auto list = stmlist; list; list = list->tail) {
+        IR::Stm* stm = list->stm;
+        if (isttmove(stm)) {
+            int dst = static_cast<IR::Temp*>(static_cast<IR::Move*>(stm)->dst)->tempid;
+            int src = static_cast<IR::Temp*>(static_cast<IR::Move*>(stm)->src)->tempid;
+            if (dst < 15 || src < 15) continue;
+            mvmap[dst].insert(src);
+            mvmap[src].insert(dst);
+        }
+    }
+    for (auto list = stmlist; list; list = list->tail) {
+        IR::Stm* stm = list->stm;
+        if (isCall(stm) && getCallName(stm) == "f2i") {
+            auto v = getUses(stm);
+            for (auto it : v) { fset.insert(static_cast<IR::Temp*>(*it)->tempid); }
+        } else if (isCall(stm) && getCallName(stm) == "i2f") {
+            auto dstp = getDef(stm);
+            if (dstp != 0) { fset.insert(static_cast<IR::Temp*>(*dstp)->tempid); }
+        } else if (ismovebi(stm)) {
+            IR::binop op = static_cast<IR::Binop*>(static_cast<IR::Move*>(stm)->src)->op;
+            if (op == IR::binop::F_plus || op == IR::binop::F_minus || op == IR::binop::F_mul
+                || op == IR::binop::F_div) {
+                auto dstp = getDef(stm);
+                if (dstp != 0) { fset.insert(static_cast<IR::Temp*>(*dstp)->tempid); }
+                auto v = getUses(stm);
+                for (auto it : v) { fset.insert(static_cast<IR::Temp*>(*it)->tempid); }
+            }
+        } else if (stm->kind == IR::stmType::cjump) {
+            IR::RelOp op = static_cast<IR::Cjump*>(stm)->op;
+            if (op == IR::RelOp::F_eq || op == IR::RelOp::F_ge || op == IR::RelOp::F_gt
+                || op == IR::RelOp::F_le || op == IR::RelOp::F_lt || op == IR::RelOp::F_ne) {
+                auto v = getUses(stm);
+                for (auto it : v) { fset.insert(static_cast<IR::Temp*>(*it)->tempid); }
+            }
+        }
+    }
+    std::queue<int> worklist;
+    for (auto it : fset) worklist.push(it);
+    while (!worklist.empty()) {
+        int tp = worklist.front();
+        worklist.pop();
+        if (mvmap.count(tp)) {
+            for (auto it : mvmap[tp]) {
+                if (!fset.count(it)) {
+                    worklist.push(it);
+                    fset.insert(it);
+                }
+            }
+        }
+    }
+    for (auto list = stmlist; list; list = list->tail) {
+        IR::Stm* stm = list->stm;
+        auto dstp = getDef(stm);
+        if (dstp) {
+            int& dst = static_cast<IR::Temp*>(*dstp)->tempid;
+            if (fset.count(dst)) dst = ~dst;
+        }
+        auto v = getUses(stm);
+        for (auto it : v) {
+            int& src = static_cast<IR::Temp*>(*it)->tempid;
+            if (fset.count(src)) src = ~src;
+        }
+    }
+    return stmlist;
 }

@@ -22,23 +22,41 @@ void Cjump::ir2asm(ASM::InstrList* ls) {
     int flag = 0;
     auto num1 = exp2int(left), num2 = exp2int(right);
     if (num1.first && num2.first) { assert(0); }
-    if (num1.first || num2.first) {
-        if (num1.first) {
-            op = commute(op);
-            std::swap(left, right);
-            std::swap(num1, num2);
+    if (op == IR::RelOp::F_eq || op == IR::RelOp::F_ge || op == IR::RelOp::F_gt
+        || op == IR::RelOp::F_le || op == IR::RelOp::F_lt || op == IR::RelOp::F_ne) {
+        int lf = this->left->ir2asm(ls);
+        int rt = this->right->ir2asm(ls);
+        if (lf > 0) {
+            int newtp = ~Temp_newtemp();
+            ls->push_back(new ASM::Oper("vmov `d0, `s0", {newtp}, {lf}, {}));
+            lf = newtp;
         }
-        auto imm2 = exp2op2(num2.second);
-        if (imm2.first) {
+        if (rt > 0) {
+            int newtp = ~Temp_newtemp();
+            ls->push_back(new ASM::Oper("vmov `d0, `s0", {newtp}, {rt}, {}));
+            rt = newtp;
+        }
+        ls->push_back(new ASM::Oper("vcmp.f32 `s0, `s1", {}, {lf, rt}, {}));
+        ls->push_back(new ASM::Oper("vmrs APSR_nzcv, fpscr", {}, {}, {}));
+    } else {
+        if (num1.first || num2.first) {
+            if (num1.first) {
+                op = commute(op);
+                std::swap(left, right);
+                std::swap(num1, num2);
+            }
+            auto imm2 = exp2op2(num2.second);
+            if (imm2.first) {
+                auto lf = this->left->ir2asm(ls);
+                ls->push_back(new ASM::Oper(std::string("cmp `s0, " + imm2.second), {}, {lf}, {}));
+                flag = 1;
+            }
+        }
+        if (!flag) {
             auto lf = this->left->ir2asm(ls);
-            ls->push_back(new ASM::Oper(std::string("cmp `s0, " + imm2.second), {}, {lf}, {}));
-            flag = 1;
+            auto rt = this->right->ir2asm(ls);
+            ls->push_back(new ASM::Oper(std::string("cmp `s0, `s1"), {}, {lf, rt}, {}));
         }
-    }
-    if (!flag) {
-        auto lf = this->left->ir2asm(ls);
-        auto rt = this->right->ir2asm(ls);
-        ls->push_back(new ASM::Oper(std::string("cmp `s0, `s1"), {}, {lf, rt}, {}));
     }
     std::string branch_type = "b" + relop2string(this->op);
     ls->push_back(
@@ -263,21 +281,12 @@ void Move::ir2asm(ASM::InstrList* ls) {
         auto ltemp = rexp->left->ir2asm(ls), rtemp = rexp->right->ir2asm(ls);
         switch (rexp->op) {
         case IR::binop::T_plus:
-            ls->push_back(
-                new ASM::Oper(std::string("add `d0, `s0, `s1"), {lexp}, {ltemp, rtemp}, {}));
-            break;
         case IR::binop::T_minus:
-            ls->push_back(
-                new ASM::Oper(std::string("sub `d0, `s0, `s1"), {lexp}, {ltemp, rtemp}, {}));
-            break;
         case IR::binop::T_mul:
-            ls->push_back(
-                new ASM::Oper(std::string("mul `d0, `s0, `s1"), {lexp}, {ltemp, rtemp}, {}));
-            break;
-        case IR::binop::T_div:
-            ls->push_back(
-                new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), {lexp}, {ltemp, rtemp}, {}));
-            break;
+        case IR::binop::T_div: {
+            ls->push_back(new ASM::Oper(binop2string(rexp->op) + " `d0, `s0, `s1", {lexp},
+                                        {ltemp, rtemp}, {}));
+        } break;
         case IR::binop::T_mod: {
             Temp_Temp temp = Temp_newtemp();
             ls->push_back(
@@ -286,46 +295,118 @@ void Move::ir2asm(ASM::InstrList* ls) {
                                         {temp, rtemp, ltemp}, {}));
             break;
         }
+        case IR::binop::F_plus:
+        case IR::binop::F_minus:
+        case IR::binop::F_mul:
+        case IR::binop::F_div: {
+            assert(lexp < 0);
+            if (ltemp > 0) {
+                int newtp = ~Temp_newtemp();
+                ls->push_back(new ASM::Oper("vmov `d0, `s0", {newtp}, {ltemp}, {}));
+                ltemp = newtp;
+            }
+            if (rtemp > 0) {
+                int newtp = ~Temp_newtemp();
+                ls->push_back(new ASM::Oper("vmov `d0, `s0", {newtp}, {rtemp}, {}));
+                rtemp = newtp;
+            }
+            ls->push_back(new ASM::Oper(binop2string(rexp->op) + " `d0, `s0, `s1", {lexp},
+                                        {ltemp, rtemp}, {}));
+        } break;
         default: assert(0); break;
         }
-    } else if (this->dst->kind == IR::expType::mem)  // Move(Mem(e1), e2)
-    {
+    } else if (this->dst->kind
+               == IR::expType::mem) {  // Move(Mem(const/name/temp), const/name/temp)
         auto s1 = this->src->ir2asm(ls);
         auto s2 = static_cast<IR::Mem*>(this->dst)->mem->ir2asm(ls);
-        ls->push_back(new ASM::Oper(std::string("str `s0, [`s1]"), {}, {s1, s2}, {}));
+        if (s1 < 0)
+            ls->push_back(new ASM::Oper(std::string("vstr `s0, [`s1]"), {}, {s1, s2}, {}));
+        else
+            ls->push_back(new ASM::Oper(std::string("str `s0, [`s1]"), {}, {s1, s2}, {}));
     } else if (this->dst->kind == IR::expType::temp
-               && this->src->kind == IR::expType::constx)  // Move(temp, Const(k))
-    {
+               && this->src->kind == IR::expType::constx) {  // Move(temp, Const(k))
         int s = static_cast<IR::Const*>(this->src)->val;
         auto d0 = this->dst->ir2asm(ls);
-        ls->push_back(new ASM::Oper(std::string("`mov `d0, #") + std::to_string(s), {d0}, {}, {}));
+        if (d0 < 0) {
+            int tmp = Temp_newtemp();
+            ls->push_back(
+                new ASM::Oper(std::string("`mov `d0, #") + std::to_string(s), {tmp}, {}, {}));
+            ls->push_back(new ASM::Oper(std::string("vmov `d0, `s0"), {d0}, {tmp}, {}));
+        } else
+            ls->push_back(
+                new ASM::Oper(std::string("`mov `d0, #") + std::to_string(s), {d0}, {}, {}));
     } else if (this->dst->kind == IR::expType::temp
-               && this->src->kind == IR::expType::name)  // Move(temp,Name(Label(L)))
-    {
+               && this->src->kind == IR::expType::name) {  // Move(temp,Name(Label(L)))
         auto d0 = static_cast<IR::Temp*>(this->dst)->tempid;
+        assert(d0 >= 0);
         ls->push_back(new ASM::Oper(
             std::string("`mov `d0,@") + static_cast<IR::Name*>(this->src)->name, {d0}, {}, {}));
 
     } else if (this->dst->kind == IR::expType::temp
-               && this->src->kind == IR::expType::mem)  // Move(temp,Mem(e))
-    {
+               && this->src->kind == IR::expType::mem) {  // Move(temp,Mem(e))
         auto d0 = (static_cast<IR::Temp*>(this->dst)->tempid);
         assert(static_cast<IR::Mem*>(this->src)->mem->kind == expType::temp
                || static_cast<IR::Mem*>(this->src)->mem->kind == expType::name);
         auto mempos = static_cast<IR::Mem*>(this->src)->mem->ir2asm(ls);
-        ls->push_back(new ASM::Oper(std::string("ldr `d0, [`s0]"), {d0}, {mempos}, {}));
+        assert(mempos >= 0);
+        if (d0 < 0)
+            ls->push_back(new ASM::Oper(std::string("vldr `d0, [`s0]"), {d0}, {mempos}, {}));
+        else
+            ls->push_back(new ASM::Oper(std::string("ldr `d0, [`s0]"), {d0}, {mempos}, {}));
     } else if (this->dst->kind == IR::expType::temp
-               && this->src->kind == IR::expType::temp)  // Move(temp, temp)
-    {
+               && this->src->kind == IR::expType::temp) {  // Move(temp, temp)
         auto d0 = static_cast<IR::Temp*>(this->dst)->tempid;
         auto s0 = static_cast<IR::Temp*>(this->src)->tempid;
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), {d0}, {s0}));
+        if (d0 < 0 && s0 < 0)
+            ls->push_back(new ASM::Move("vmov `d0, `s0", {d0}, {s0}));
+        else if (d0 >= 0 && s0 >= 0)
+            ls->push_back(new ASM::Move("mov `d0, `s0", {d0}, {s0}));
+        else
+            ls->push_back(new ASM::Oper("vmov `d0, `s0", {d0}, {s0}, {}));
     } else if (this->dst->kind == IR::expType::temp
-               && this->src->kind == IR::expType::call)  // Move(temp, call)
-    {
+               && this->src->kind == IR::expType::call) {  // Move(temp, call)
+        std::string fun = getCallName(this);
         auto d0 = static_cast<IR::Temp*>(this->dst)->tempid;
-        auto s0 = this->src->ir2asm(ls);
-        ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), {d0}, {s0}));
+        if (fun == "i2f") {
+            assert(d0 < 0);
+            IR::Exp* exp = getCallParam(this).at(0);
+            if (exp->kind == IR::expType::temp) {
+                int src = static_cast<IR::Temp*>(exp)->tempid;
+                assert(src >= 0);
+                ls->push_back(new ASM::Oper("vmov `d0, `s0", {d0}, {src}, {}));
+                ls->push_back(new ASM::Oper("vcvt.f32.s32 `d0, `s0", {d0}, {d0}, {}));
+            } else if (exp->kind == IR::expType::constx) {
+                int num = static_cast<IR::Const*>(exp)->val;
+                num = digit_i2f(num);
+                int tmp = Temp_newtemp();
+                ls->push_back(new ASM::Oper("`mov `d0,#" + std::to_string(num), {tmp}, {}, {}));
+                ls->push_back(new ASM::Oper("vmov `d0,`s0", {d0}, {tmp}, {}));
+            } else
+                assert(0);
+        } else if (fun == "f2i") {
+            assert(d0 >= 0);
+            IR::Exp* exp = getCallParam(this).at(0);
+            if (exp->kind == IR::expType::temp) {
+                int src = static_cast<IR::Temp*>(exp)->tempid;
+                assert(src < 0);
+                int tmp = ~Temp_newtemp();
+                ls->push_back(new ASM::Oper("vcvt.s32.f32 `d0, `s0", {tmp}, {src}, {}));
+                ls->push_back(new ASM::Oper("vmov `d0, `s0", {d0}, {tmp}, {}));
+            } else if (exp->kind == IR::expType::constx) {
+                int num = static_cast<IR::Const*>(exp)->val;
+                num = digit_f2i(num);
+                ls->push_back(new ASM::Oper("`mov `d0,#" + std::to_string(num), {d0}, {}, {}));
+            } else
+                assert(0);
+        } else {
+            auto s0 = this->src->ir2asm(ls);
+            assert(s0 == 0);
+            if (d0 < 0)
+                ls->push_back(new ASM::Oper(std::string("vmov `d0, `s0"), {d0}, {s0}, {}));
+            else
+                ls->push_back(new ASM::Move(std::string("mov `d0, `s0"), {d0}, {s0}));
+        }
+
     } else
         assert(0);
 }
@@ -341,40 +422,8 @@ Temp_Temp Const::ir2asm(ASM::InstrList* ls) {
     return d0;
 }
 Temp_Temp Binop::ir2asm(ASM::InstrList* ls) {
-    // FIXME
-    Temp_Temp exp_l = this->left->ir2asm(ls);
-    Temp_Temp exp_r = this->right->ir2asm(ls);
-    Temp_TempList src = Temp_TempList(), dst = Temp_TempList();
-    src.push_back(exp_l);
-    src.push_back(exp_r);
-    dst.push_back(Temp_newtemp());
-    switch (this->op) {
-    case IR::binop::T_plus:
-        ls->push_back(new ASM::Oper(std::string("add `d0, `s0, `s1"), dst, src, ASM::Targets()));
-        return dst[0];
-        break;
-    case IR::binop::T_minus:
-        ls->push_back(new ASM::Oper(std::string("sub `d0, `s0, `s1"), dst, src, ASM::Targets()));
-        return dst[0];
-    case IR::binop::T_mul:
-        ls->push_back(new ASM::Oper(std::string("mul `d0, `s0, `s1"), dst, src, ASM::Targets()));
-        return dst[0];
-    case IR::binop::T_div:
-        ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), dst, src, ASM::Targets()));
-        return dst[0];
-    case IR::binop::T_mod: {
-        // assert(0);  // FIXME
-        Temp_Temp temp = Temp_newtemp();
-        ls->push_back(new ASM::Oper(std::string("sdiv `d0, `s0, `s1"), Temp_TempList(1, temp), src,
-                                    ASM::Targets()));
-        src.push_back(src[0]);
-        src[0] = temp;
-        ls->push_back(
-            new ASM::Oper(std::string("mls `d0, `s0, `s1, `s2"), dst, src, ASM::Targets()));
-        return dst[0];
-    }
-    default: assert(0); break;
-    }
+    assert(0);
+    return 0;
 }
 Temp_Temp Temp::ir2asm(ASM::InstrList* ls) { return this->tempid; }
 Temp_Temp Mem::ir2asm(ASM::InstrList* ls) {
@@ -391,111 +440,57 @@ Temp_Temp Name::ir2asm(ASM::InstrList* ls) {
     return d0;
 }
 Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
-    // FIXME
+    assert(fun != "i2f" && fun != "f2i");
     int cnt = 0, stksize = 0;
-    IR::StmList *head = nullptr, *tail = nullptr;
+    IR::StmList *head = new IR::StmList(nullptr, nullptr), *tail;
+    tail = head;
     for (auto it : this->args) {
-        //
-        IR::Stm* stm;
         if (cnt < 4) {
-            stm = new IR::Move(new IR::Temp(cnt), it);
+            tail = tail->tail = new IR::StmList(new IR::Move(new IR::Temp(cnt), it), nullptr);
             cnt++;
         } else {
-            stm = new IR::Move(new IR::Mem(new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
-                                                         new IR::Const(stksize))),
-                               it);
+            int tmp = Temp_newtemp();
+            tail = tail->tail = new IR::StmList(
+                new IR::Move(new IR::Temp(tmp), new IR::Binop(IR::binop::T_plus, new IR::Temp(13),
+                                                              new IR::Const(stksize))),
+                nullptr);
+            tail = tail->tail
+                = new IR::StmList(new IR::Move(new IR::Mem(new IR::Temp(tmp)), it), nullptr);
             stksize += 4;
         }  // low ..now stack..sp 5 6 7 8 ... high
-        if (head == nullptr)
-            head = tail = new IR::StmList(stm, nullptr);
-        else
-            tail = tail->tail = new IR::StmList(stm, nullptr);
     }
     if (stksize) {
         (new IR::Move(new IR::Temp(13),
                       new IR::Binop(IR::binop::T_plus, new IR::Temp(13), new IR::Const(-stksize))))
             ->ir2asm(ls);
     }
-    for (; head; head = head->tail) head->stm->ir2asm(ls);
+    for (head = head->tail; head; head = head->tail) head->stm->ir2asm(ls);
     Temp_TempList uses = Temp_TempList();
     for (int i = 0; i < cnt; i++) { uses.push_back(i); }
-#ifndef VFP
+    Temp_TempList def;
+    for (int i = 0; i < 32; i++) def.push_back(~i);
+    Temp_TempList tdef{0, 1, 2, 3, 14, 12};
+    for (auto it : tdef) def.push_back(it);
     Temp_Temp ftemp = Temp_newtemp();
     if (fun == "putfloat") {
-        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1, ftemp),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("vmov `d0, `s0"), {~0}, {0}, {}));
+        uses.push_back(~0);
     }
-    if (fun == "putfarray") {
-        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1, ftemp),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
+    if (fun == "putfloat" || fun == "putfarray") {
+        ls->push_back(new ASM::Oper(std::string("mov `d0, sp"), Temp_TempList(1, ftemp), {}, {}));
+        ls->push_back(new ASM::Oper(std::string("lsr sp, sp, #4"), {}, {}, {}));
+        ls->push_back(new ASM::Oper(std::string("lsl sp, sp, #4"), {}, {}, {}));
     }
-#endif
 
-#ifndef VFP
-    if (fun == "__aeabi_fadd") {
-        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vadd.f32 s0, s0, s1"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-    } else if (fun == "__aeabi_fsub") {
-        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vsub.f32 s0, s0, s1"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-    } else if (fun == "__aeabi_fmul") {
-        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmul.f32 s0, s0, s1"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-    } else if (fun == "__aeabi_fdiv") {
-        ls->push_back(new ASM::Oper(std::string("vmov s0, r0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov s1, r1"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vdiv.f32 s0, s0, s1"), Temp_TempList(),
-                                    Temp_TempList(), ASM::Targets()));
-        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
-    } else {
-        ls->push_back(new ASM::Oper(std::string("bl ") + fun, Temp_TempList({0, 1, 2, 3, 14, 12}),
-                                    uses, ASM::Targets()));
-    }
-#else
-    ls->push_back(new ASM::Oper(std::string("bl ") + fun, Temp_TempList({0, 1, 2, 3, 14, 12}),
-                                uses, ASM::Targets()));
-#endif
-#ifndef VFP
-    if (fun == "putfloat" || (fun == "putfarray")) {
-        ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), Temp_TempList(),
-                                    Temp_TempList(1, ftemp), ASM::Targets()));
+    ls->push_back(new ASM::Oper(std::string("bl ") + fun, def, uses, {}));
+
+    if (fun == "putfloat" || fun == "putfarray") {
+        ls->push_back(new ASM::Oper(std::string("mov sp, `s0"), {}, {ftemp}, {}));
     }
     if (fun == "getfloat") {
-        ls->push_back(new ASM::Oper(std::string("vmov r0, s0"), Temp_TempList(), Temp_TempList(),
-                                    ASM::Targets()));
+        ls->push_back(new ASM::Oper(std::string("vmov `d0, `s0"), {0}, {~0}, {}));
     }
-#endif
+
     if (stksize) {
         (new IR::Move(new IR::Temp(13),
                       new IR::Binop(IR::binop::T_plus, new IR::Temp(13), new IR::Const(stksize))))
@@ -507,6 +502,7 @@ Temp_Temp Call::ir2asm(ASM::InstrList* ls) {
 ASM::Proc* IR::ir2asm(StmList* stmlist) {
     ASM::Proc* proc = new ASM::Proc();
     stmlist = CANON::funcEntryExit1(stmlist);
+    stmlist = CANON::transIR(stmlist);
     // for (; stmlist; stmlist = stmlist->tail) stmlist->stm->ir2asm(&proc->body);
 
     std::unordered_map<Temp_Temp, int> tempcur;
@@ -553,7 +549,7 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                         auto dtid = static_cast<IR::Temp*>(m2->dst)->tempid;
                         auto tid1 = static_cast<IR::Temp*>(memexp->mem)->tempid;
                         auto tid2 = static_cast<IR::Temp*>(m1->dst)->tempid;
-                        if (tid1 == tid2 && tempcur[tid1] == 1) {
+                        if (tid1 == tid2 && tempcur[tid1] == 1 && dtid >= 0) {
                             auto bop = static_cast<IR::Binop*>(m1->src);
                             auto num1 = exp2int(bop->left), num2 = exp2int(bop->right);
                             if (num1.first && num2.first) { assert(0); }
@@ -614,9 +610,10 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                     && m2->dst->kind == expType::mem) {
                     auto memexp = static_cast<IR::Mem*>(m2->dst);
                     if (memexp->mem->kind == expType::temp) {
+                        auto dtid = (m2->src)->ir2asm(&proc->body);
                         auto tid1 = static_cast<IR::Temp*>(memexp->mem)->tempid;
                         auto tid2 = static_cast<IR::Temp*>(m1->dst)->tempid;
-                        if (tid1 == tid2 && tempcur[tid1] == 1) {
+                        if (tid1 == tid2 && tempcur[tid1] == 1 && dtid >= 0) {
                             auto bop = static_cast<IR::Binop*>(m1->src);
                             auto num1 = exp2int(bop->left), num2 = exp2int(bop->right);
                             if (num1.first && num2.first) { assert(0); }
@@ -632,7 +629,6 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                     switch (bop->op) {
                                     case IR::binop::T_plus: {
                                         auto tid3 = (opsexp)->ir2asm(&proc->body);
-                                        auto dtid = (m2->src)->ir2asm(&proc->body);
                                         proc->body.push_back(new ASM::Oper(
                                             std::string("str `s0, [`s1, " + imm.second + "]"), {},
                                             {dtid, tid3}, {}));
@@ -646,7 +642,6 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                     }
                                 } else {
                                     if (bop->op == binop::T_plus) {
-                                        auto dtid = (m2->src)->ir2asm(&proc->body);
                                         auto tid3 = (bop->left)->ir2asm(&proc->body);
                                         auto tid4 = (bop->right)->ir2asm(&proc->body);
                                         proc->body.push_back(
@@ -658,7 +653,6 @@ ASM::Proc* IR::ir2asm(StmList* stmlist) {
                                         continue;
                                     } else if (bop->op == binop::T_minus) {
                                         assert(0);
-                                        auto dtid = (m2->src)->ir2asm(&proc->body);
                                         auto tid3 = (bop->left)->ir2asm(&proc->body);
                                         auto tid4 = (bop->right)->ir2asm(&proc->body);
                                         proc->body.push_back(

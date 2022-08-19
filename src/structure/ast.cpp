@@ -669,23 +669,18 @@ IR::ExpTy AST::RelExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
     TY::tyType rty = rExpTy.ty->kind;
     IR::Exp* lexp = lExpTy.exp->unEx();
     IR::Exp* rexp = rExpTy.exp->unEx();
+    IR::RelOp bop;
     if (lty == TY::tyType::Ty_float || rty == TY::tyType::Ty_float) {
         if (lty == TY::tyType::Ty_int) lexp = ir_i2f(lexp);
         if (rty == TY::tyType::Ty_int) rexp = ir_i2f(rexp);
-        IR::ExpList params;
-        params.push_back(lexp);
-        params.push_back(rexp);
-        IR::Exp* exp;
         switch (this->op) {
-        case AST::rel_t::GE: exp = new IR::Call("__aeabi_fcmpge", params); break;
-        case AST::rel_t::GT: exp = new IR::Call("__aeabi_fcmpgt", params); break;
-        case AST::rel_t::LE: exp = new IR::Call("__aeabi_fcmple", params); break;
-        case AST::rel_t::LT: exp = new IR::Call("__aeabi_fcmplt", params); break;
+        case AST::rel_t::GE: bop = IR::RelOp::F_ge; break;
+        case AST::rel_t::GT: bop = IR::RelOp::F_gt; break;
+        case AST::rel_t::LE: bop = IR::RelOp::F_le; break;
+        case AST::rel_t::LT: bop = IR::RelOp::F_lt; break;
         default: assert(0);
         }
-        return IR::ExpTy(new IR::Tr_Exp(exp), t);
     } else {
-        IR::RelOp bop;
         switch (this->op) {
         case AST::rel_t::GE: bop = IR::RelOp::T_ge; break;
         case AST::rel_t::GT: bop = IR::RelOp::T_gt; break;
@@ -693,30 +688,36 @@ IR::ExpTy AST::RelExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY:
         case AST::rel_t::LT: bop = IR::RelOp::T_lt; break;
         default: assert(0);
         }
-        IR::Cjump* stm = new IR::Cjump(bop, lexp, rexp, "", "");
-        IR::PatchList* trues = new IR::PatchList(&stm->trueLabel, NULL);
-        IR::PatchList* falses = new IR::PatchList(&stm->falseLabel, NULL);
-        return IR::ExpTy(new IR::Tr_Exp(trues, falses, stm), t);
     }
+    IR::Cjump* stm = new IR::Cjump(bop, lexp, rexp, "", "");
+    IR::PatchList* trues = new IR::PatchList(&stm->trueLabel, NULL);
+    IR::PatchList* falses = new IR::PatchList(&stm->falseLabel, NULL);
+    return IR::ExpTy(new IR::Tr_Exp(trues, falses, stm), t);
 }
 IR::ExpTy AST::EqExp::ast2ir(Table::Stable<TY::Entry*>* venv, Table::Stable<TY::EnFunc*>* fenv,
                              Temp_Label name) {
     TY::Type* t = TY::intType(new int(0), false);
-    IR::RelOp bop;
-    switch (this->op) {
-    case AST::equal_t::EQ: bop = IR::RelOp::T_eq; break;
-    case AST::equal_t::NE: bop = IR::RelOp::T_ne; break;
-    default: assert(0);
-    }
     IR::ExpTy lExpTy = this->lhs->ast2ir(venv, fenv, name);
     IR::ExpTy rExpTy = this->rhs->ast2ir(venv, fenv, name);
-    IR::Exp* lexp = lExpTy.exp->unEx();
-    IR::Exp* rexp = rExpTy.exp->unEx();
     TY::tyType lty = lExpTy.ty->kind;
     TY::tyType rty = rExpTy.ty->kind;
+    IR::Exp* lexp = lExpTy.exp->unEx();
+    IR::Exp* rexp = rExpTy.exp->unEx();
+    IR::RelOp bop;
     if (lty == TY::tyType::Ty_float || rty == TY::tyType::Ty_float) {
         if (lty == TY::tyType::Ty_int) lexp = ir_i2f(lexp);
         if (rty == TY::tyType::Ty_int) rexp = ir_i2f(rexp);
+        switch (this->op) {
+        case AST::equal_t::EQ: bop = IR::RelOp::F_eq; break;
+        case AST::equal_t::NE: bop = IR::RelOp::F_ne; break;
+        default: assert(0);
+        }
+    } else {
+        switch (this->op) {
+        case AST::equal_t::EQ: bop = IR::RelOp::T_eq; break;
+        case AST::equal_t::NE: bop = IR::RelOp::T_ne; break;
+        default: assert(0);
+        }
     }
     IR::Cjump* stm = new IR::Cjump(bop, lexp, rexp, "", "");
     IR::PatchList* trues = new IR::PatchList(&stm->trueLabel, NULL);

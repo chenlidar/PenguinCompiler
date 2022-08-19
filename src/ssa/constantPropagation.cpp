@@ -46,6 +46,12 @@ bool evalRel(IR::RelOp op, int lv, int rv) {
     case IR::RelOp::T_le: return lv <= rv;
     case IR::RelOp::T_lt: return lv < rv;
     case IR::RelOp::T_ne: return lv != rv;
+    case IR::RelOp::F_eq: return decode(lv) == decode(rv);
+    case IR::RelOp::F_ge: return decode(lv) >= decode(rv);
+    case IR::RelOp::F_gt: return decode(lv) > decode(rv);
+    case IR::RelOp::F_le: return decode(lv) <= decode(rv);
+    case IR::RelOp::F_lt: return decode(lv) < decode(rv);
+    case IR::RelOp::F_ne: return decode(lv) != decode(rv);
     default: break;
     }
     assert(0);
@@ -149,6 +155,10 @@ private:
             case IR::binop::T_mod: return lf % rg;
             case IR::binop::T_mul: return lf * rg;
             case IR::binop::T_plus: return lf + rg;
+            case IR::binop::F_div: return encode(decode(lf) / decode(rg));
+            case IR::binop::F_minus: return encode(decode(lf) - decode(rg));
+            case IR::binop::F_mul: return encode(decode(lf) * decode(rg));
+            case IR::binop::F_plus: return encode(decode(lf) + decode(rg));
             default: assert(0);
             }
         }

@@ -18,8 +18,8 @@ using std::unordered_set;
 using std::vector;
 
 // use Binop::plus
-enum class binop { T_plus, T_minus, T_mul, T_div, T_mod };
-enum class RelOp { T_eq, T_ne, T_lt, T_gt, T_le, T_ge };
+enum class binop { T_plus, T_minus, T_mul, T_div, T_mod, F_plus, F_minus, F_mul, F_div };
+enum class RelOp { T_eq, T_ne, T_lt, T_gt, T_le, T_ge, F_eq, F_ne, F_lt, F_gt, F_le, F_ge };
 
 enum class expType { constx, binop, temp, mem, eseq, name, call };
 enum class stmType { seq, label, jump, cjump, move, exp };
